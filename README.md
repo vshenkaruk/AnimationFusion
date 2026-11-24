@@ -18,8 +18,9 @@ Clone the repository or download its ZIP. Start Claude Code or OpenCode **from t
 - `/short-studio-list` — list batches and slot states.
 - `/short-studio-rename <batch-id> <new-name>` — rename a batch in place, including its paths and output folder.
 - `/short-studio-continue <batch-id>` — resume the saved queue without recreating it.
+- **Codex:** ask it to create exactly one AnimationFusion short; the project skill is `.agents/skills/short-studio/SKILL.md`.
 
-For every video, the workflow asks for three choices before research: render theme, story format, and exact target duration from **30 to 60 seconds**. It chooses visual treatment automatically after research by scoring character-led, graphics-led, and hybrid fit; the creator can request an override. Research and trend checks happen for every new video. The workflow plans 5–7 key images before drafting the narration, then waits for pitch approval.
+Claude Code and OpenCode expose the slash commands above. Codex uses the repository skill from a new session opened at the AnimationFusion root; it does not use Claude's `/short-studio-one` command. For every video, the workflow asks for three choices before research: render theme, story format, and exact target duration from **30 to 60 seconds**. It chooses visual treatment automatically after research by scoring character-led, graphics-led, and hybrid fit; the creator can request an override. Research and trend checks happen for every new video. The workflow plans 5–7 key images before drafting the narration, then waits for pitch approval.
 
 ## Research, scripts, and delivery
 
@@ -99,7 +100,7 @@ The CLI manages files, stage timings, audio-preview approval, and render gates; 
 
 ## Updating an existing copy
 
-After these changes are merged into the repository's main branch, an existing clone should run `git pull` in the AnimationFusion folder. If your friend uses a ZIP, download and extract a fresh copy. Then open Claude Code from that updated folder. The new commands live in `.claude/commands/` (and OpenCode commands in `.opencode/commands/`); no separate chat setup is required.
+For an existing clone, run `git pull` in the AnimationFusion folder. If you use a ZIP, download and extract a fresh copy. Start Claude Code, OpenCode, or Codex from that updated folder. Claude Code and OpenCode read the project commands in `.claude/commands/` and `.opencode/commands/`; Codex discovers the repo-local skill in `.agents/skills/short-studio/`. Start a new Codex session after updating so it can discover the skill.
 
 ## Cost, files, and licenses
 

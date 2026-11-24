@@ -32,7 +32,7 @@ If you already cloned AnimationFusion, go into its folder and run:
 git pull
 ```
 
-If you use a ZIP, download and extract the latest copy from GitHub. Start Claude Code or OpenCode with the updated AnimationFusion folder as its working directory. Commands in `.claude/commands/` and `.opencode/commands/` are project-local; there is nothing to install into a separate chat.
+If you use a ZIP, download and extract the latest copy from GitHub. Open the updated AnimationFusion folder as the project in Claude Code, OpenCode, or Codex. Claude Code and OpenCode use the project commands in `.claude/commands/` and `.opencode/commands/`. Codex uses the repo-local skill in `.agents/skills/short-studio/`; start a new Codex session after updating so it discovers the skill.
 
 ## Make videos
 
@@ -64,7 +64,9 @@ The optional count is the number of new slots per selected topic. Check a batch 
 
 Continuing or adding videos reuses the existing batch folder. It does not rebuild the old slots. Every new video gets fresh topic-specific research.
 
-For each new slot, Claude/OpenCode asks you to choose the render theme, story format (`standalone` or `choice-story`), and an exact target length from 30 to 60 seconds. Treatment is selected automatically after research from character-led, graphics-led, and hybrid options; your friend can override it if desired.
+For each new slot, the workflow asks you to choose the render theme, story format (`standalone` or `choice-story`), and exact target length from 30 to 60 seconds. Treatment is selected automatically after research from character-led, graphics-led, and hybrid options; you can request an override.
+
+In Codex, ask: `Create exactly one AnimationFusion short about [topic]. Follow the short-studio skill and ask me for each choice one step at a time.` In Claude Code, use `/short-studio-one [topic]`.
 
 Before work starts, expect roughly 4–10 minutes of research per video; 2–6 minutes for treatment scoring, beat plan, pitch, and script; and 2–10 minutes for voice and storyboard preparation. Choosing the three options is usually quick. Storyboard review and listening pauses depend on you. Preview and full-render times are machine-dependent: this computer uses comparable saved timings after a video completes; first runs are unbenchmarked. A 30–60 second final contains 1,800–3,600 frames at 60 fps, and your friend's computer has taken close to 50 minutes for a render. These are estimates, not guarantees. The CLI records actual preparation, preview, and final-render time so later estimates improve. For `/short-studio-add` with several videos, the research may run in parallel; scripting, preparation, review, preview, and final rendering still add time per video.
 
