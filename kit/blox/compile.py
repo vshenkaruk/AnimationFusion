@@ -15,6 +15,7 @@ SPEC = json.load(open(os.path.join(EP, 'timed.json'), encoding='utf8'))
 WORDS = json.load(open(os.path.join(EP, 'words.json'), encoding='utf8'))
 FPS = 60; N = int(math.ceil(SPEC['dur'] * FPS))
 import places as _places
+import vfx3d
 _places.register_things(SPEC.get('things', {}))   # the story's own blocky objects
 PLACES = SPEC.get('places', {})   # the story's own places (specs, see places.py); built-in names need none
 _used = []
@@ -103,6 +104,59 @@ for s in SMOKE: s.location = OFF
 CRUMB = [sphere(f'crumb{i}', 0.028, mat('crumb_m', (0.62, 0.4, 0.18), rough=0.9)) for i in range(3)]
 for c in CRUMB: c.location = OFF; c.visible_shadow = False
 
+def _rgb(value):
+    if isinstance(value, (list, tuple)):
+        return tuple(float(v) for v in value[:3])
+    value = str(value).lstrip('#')
+    if len(value) != 6:
+        raise ValueError(f"VFX color must be #RRGGBB, got {value!r}")
+    return tuple(int(value[i:i + 2], 16) / 255 for i in (0, 2, 4))
+
+def make_story_vfx():
+    """Build short camera-facing meshes for story cues and keyframe their scale."""
+    valid = set(vfx3d.KINDS)
+    for si, shot in enumerate(SPEC['shots']):
+        for ei, event in enumerate(shot.get('vfx', []) or []):
+            kind = str(event.get('kind', '')).strip()
+            if kind not in valid:
+                raise ValueError(f"shot {si + 1} vfx kind must be one of {sorted(valid)}")
+            at = float(event.get('at', 0.0)); duration = float(event.get('duration', 0.45))
+            shot_duration = float(shot['t1']) - float(shot['t0'])
+            if at < 0 or duration <= 0 or at + duration > shot_duration + 1e-5:
+                raise ValueError(f"shot {si + 1} vfx timing must stay inside its shot")
+            local = event.get('position', [0, 0, 4])
+            if not isinstance(local, (list, tuple)) or len(local) != 3:
+                raise ValueError(f"shot {si + 1} vfx position must be [x, y, z]")
+            size = float(event.get('size', 1.0))
+            if size <= 0:
+                raise ValueError(f"shot {si + 1} vfx size must be positive")
+            name = f"story_vfx_{si + 1}_{ei + 1}_{kind}"
+            obj = link(bpy.data.objects.new(name, vfx3d.mesh(kind, name)))
+            obj.data.materials.append(mat(name + '_material', _rgb(event.get('color', '#fff2a1')),
+                                          emit=float(event.get('emission', 2.4)), rough=0.38))
+            # The flat mesh faces the camera from the open side of the set.
+            obj.rotation_euler = (math.pi / 2, 0, math.radians(float(event.get('rotation', 0))))
+            obj.location = ORIG[shot['set']] + Vector(tuple(float(v) for v in local))
+            start = int(round((float(shot['t0']) + at) * FPS))
+            peak = min(start + max(1, int(round(0.07 * FPS))),
+                       int(round((float(shot['t0']) + at + duration * 0.35) * FPS)))
+            end = int(round((float(shot['t0']) + at + duration) * FPS))
+            if start > 0:
+                obj.scale = (0.001, 0.001, 0.001); obj.keyframe_insert('scale', frame=start - 1)
+            obj.scale = (0.08 * size, 0.08 * size, 0.08 * size); obj.keyframe_insert('scale', frame=start)
+            if kind == 'sparkle':
+                obj.keyframe_insert('rotation_euler', frame=start)
+            peak_scale = 1.35 if kind in ('ring', 'sound_rings', 'dash') else 1.0
+            obj.scale = (peak_scale * size, peak_scale * size, peak_scale * size); obj.keyframe_insert('scale', frame=peak)
+            if kind == 'sparkle':
+                obj.rotation_euler.z = math.radians(float(event.get('rotation', 0)) + 18)
+                obj.keyframe_insert('rotation_euler', frame=peak)
+            obj.scale = (0.001, 0.001, 0.001); obj.keyframe_insert('scale', frame=end)
+            if kind == 'sparkle':
+                obj.keyframe_insert('rotation_euler', frame=end)
+
+make_story_vfx()
+
 cam_data = bpy.data.cameras.new('cam'); cam_data.sensor_fit = 'VERTICAL'; cam_data.clip_start = 0.1; cam_data.clip_end = 900
 CAM = bpy.data.objects.new('cam', cam_data); sc.collection.objects.link(CAM); sc.camera = CAM
 
@@ -173,7 +227,25 @@ def solve_cam(s, tl, heads):
     """returns eye, target, lens, focus point, fstop"""
     dur = s['t1'] - s['t0']; kind = s.get('cam', 'ms'); kind = kind if kind in CAMS else 'ms'
     fw, sdeg, edz, eyy, lens, fst, mv0 = CAMS[kind]; side = s.get('side', 1); o = ORIG[s['set']]
-    if kind == 'ins' or not heads:
+    if s.get('aim') is not None:
+        aim = s['aim']
+        if not isinstance(aim, (list, tuple)) or len(aim) != 3:
+            raise ValueError("shot 'aim' must be [x, y, z] in set-local studs")
+        foc = o + Vector(tuple(float(v) for v in aim)); hp = foc
+        view = s.get('aimView', 'set')
+        if view == 'subject':
+            sub = s.get('subject')
+            if sub not in heads:
+                raise ValueError("shot aimView='subject' needs a subject actor in the shot")
+            F = yawdir(heads[sub][1])
+        elif view == 'set':
+            F = Vector((0, -1, 0))
+        else:
+            raise ValueError("shot 'aimView' must be 'set' or 'subject'")
+        k = float(s.get('aimScale', 1.0))
+        if k <= 0:
+            raise ValueError("shot 'aimScale' must be positive")
+    elif kind == 'ins' or not heads:
         anc = sets.ANCHORS.get(s['set'], {}).get(s.get('focus', ''), (0, 0, 2.6))
         foc = o + Vector(anc); F = Vector((0, -1, 0)); hp = foc
         k = max(1.0, _places.SIZES.get((s['set'], s.get('focus', '')), 0) * 1.4 / fw)   # whole story thing in frame
@@ -327,11 +399,11 @@ def safe_pose(arm, f, anim, phase, amt=1.0):
     except Exception: chars.pose(arm, f, 'idle', phase, amt); MISSING.add(anim)
 MISSING = set()
 ONE_SHOT = {'nod', 'headshake', 'flinch', 'slump', 'jump_joy', 'shock', 'surrender', 'head_tilt',
-            'what', 'facepalm', 'clap', 'throw', 'catch', 'thumbs_up'}
+            'what', 'facepalm', 'clap', 'throw', 'catch', 'thumbs_up', 'slap', 'knock'}
 ONE_SHOT_DURATION = {
     'nod': 0.65, 'headshake': 0.75, 'flinch': 0.45, 'slump': 1.1, 'jump_joy': 0.9,
     'shock': 0.8, 'surrender': 1.0, 'head_tilt': 0.9, 'what': 0.9, 'facepalm': 1.1,
-    'clap': 0.9, 'throw': 0.65, 'catch': 0.75, 'thumbs_up': 0.9,
+    'clap': 0.9, 'throw': 0.65, 'catch': 0.75, 'thumbs_up': 0.9, 'slap': 0.6, 'knock': 0.5,
 }
 cam_data.dof.use_dof = True
 try: sc.render.motion_blur_position = 'START'  # never sample the previous shot across a cut

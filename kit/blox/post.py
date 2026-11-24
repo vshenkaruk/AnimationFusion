@@ -330,6 +330,18 @@ def _make(nm, rng):
         return pan2(s, 0)
     if nm == 'squeak':
         t = _t(0.22); f = 1800 + 800 * t / 0.22 + 120 * np.sin(2 * np.pi * 30 * t); return pan2(_sweep(f, 0.22) * np.sin(np.pi * t / 0.22), 0)
+    if nm == 'whistle':
+        # Two bright, separated notes read as a deliberate cue instead of a generic beep.
+        t = _t(0.58); phase = np.cumsum(1480 + 360 * np.sin(2 * np.pi * 1.8 * t)) * (2 * np.pi / SR)
+        env = np.maximum(np.exp(-((t - 0.12) / 0.085) ** 2), 0.78 * np.exp(-((t - 0.39) / 0.085) ** 2))
+        tone = (np.sin(phase) + 0.16 * np.sin(2 * phase)) * env
+        return pan2(tone, 0)
+    if nm == 'door_hit':
+        # A short, softened metal-panel knock with a bright latch tick.
+        t = _t(0.42); low = _sweep(190 * np.exp(-t * 9) + 62, 0.42) * np.exp(-t * 15)
+        clack = _sweep(780 * np.exp(-t * 18) + 180, 0.16) * np.exp(-t * 35)
+        noise = filt(rng.standard_normal(len(t)), 'bandpass', [500, 4200]) * np.exp(-t * 28) * 0.22
+        return pan2(np.tanh(1.4 * (low + clack + noise)), 0)
     if nm == 'scratch':
         t = _t(0.4); f = 250 + 650 * np.abs(np.sin(2 * np.pi * 5 * t)); ph = np.cumsum(f) / SR % 1
         return pan2(filt(2 * ph - 1, 'bandpass', [300, 4000]) * np.sin(np.pi * t / 0.4), 0)
@@ -338,13 +350,22 @@ def _make(nm, rng):
     raise KeyError(nm)
 
 SFX = {'whoosh', 'whoosh_up', 'whoosh_down', 'pop', 'boing', 'ding', 'impact', 'boom', 'riser', 'scratch', 'bell', 'thunder', 'rain',
-       'correct', 'cash', 'heartbeat', 'glitch', 'tick', 'snap', 'squeak', 'drop', 'click', 'stamp'}  # usable in shot 'sfx': ['name@dt']
-SFX_GAIN = {'boom': -2, 'impact': -2, 'thunder': -4, 'scratch': -3, 'rain': -14, 'riser': -8}
+       'correct', 'cash', 'heartbeat', 'glitch', 'tick', 'snap', 'squeak', 'drop', 'click', 'stamp',
+       'slap', 'whistle', 'door_hit'}  # usable in shot 'sfx': ['name@dt']
+SFX_GAIN = {'boom': -2, 'impact': -2, 'thunder': -4, 'scratch': -3, 'rain': -14, 'riser': -8,
+            'slap': -4, 'whistle': -3, 'door_hit': -3}
+SFX_FILES = {'slap': os.path.join(HERE, 'assets', 'sfx', 'cc0', 'slap-2-clean.mp3')}
 _C = {}
 def sfx_asset(nm, rng):
     if nm == 'step': return trim_on(_make('step', rng), -24) * (0.85 + 0.3 * rng.random())
     if nm not in _C:
-        a = as2(_make(nm, np.random.default_rng(len(_C) + 21)))
+        if nm in SFX_FILES:
+            path = SFX_FILES[nm]
+            if not os.path.isfile(path):
+                raise FileNotFoundError(f"Licensed sound effect is missing: {path}")
+            a = as2(trim_on(read_audio(path)))
+        else:
+            a = as2(_make(nm, np.random.default_rng(len(_C) + 21)))
         _C[nm] = a if nm in ('rain', 'drizzle') else trim_on(a)
     return _C[nm]
 
@@ -468,27 +489,37 @@ def mix(d, spec, words):
 
 # ================================================================== picture: word-timed captions
 G = {}
-def draw_hook_card(im, text, highlights=None):
-    """Draw a two-line opening hook in a top safe area; shared by previews and final frames."""
+def draw_hook_card(im, text, highlights=None, style='clean'):
+    """Draw an opening hook or CTA card; the blocky game treatment stays inside Blocky 3D."""
     words = str(text or "").split()
     if not words:
         return im
     scale = im.width / 1080
-    split = min(range(1, len(words)), key=lambda n: abs(sum(map(len, words[:n])) - sum(map(len, words[n:])))) if len(words) > 1 else 1
-    lines = [words[:split], words[split:]] if len(words) > 1 else [words]
-    size = max(32, int(76 * scale))
+    size = max(32, int((72 if style == 'blocky_game' else 76) * scale))
     font = _font(size)
+    if font.getlength(" ".join(words)) <= 930 * scale:
+        lines = [words]
+    else:
+        split = min(range(1, len(words)), key=lambda n: abs(sum(map(len, words[:n])) - sum(map(len, words[n:])))) if len(words) > 1 else 1
+        lines = [words[:split], words[split:]] if len(words) > 1 else [words]
     while max(font.getlength(" ".join(line)) for line in lines) > 930 * scale and size > 38 * scale:
         size -= max(1, int(4 * scale))
         font = _font(size)
     line_h = int(size * 1.15)
-    card_h = int(line_h * len(lines) + 44 * scale)
-    left, top = int(40 * scale), int(300 * scale)
+    card_h = int(line_h * len(lines) + (48 if style == 'blocky_game' else 44) * scale)
+    left, top = int(40 * scale), int((116 if style == 'blocky_game' else 300) * scale)
     right = im.width - left
     overlay = Image.new("RGBA", im.size, (0, 0, 0, 0))
-    ImageDraw.Draw(overlay).rounded_rectangle(
-        (left, top, right, top + card_h), radius=int(22 * scale), fill=(12, 12, 20, 218)
-    )
+    plate = ImageDraw.Draw(overlay)
+    if style == 'blocky_game':
+        plate.rectangle((left + 5 * scale, top + 7 * scale, right + 5 * scale, top + card_h + 7 * scale), fill=(0, 0, 0, 155))
+        plate.rectangle((left, top, right, top + card_h), fill=(10, 25, 42, 236), outline=(70, 214, 244, 255), width=max(2, int(4 * scale)))
+        plate.rectangle((left + 4 * scale, top + 4 * scale, left + 14 * scale, top + card_h - 4 * scale), fill=(70, 214, 244, 255))
+        plate.rectangle((right - 14 * scale, top + 4 * scale, right - 4 * scale, top + card_h - 4 * scale), fill=(255, 198, 55, 255))
+    else:
+        plate.rounded_rectangle(
+            (left, top, right, top + card_h), radius=int(22 * scale), fill=(12, 12, 20, 218)
+        )
     im = Image.alpha_composite(im.convert("RGBA"), overlay).convert("RGB")
     draw = ImageDraw.Draw(im)
     highlights = {norm(word) for word in (highlights or [])}
@@ -497,7 +528,15 @@ def draw_hook_card(im, text, highlights=None):
         y = top + int(22 * scale + line_h * (line_index + 0.5))
         x = (im.width - font.getlength(rendered)) / 2
         for word in line:
-            color = (255, 222, 40) if norm(word) in highlights else (255, 255, 255)
+            token = norm(word)
+            if style == 'blocky_game' and token in ('a', 'gold'):
+                color = (255, 205, 54)
+            elif style == 'blocky_game' and token in ('b', 'green'):
+                color = (70, 244, 160)
+            elif style == 'blocky_game' and token in highlights:
+                color = (82, 226, 255)
+            else:
+                color = (255, 222, 40) if token in highlights else (255, 255, 255)
             draw.text(
                 (x, y), word, font=font, anchor="lm", fill=color,
                 stroke_width=max(1, int(3 * scale)), stroke_fill=(14, 10, 20),
@@ -510,6 +549,7 @@ def _init(d):
     sp = json.load(open(os.path.join(d, 'timed.json'), encoding='utf8'))
     G['d'] = d; G['keys'] = set(norm(k) for k in sp.get('keys', []))
     G['hook'] = str(sp.get('hook', '')).strip()
+    G['ui_style'] = str(sp.get('ui_style', 'clean')) if sp.get('theme', sp.get('style')) == 'blocky-3d' else 'clean'
     G['hook_duration'] = float(sp.get('hook_duration_seconds', 1.5))
     G['hook_highlights'] = set(norm(k) for k in sp.get('hook_highlights', []))
     G['cta'] = str(sp.get('cta', '')).strip()
@@ -540,12 +580,24 @@ def comp_frame(i, n):
         size = int((118 if key else 96) * sc * s); f = _font(size)
         while f.getlength(w) > 980 * s and size > 50 * s: size -= int(6 * s) or 1; f = _font(size)
         cx, cy = W / 2, 1290 / 1920 * H; dr = ImageDraw.Draw(im)
-        dr.text((cx, cy + 6 * s), w, font=f, anchor='mm', fill=(0, 0, 0), stroke_width=int(11 * sc * s), stroke_fill=(0, 0, 0))
-        dr.text((cx, cy), w, font=f, anchor='mm', fill=(255, 222, 40) if key else (255, 255, 255), stroke_width=int(10 * sc * s), stroke_fill=(20, 15, 25))
+        if G.get('ui_style') == 'blocky_game':
+            text_w = f.getlength(w); pad_x, pad_y = 36 * s, 18 * s
+            x0, y0, x1, y1 = cx - text_w / 2 - pad_x, cy - size / 2 - pad_y, cx + text_w / 2 + pad_x, cy + size / 2 + pad_y
+            overlay = Image.new('RGBA', im.size, (0, 0, 0, 0)); od = ImageDraw.Draw(overlay)
+            edge = (255, 201, 55, 255) if key else (67, 213, 245, 255)
+            od.rectangle((x0 + 4 * s, y0 + 6 * s, x1 + 4 * s, y1 + 6 * s), fill=(0, 0, 0, 135))
+            od.rectangle((x0, y0, x1, y1), fill=(10, 23, 39, 225), outline=edge, width=max(2, int(3 * s)))
+            od.rectangle((x0 + 4 * s, y0 + 4 * s, x0 + 12 * s, y1 - 4 * s), fill=edge)
+            im = Image.alpha_composite(im.convert('RGBA'), overlay).convert('RGB'); dr = ImageDraw.Draw(im)
+            fill = (255, 205, 54) if key and norm(w) in ('a', 'gold', 'door') else (70, 244, 160) if key and norm(w) in ('b', 'green') else (255, 222, 40) if key else (255, 255, 255)
+            dr.text((cx, cy + 2 * s), w, font=f, anchor='mm', fill=fill, stroke_width=max(1, int(3 * s)), stroke_fill=(8, 12, 20))
+        else:
+            dr.text((cx, cy + 6 * s), w, font=f, anchor='mm', fill=(0, 0, 0), stroke_width=int(11 * sc * s), stroke_fill=(0, 0, 0))
+            dr.text((cx, cy), w, font=f, anchor='mm', fill=(255, 222, 40) if key else (255, 255, 255), stroke_width=int(10 * sc * s), stroke_fill=(20, 15, 25))
     if G.get('hook') and t < G['hook_duration']:
-        im = draw_hook_card(im, G['hook'], G.get('hook_highlights', []))
+        im = draw_hook_card(im, G['hook'], G.get('hook_highlights', []), G.get('ui_style', 'clean'))
     if G.get('cta') and n / FPS - t <= G['cta_duration']:
-        im = draw_hook_card(im, G['cta'])
+        im = draw_hook_card(im, G['cta'], style=G.get('ui_style', 'clean'))
     im.convert('RGB').save(os.path.join(d, 'comp', f'{i:05d}.jpg'), quality=94)
 
 def tag_frame(i, n, W, H):

@@ -76,7 +76,7 @@ Research and topic/style scoring happen first. It makes a 5–7 image beat plan 
 
 Research looks for recent high-performing examples in the chosen style, current topic signals, and evidence of youth relevance when available. It notes source links, dates, and what is a fact versus a forecast. It does not promise a topic will go viral or copy another creator's content.
 
-Review the idea, sources, and full script before approving. After script approval, inspect the actual storyboard. For blocky videos, replace the copied starter shot plan with the approved story's title/topic, enough story beats, varied camera framings, layered set depth, scene-specific props, and distinct character actions. Character-led or hybrid stories need a recognizable silhouette, signature color and prop, and a clear role for each character. Follow [the blocky 3D art-direction guide](references/blocky-3d.md) to keep the render clean and readable. Use the storyboard sheet to check the hook, location and scale changes, perspective, character design, and scene continuity on a phone-sized view. Approve the storyboard before a quick audio preview.
+Review the idea, sources, and full script before approving. After script approval, inspect the actual storyboard. For blocky videos, replace the copied starter shot plan with the approved story's title/topic, enough story beats, varied camera framings, layered set depth, scene-specific props, and distinct character actions. Character-led or hybrid stories need a recognizable silhouette, signature color and prop, and a clear role for each character. If you want a particular Roblox look, attach a small reference pack (2–5 images) to the session; the assistant will inspect those actual images, record high-level cues, and compare the storyboard at phone size. Follow [the blocky 3D art-direction guide](references/blocky-3d.md) to keep the render clean and readable. Use the storyboard sheet to check the hook, location and scale changes, perspective, character design, actions, and scene continuity. Approve the storyboard before a quick audio preview.
 
 ### Manual storyboard review
 
@@ -118,11 +118,11 @@ The choice reuses the existing renderers. In Blender styles, graphics-led means 
 
 | Theme | Renderer | Notes |
 |---|---|---|
-| `blocky-3d` | Blender | Story-specific scenes, additional gestures, and named props that move as rigid objects |
+| `blocky-3d` | Blender | Story-specific scenes, slap/knock gestures, quick low-poly effects, action-linked sound cues, and named rigid props |
 | `monochrome` | Blender + FFmpeg | Same blocky renderer with a final black-and-white grade |
 | `what-if` | Remotion | Original vector animation |
 
-Blocky 3D uses original generic human characters and no official Roblox assets. Story props can move as rigid objects, but they do not attach to hands or use physics; animal and robot actor rigs are not included. New What If episodes need files under `studio/src/episodes/<slug>/` and a registration in `studio/src/episodes/index.ts`. The prepare command checks this.
+Blocky 3D uses original generic human characters and no official Roblox assets. Its screen-proof check catches script-to-shot omissions, while storyboard review checks the actual picture. Story props can move as rigid objects, but they do not attach to hands or use physics; animal and robot actor rigs are not included. Reference libraries guide the assistant only when their images are supplied or explicitly loaded. They do not train the renderer. New What If episodes need files under `studio/src/episodes/<slug>/` and a registration in `studio/src/episodes/index.ts`. The prepare command checks this.
 
 ## Cost and research tools
 

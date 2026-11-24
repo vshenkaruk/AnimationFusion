@@ -12,6 +12,7 @@
 | `keys` | words that get a stronger caption pop |
 | `places` | `{name: spec}`: your own places, built from the story (see **Places**) |
 | `things` | `{name: parts}`: objects the story needs that the catalogue lacks (see **Things**) |
+| `ui_style` | optional Blocky 3D caption cards: `blocky_game`; other themes keep their existing style |
 
 ## Cast look
 `skin`, `shirt`, `pants`, `shoes`, `hair_color`, `cap_color`, `tie_color`, `apron_color`: RGB 0-1.
@@ -32,6 +33,10 @@
 | `aimUp` | true: frame higher (clouds above heads) |
 | `flash`, `impact` | lightning flash and camera kick at `impact` s into the shot |
 | `focus` | an anchor or prop name; with `cam='ins'` the shot is on that object (a story thing is framed whole) |
+| `aim` | optional `[x, y, z]` set-local camera target; useful to hold a clear composition around multiple props |
+| `sfx` | timed sound cues such as `slap@0.28`, `whistle@0.10`, or `door_hit@0.30`; sound names must be supported in `kit/blox/post.py` |
+| `vfx` | timed, flat low-poly meshes at set-local positions; kinds: `burst`, `sparkle`, `ring`, `sound_rings`, `dash` |
+| `screen_proof` | Blocky 3D-only CLI check mapping a full spoken line to visible props, actor poses, timed sounds, and visual effects |
 
 ## Actor (inside `actors`)
 | Key | Meaning |
@@ -40,7 +45,7 @@
 | `at` | `[x, y]` on the set floor; the camera side is -y. Keep people 2.5+ apart |
 | `walkTo` | `[x, y]`: walks there during the shot (feet locked to the floor, no sliding) |
 | `yaw` | facing in degrees: 0 faces the camera side (-y), 90 faces +x, -90 faces -x |
-| `anim` | idle, talk, walk, run, point, shrug, shock, scared, cheer, eat, cross_arms, think, sad, angry, wave, sit, facepalm, clap, surrender, nod, headshake, flinch, slump, jump_joy, head_tilt, what, throw, catch, thumbs_up |
+| `anim` | idle, talk, walk, run, point, shrug, shock, scared, cheer, eat, cross_arms, think, sad, angry, wave, sit, facepalm, clap, surrender, nod, headshake, flinch, slump, jump_joy, head_tilt, what, throw, catch, thumbs_up, slap, knock |
 | `animAt` | `[[t, anim], ...]` switch the animation at shot time t |
 | `face` | neutral, smile, grin, laugh, shock, scared, sad, worried, angry, smug, think, blink |
 | `faceAt` | `[[t, face], ...]` |
@@ -48,6 +53,25 @@
 | `look` | `[x, y]` eye direction, -1..1 |
 | `fx` | `['name@t', ...]`: `drizzle`, `raincloud`, `storm`, `bigstorm` (a cloud above the head that rains), `bolt`, `smoke`, `crumbs`. `@-1` = already there when the shot starts |
 | `propMoves` | Optional rigid motion for a named prop in this set; see **Moving story props** below. |
+
+## Timed Blocky 3D cues and screen proof
+
+`vfx` positions are `[x, y, z]` in the shot's set-local studs. Each cue has an `at` time and positive `duration` that must stay within the shot, plus optional `size`, `color` (`#RRGGBB`), `emission`, and `rotation`. These are lightweight geometry meshes that animate by scale. They do not attach to a character or prop, collide, or use physics. Use a brief burst/ring at contact, expanding rings at a visible sound source, and dash marks behind a runner; sync `at` with the pose and sound.
+
+Blocky 3D plans include a proof row for each spoken shot:
+
+```python
+{
+    "claim": "Milo slaps gold A—WHAP! The doorway flashes!",  # the full spoken line
+    "visual": "Milo's slap meets the gold frame; a star pop and ring mark contact.",
+    "props": ["door_a", "gold_arch"],
+    "events": [{"who": "Milo", "anim": "slap", "at": 0.30}],
+    "sfx": ["slap@0.28"],
+    "vfx": [{"kind": "burst", "at": 0.28}, {"kind": "ring", "at": 0.28}],
+}
+```
+
+The CLI verifies that claims, props, actors, poses, sounds, and timed effects exist in the shot plan. It also checks A/B choice framing, spawn-pad returns, whistle cues, and specific slap, door-hit, and run cues. This is a plan consistency check; it cannot judge whether an effect looks good in the rendered image. Review the storyboard at phone size and listen to the quick preview. If using reference images, attach or explicitly load them for the session, then compare the storyboard against selected design cues. References do not train the renderer or model.
 
 ## Places (the world comes from the story)
 Every location in the script gets its own place. A shot's `set` names one of:

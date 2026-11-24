@@ -8,6 +8,7 @@ workflow; no generative API is called by this utility.
 from __future__ import annotations
 
 import argparse
+import ast
 import hashlib
 import json
 import re
@@ -336,6 +337,173 @@ def validate_blocky_story_plan(spec: dict[str, Any], topic: dict[str, Any], slot
                     actions.add(str(event[1]))
     if len(actions) < 2:
         raise SystemExit("Give the cast at least two distinct actions across the story shot plan.")
+    if slot.get("theme") == "blocky-3d":
+        validate_blocky_screen_proof(spec)
+
+
+def _literal_assignment(path: Path, variable: str) -> Any:
+    try:
+        module = ast.parse(path.read_text(encoding="utf-8"))
+        for node in module.body:
+            if isinstance(node, ast.Assign) and any(
+                isinstance(target, ast.Name) and target.id == variable for target in node.targets
+            ):
+                return ast.literal_eval(node.value)
+    except (OSError, SyntaxError, ValueError) as exc:
+        raise SystemExit(f"Cannot read Blocky 3D capability list {variable} from {path}: {exc}") from exc
+    raise SystemExit(f"Blocky 3D capability list {variable} is missing from {path}.")
+
+
+def _proof_text(value: str) -> str:
+    return re.sub(r"\s+", " ", re.sub(r"[^a-z0-9\s]", " ", value.casefold())).strip()
+
+
+def _custom_place_prop_names(place: dict[str, Any]) -> set[str]:
+    counts: dict[str, int] = {}
+    names: set[str] = set()
+    for item in place.get("props", []) or []:
+        if not isinstance(item, (list, tuple)) or not item:
+            continue
+        kind = str(item[0])
+        counts[kind] = counts.get(kind, 0) + 1
+        options = item[4] if len(item) > 4 and isinstance(item[4], dict) else {}
+        names.add(str(options.get("name") or (kind if counts[kind] == 1 else f"{kind}{counts[kind]}")))
+    return names
+
+
+def validate_blocky_screen_proof(spec: dict[str, Any]) -> None:
+    """Require every Blocky 3D spoken beat to point at supported on-screen evidence."""
+    supported_animations = set(_literal_assignment(ROOT / "kit" / "blox" / "chars.py", "ANIMS"))
+    supported_sfx = set(_literal_assignment(ROOT / "kit" / "blox" / "post.py", "SFX"))
+    supported_vfx = set(_literal_assignment(ROOT / "kit" / "blox" / "vfx3d.py", "KINDS"))
+    custom_places = spec.get("places", {}) or {}
+    things = set((spec.get("things", {}) or {}).keys())
+    for index, shot in enumerate(spec.get("shots", []), start=1):
+        text = str(shot.get("text", "")).strip()
+        if not text:
+            raise SystemExit(f"Blocky 3D shot {index} needs spoken text so its visual proof can be reviewed.")
+        proof_rows = shot.get("screen_proof")
+        if not isinstance(proof_rows, list) or not proof_rows:
+            raise SystemExit(
+                f"Blocky 3D shot {index} needs screen_proof: map its spoken line to visible actions, story props, and timed sounds."
+            )
+        if not any(_proof_text(str(row.get("claim", ""))) == _proof_text(text) for row in proof_rows if isinstance(row, dict)):
+            raise SystemExit(f"Blocky 3D shot {index} screen_proof must include its complete spoken line as a claim.")
+
+        place = custom_places.get(str(shot.get("set", "")))
+        known_props = _custom_place_prop_names(place) if isinstance(place, dict) else set()
+        all_props: set[str] = set()
+        all_events: list[dict[str, Any]] = []
+        all_cues: set[str] = set()
+        all_vfx: list[dict[str, Any]] = []
+        actual_cues = {str(cue).strip() for cue in (shot.get("sfx", []) or [])}
+        actual_vfx = shot.get("vfx", []) or []
+        actors = {str(actor.get("who")): actor for actor in (shot.get("actors", []) or []) if isinstance(actor, dict)}
+        shot_duration = float(shot["t1"]) - float(shot["t0"])
+
+        for row in proof_rows:
+            if not isinstance(row, dict):
+                raise SystemExit(f"Blocky 3D shot {index} screen_proof rows must be objects.")
+            claim = str(row.get("claim", "")).strip()
+            visible = str(row.get("visual", "")).strip()
+            if not claim or _proof_text(claim) not in _proof_text(text):
+                raise SystemExit(f"Blocky 3D shot {index} has a screen_proof claim that is not in its spoken line.")
+            if len(visible) < 12:
+                raise SystemExit(f"Blocky 3D shot {index} needs a concrete visual description for each screen_proof claim.")
+            props = row.get("props", []) or []
+            if not isinstance(props, list):
+                raise SystemExit(f"Blocky 3D shot {index} screen_proof props must be a list of story prop names.")
+            all_props.update(str(name) for name in props)
+            if known_props:
+                unknown = sorted(set(str(name) for name in props) - known_props)
+                if unknown:
+                    raise SystemExit(f"Blocky 3D shot {index} screen_proof names props not built in its set: {', '.join(unknown)}.")
+            for name in props:
+                if str(name) in things and str(name) not in known_props:
+                    raise SystemExit(f"Blocky 3D shot {index} mentions custom thing {name!r} without placing it in the set.")
+
+            events = row.get("events", []) or []
+            if not isinstance(events, list):
+                raise SystemExit(f"Blocky 3D shot {index} screen_proof events must be a list.")
+            for event in events:
+                if not isinstance(event, dict):
+                    raise SystemExit(f"Blocky 3D shot {index} screen_proof events must be objects.")
+                who, anim = str(event.get("who", "")), str(event.get("anim", ""))
+                if who not in actors:
+                    raise SystemExit(f"Blocky 3D shot {index} screen_proof action names actor {who!r}, who is not in the shot.")
+                if anim not in supported_animations:
+                    raise SystemExit(f"Blocky 3D shot {index} uses unsupported animation {anim!r} in screen_proof.")
+                at = event.get("at")
+                if not isinstance(at, (int, float)) or at < 0 or at > shot_duration:
+                    raise SystemExit(f"Blocky 3D shot {index} action time must be a shot-local second inside the shot.")
+                actor = actors[who]
+                current = str(actor.get("anim", "idle"))
+                for event_time, event_anim in actor.get("animAt", []) or []:
+                    if float(event_time) <= float(at):
+                        current = str(event_anim)
+                if current != anim:
+                    raise SystemExit(
+                        f"Blocky 3D shot {index} says {who} performs {anim} at {at:.2f}s, but the scheduled pose is {current}."
+                    )
+                all_events.append(event)
+
+            cues = row.get("sfx", []) or []
+            if not isinstance(cues, list):
+                raise SystemExit(f"Blocky 3D shot {index} screen_proof sfx must be a list of timed cue names.")
+            for cue in cues:
+                cue = str(cue).strip()
+                name = cue.partition("@")[0]
+                if cue not in actual_cues:
+                    raise SystemExit(f"Blocky 3D shot {index} screen_proof cue {cue!r} is not scheduled in the shot.")
+                if name not in supported_sfx:
+                    raise SystemExit(f"Blocky 3D shot {index} uses unsupported sound effect {name!r}.")
+                all_cues.add(cue)
+
+            vfx = row.get("vfx", []) or []
+            if not isinstance(vfx, list):
+                raise SystemExit(f"Blocky 3D shot {index} screen_proof vfx must be a list of timed visual-effect names.")
+            for effect in vfx:
+                if not isinstance(effect, dict):
+                    raise SystemExit(f"Blocky 3D shot {index} screen_proof vfx rows must be objects.")
+                kind = str(effect.get("kind", ""))
+                at = effect.get("at")
+                if kind not in supported_vfx:
+                    raise SystemExit(f"Blocky 3D shot {index} uses unsupported visual effect {kind!r}.")
+                if not isinstance(at, (int, float)) or at < 0 or at > shot_duration:
+                    raise SystemExit(f"Blocky 3D shot {index} visual-effect time must be a shot-local second inside the shot.")
+                matching = [item for item in actual_vfx if isinstance(item, dict) and str(item.get("kind")) == kind]
+                if not any(abs(float(item.get("at", 0.0)) - float(at)) <= 0.03 for item in matching):
+                    raise SystemExit(f"Blocky 3D shot {index} screen_proof effect {kind!r} at {at:.2f}s is not scheduled in the shot.")
+                all_vfx.append(effect)
+
+        text_l = text.casefold()
+        animations = {str(event.get("anim")) for event in all_events}
+        cue_names = {cue.partition("@")[0] for cue in all_cues}
+        effect_names = {str(effect.get("kind")) for effect in all_vfx}
+        if re.search(r"\b(?:gold|yellow)\s+(?:door|portal|a)\b", text_l) and "door_a" not in all_props:
+            raise SystemExit(f"Blocky 3D shot {index} mentions gold but does not show door_a.")
+        if re.search(r"\bgreen\s+(?:door|portal|b)\b", text_l) and "door_b" not in all_props:
+            raise SystemExit(f"Blocky 3D shot {index} mentions green but does not show door_b.")
+        if re.search(r"\b(?:a or b|door a.{0,30}door b|which door)\b", text_l) and not {"door_a", "door_b"}.issubset(all_props):
+            raise SystemExit(f"Blocky 3D shot {index} asks viewers to choose A/B without showing both doors in the shot.")
+        if re.search(r"\bspawn\b", text_l) and "spawn_pad" not in all_props:
+            raise SystemExit(f"Blocky 3D shot {index} says spawn but does not show the spawn_pad landmark.")
+        if re.search(r"\b(?:whistle|chirp)\w*\b", text_l):
+            if (not any("whistle" in prop.casefold() for prop in all_props) or "whistle" not in cue_names
+                    or "sound_rings" not in effect_names):
+                raise SystemExit(f"Blocky 3D shot {index} mentions a whistle without its visible prop, timed whistle sound, and sound-ring cue.")
+        if re.search(r"\bslaps?\b", text_l) and ("slap" not in animations or "slap" not in cue_names or "burst" not in effect_names):
+            raise SystemExit(f"Blocky 3D shot {index} says slap but needs the slap pose, impact burst, and timed slap sound.")
+        if re.search(r"\b(?:smacks?|hits?)\s+(?:the|a|an)\s+(?:locked\s+)?(?:door|exit|wall)\b", text_l):
+            if "knock" not in animations or not ({"door_hit", "impact"} & cue_names) or not ({"burst", "ring"} & effect_names):
+                raise SystemExit(f"Blocky 3D shot {index} says a character hits a door but needs the knock pose, impact sound, and impact effect.")
+        if re.search(r"\b(?:runs?|sprints?|chases?|races?)\b", text_l) and not any(
+            str(actor.get("anim", "")) == "run" or any(str(item[1]) == "run" for item in (actor.get("animAt", []) or []) if len(item) > 1)
+            for actor in actors.values()
+        ):
+            raise SystemExit(f"Blocky 3D shot {index} narrates a chase/run without a scheduled run animation.")
+        if re.search(r"\b(?:runs?|sprints?|chases?|races?)\b", text_l) and "dash" not in effect_names:
+            raise SystemExit(f"Blocky 3D shot {index} narrates a chase/run without a timed dash effect.")
 
 
 def _storyboard_review_files(slot: dict[str, Any]) -> tuple[Path, list[Path]]:

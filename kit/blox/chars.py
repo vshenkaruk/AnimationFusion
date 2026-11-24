@@ -15,7 +15,7 @@ from mathutils import Matrix, Vector, Euler, Quaternion
 ANIMS = ['idle', 'talk', 'walk', 'run', 'point', 'shrug', 'shock', 'scared', 'cheer', 'eat',
          'cross_arms', 'think', 'sad', 'angry', 'wave', 'sit', 'facepalm', 'clap', 'surrender',
          'nod', 'headshake', 'flinch', 'slump', 'jump_joy', 'head_tilt', 'what', 'throw', 'catch',
-         'thumbs_up']
+         'thumbs_up', 'slap', 'knock']
 EXPRS = ['neutral', 'smile', 'grin', 'laugh', 'shock', 'scared', 'sad', 'worried', 'angry',
          'smug', 'think', 'blink']
 VISEMES = ['A', 'O', 'E', 'M']
@@ -876,6 +876,31 @@ def _static(anim, t):
         for s in (1, -1):
             P.update(_arm_fk(s, fwd=70 + 20 * reach, out=18, elbow=45 - 21 * reach, spread=36 - 21 * reach))
         P['torso'] = _R(-5, 0, 0)
+    elif anim == 'slap':
+        # Readable anticipation, cross-body swing, and a brief held contact pose.
+        wind = max(0.0, 1.0 - min(1.0, t / 0.18))
+        strike = max(0.0, min(1.0, (t - 0.10) / 0.16))
+        strike = strike * strike * (3 - 2 * strike)
+        recover = max(0.0, min(1.0, (t - 0.34) / 0.20))
+        recover = recover * recover * (3 - 2 * recover)
+        reach = strike * (1.0 - recover)
+        P.update(_arm_fk(-1, fwd=-24 * wind + 116 * reach + 30 * recover, out=18 + 10 * reach,
+                         elbow=92 - 72 * reach + 10 * recover, spread=-34 + 70 * reach))
+        P.update(_arm_fk(1, fwd=12, out=5, elbow=16))
+        P['torso'] = _R(2 + 6 * reach, 0, -14 * wind + 19 * reach - 5 * recover)
+        P['head'] = _R(-2 - 5 * reach, 0, -4 * reach)
+        root = Vector((0, -0.05 * reach, 0))
+    elif anim == 'knock':
+        reach = max(0.0, min(1.0, t / 0.16))
+        reach = reach * reach * (3 - 2 * reach)
+        recoil = max(0.0, min(1.0, (t - 0.20) / 0.22))
+        recoil = recoil * recoil * (3 - 2 * recoil)
+        reach *= 1.0 - recoil
+        P.update(_arm_fk(-1, fwd=38 + 62 * reach, out=8, elbow=72 - 56 * reach))
+        P.update(_arm_fk(1, fwd=8, out=5, elbow=12))
+        P['torso'] = _R(-2 - 8 * reach + 4 * recoil, 0, -4 * reach)
+        P['head'] = _R(-2 - 4 * reach + 4 * recoil, 0, 0)
+        root = Vector((0, -0.06 * reach + 0.02 * recoil, 0))
     elif anim == 'thumbs_up':
         P.update(_arm_fk(-1, fwd=34, out=82, elbow=24, spread=10))
         P.update(_arm_fk(1, fwd=4, out=3, elbow=10))

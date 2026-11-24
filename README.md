@@ -58,7 +58,7 @@ For speed, the Blender preview renders at half resolution with reduced preview-o
 
 | Theme | Rendering path | What it produces |
 |---|---|---|
-| `blocky-3d` | Blender | Original blocky 3D scenes with story-specific sets, varied shots, added character gestures, and keyframed rigid story props |
+| `blocky-3d` | Blender | Original blocky 3D scenes with story-specific sets, timed gestures and low-poly hit, sound, sparkle, and speed effects; Blocky 3D plans get a script-to-screen proof check |
 | `monochrome` | Blender + FFmpeg | Blocky 3D scenes with a black-and-white grade |
 | `what-if` | Remotion | Original vector animation |
 
@@ -72,7 +72,7 @@ The visual treatment is an episode-level choice independent of the theme and A/B
 
 These treatments reuse the three existing render paths. Graphics-led Blender videos use the kit's current physical props, camera moves, captions, and cards; they do not promise an unimplemented 2D HUD. The What If engine uses its existing vector shots and overlays. The blocky style uses original human characters when chosen; it does not include official Roblox characters or assets. Named story props can move as rigid objects, without physics or hand attachment. Animal and robot character rigs are not included. The monochrome grade is applied to the final MP4. Each new What If episode must be registered in `studio/src/episodes/index.ts`; preparation checks the registration.
 
-Visual references and upstream demos are in [FRIEND_GUIDE.md](FRIEND_GUIDE.md). See the [blocky 3D art-direction guide](references/blocky-3d.md) for clean set, light, material, and framing checks. These references are examples, not output renders from this repository.
+Visual references and upstream demos are in [FRIEND_GUIDE.md](FRIEND_GUIDE.md). See the [blocky 3D art-direction guide](references/blocky-3d.md) for the visual reference workflow and clean set, light, material, action, and framing checks. Reference repositories do not train the assistant or renderer: the assistant can inspect images attached or explicitly loaded in a session, and the renderer uses only project code and assets.
 
 ## Manual CLI
 

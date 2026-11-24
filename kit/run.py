@@ -121,28 +121,47 @@ class Project:
         print('   clash frames', n, '(characters overlapping; 0 is the goal; see clash.txt)')
 
     def stills(s):
-        c = s.cuts(); fr = [min(a + max(1, int((b - a) * 0.4)), b - 1) for a, b in zip(c, c[1:])]
+        c = s.cuts(); spec = s.spec(); fr = []
+        for shot, a, b in zip(spec['shots'], c, c[1:]):
+            span = max(1, b - a)
+            local = None
+            if spec.get('theme') == 'blocky-3d':
+                visual_events = [
+                    (float(item.get('at', 0.0)), min(0.12, float(item.get('duration', 0.45)) * 0.35))
+                    for item in (shot.get('vfx', []) or []) if isinstance(item, dict)
+                ]
+                action_events = [
+                    (float(item[0]), 0.10)
+                    for actor in (shot.get('actors', []) or []) for item in (actor.get('animAt', []) or [])
+                    if isinstance(item, (list, tuple)) and len(item) > 1
+                ]
+                candidates = sorted(visual_events + action_events)
+                if candidates:
+                    local = candidates[0][0] + candidates[0][1]
+            sample = min(a + max(1, round((local if local is not None else (b - a) / FPS * 0.4) * FPS)), b - 1)
+            fr.append(sample)
         if os.path.isdir(s.p('stills')): shutil.rmtree(s.p('stills'))
         sh([sys.executable, os.path.join(BLOX, 'render_par.py'), s.d, str(procs()), '--frames', ','.join(map(str, fr)), '--out', 'stills'])
         from PIL import Image, ImageDraw, ImageOps
         W, H, cols = 216, 384, 6; rows = -(-len(fr) // cols); S = Image.new('RGB', (W * cols, H * rows), (12, 14, 20))
-        sp = s.spec()
+        sp = spec
         for i, f in enumerate(fr):
             p = s.p('stills', f'{f:05d}.jpg')
             if not os.path.exists(p): continue
             im = Image.open(p).convert('RGB').resize((W, H))
+            ui_style = 'blocky_game' if sp.get('theme') == 'blocky-3d' else 'clean'
             if i == 0 and sp.get('hook'):
                 sys.path.insert(0, BLOX)
                 try:
                     from post import draw_hook_card
-                    im = draw_hook_card(im, sp['hook'], sp.get('hook_highlights', []))
+                    im = draw_hook_card(im, sp['hook'], sp.get('hook_highlights', []), style=ui_style)
                 finally:
                     sys.path.pop(0)
             if i == len(fr) - 1 and sp.get('cta'):
                 sys.path.insert(0, BLOX)
                 try:
                     from post import draw_hook_card
-                    im = draw_hook_card(im, sp['cta'])
+                    im = draw_hook_card(im, sp['cta'], style=ui_style)
                 finally:
                     sys.path.pop(0)
             if sp.get('theme') == 'monochrome': im = ImageOps.grayscale(im).convert('RGB')

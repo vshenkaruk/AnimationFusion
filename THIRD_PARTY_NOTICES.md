@@ -17,3 +17,9 @@ The offline QA helper in `scripts/quality/short_qa.py` is adapted from [baerozga
 ## Search and style references
 
 The user-provided Brave URL is a search query, not a repository: `https://search.brave.com/search?q=githuib+animation+short+studio`. The search results included [mromidev/claude-animated-shorts](https://github.com/mromidev/claude-animated-shorts), which was reviewed as a related Remotion project; no code or assets from it were copied. The supplied TikTok links were treated as high-level style direction only. No video, audio, character, or other creator asset from those posts is included.
+
+## Roblox visual references and sound
+
+[isaiahagi/roblox-ai](https://github.com/isaiahagi/roblox-ai) was reviewed as a mixed-rights visual reference gallery. Its `sfx/cc0-audio/impact-hit/slap-2-clean-3fe3c7ff.mp3` sample is included as `kit/blox/assets/sfx/cc0/slap-2-clean.mp3`; the upstream repository identifies the `cc0-audio` collection as CC0 in its [README](https://github.com/isaiahagi/roblox-ai#sound-effects). No gallery images or videos are redistributed here.
+
+[KanzeroG/roblox-vfx-animation](https://github.com/KanzeroG/roblox-vfx-animation) was used as a design reference for effect layering, key poses, and timing. No code or `.rbxm` assets were copied. Its MIT-licensed Blender helpers primarily support Roblox model/animation export, and its prefab pack is designed for Roblox Studio with assets that may require separate Creator Store permissions; neither is bundled in this Blender video renderer. See the upstream [license](https://github.com/KanzeroG/roblox-vfx-animation/blob/main/LICENSE) and [asset notes](https://github.com/KanzeroG/roblox-vfx-animation#download-the-vfx-pack).
