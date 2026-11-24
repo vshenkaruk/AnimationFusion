@@ -74,7 +74,17 @@ Then it researches the topic and chosen style again, prepares a complete script 
 
 Research looks for recent high-performing examples in the chosen style, current topic signals, and evidence of youth relevance when available. It notes source links, dates, and what is a fact versus a forecast. It does not promise a topic will go viral or copy another creator's content.
 
-Choose the theme and story only after reviewing the idea, sources, and full script. After approval, inspect the storyboard and ask for changes if needed, then render.
+Choose the theme and story only after reviewing the idea, sources, and full script. After script approval, inspect the real storyboard. For blocky videos, Claude must replace the copied generic starter shot plan with the approved story's title/topic, enough story beats, varied camera framings, and distinct character actions. If anything looks generic or awkward, ask for revised shots and rebuild the storyboard. The CLI blocks full rendering until you explicitly approve the current storyboard.
+
+### Manual storyboard review
+
+After `prepare`, the storyboard is saved at `production/batches/<batch-id>/<topic-id>/short-<n>/project/stills_sheet.jpg` for Blender themes or `studio/out/<slug>/storyboard.jpg` for What If. Ask Claude to show it. To approve the current preview:
+
+```powershell
+python scripts/short_studio.py review-storyboard --batch-id <batch-id> --topic <topic-id> --slot <n> --decision approve
+```
+
+If changes are needed, use `--decision revise`, edit the scene plan, run `prepare` again, and review the new storyboard. The `render` command refuses to run without approval of the current preview.
 
 ## Output files
 
@@ -90,11 +100,11 @@ It contains `final.mp4`, `script.md`, `research.md`, `post-caption.txt`, and `st
 
 | Theme | Renderer | Notes |
 |---|---|---|
-| `blocky-3d` | Blender | Original blocky 3D look and characters |
+| `blocky-3d` | Blender | Story-specific scenes, additional gestures, and named props that move as rigid objects |
 | `monochrome` | Blender + FFmpeg | Same blocky renderer with a final black-and-white grade |
 | `what-if` | Remotion | Original vector animation |
 
-The blocky theme is generic and does not use official Roblox assets. New What If episodes need files under `studio/src/episodes/<slug>/` and a registration in `studio/src/episodes/index.ts`. The prepare command checks this.
+Blocky 3D uses original generic human characters and no official Roblox assets. Story props can move as rigid objects, but they do not attach to hands or use physics; animal and robot actor rigs are not included. New What If episodes need files under `studio/src/episodes/<slug>/` and a registration in `studio/src/episodes/index.ts`. The prepare command checks this.
 
 ## Cost and research tools
 
