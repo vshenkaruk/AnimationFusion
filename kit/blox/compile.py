@@ -236,6 +236,74 @@ def key_obj(o, f, loc=None, scale=None):
 
 # ---------- acting schedulers (acting.md 3) ----------
 SHOTS = SPEC['shots']; CUTF = [int(round(s_['t0'] * FPS)) for s_ in SHOTS] + [N]
+
+
+def animate_story_props():
+    """Keyframe named place props as rigid story objects, with no physics or hand attachment."""
+    starts = {}
+    ends = {}
+    rotations = {}
+    initialized = set()
+    for shot in SHOTS:
+        set_name = shot["set"]
+        origin = ORIG[set_name]
+        shot_dur = float(shot["t1"]) - float(shot["t0"])
+        for move in shot.get("propMoves", []):
+            name = str(move.get("name", "")).strip()
+            if not name:
+                raise ValueError("propMoves entries need a named place prop.")
+            obj_name = f"{set_name}.{name}"
+            obj = bpy.data.objects.get(obj_name)
+            if obj is None:
+                raise ValueError(
+                    f"propMoves references {obj_name!r}, but no named prop exists in this shot's set. "
+                    "Add the prop under places and give it the same name."
+                )
+            start = float(move.get("start", 0.0))
+            end = float(move.get("end", shot_dur))
+            if start < 0 or end <= start or end > shot_dur + 1e-5:
+                raise ValueError(f"Invalid propMoves timing for {obj_name}: expected 0 <= start < end <= shot duration.")
+            if "to" not in move or len(move["to"]) != 3:
+                raise ValueError(f"propMoves for {obj_name} needs a three-number 'to' position.")
+            key = obj_name
+            base_loc = starts.setdefault(key, obj.location.copy())
+            base_rot = rotations.setdefault(key, obj.rotation_euler.copy())
+            from_local = Vector(move.get("from", ends.get(key, base_loc - origin)))
+            to_local = Vector(move["to"])
+            if len(from_local) != 3:
+                raise ValueError(f"propMoves 'from' for {obj_name} must contain three numbers.")
+            spin = move.get("spin", [0, 0, 0])
+            if len(spin) != 3:
+                raise ValueError(f"propMoves 'spin' for {obj_name} must contain three degree values.")
+            rot0 = base_rot.copy()
+            rot1 = rot0.copy()
+            for axis in range(3):
+                rot1[axis] += math.radians(float(spin[axis]))
+            from_world = origin + from_local
+            to_world = origin + to_local
+            start_frame = int(round((float(shot["t0"]) + start) * FPS))
+            end_frame = int(round((float(shot["t0"]) + end) * FPS))
+            if end_frame <= start_frame:
+                raise ValueError(f"propMoves for {obj_name} is shorter than one frame.")
+            if key not in initialized:
+                obj.location = from_world
+                obj.rotation_euler = rot0
+                obj.keyframe_insert("location", frame=0)
+                obj.keyframe_insert("rotation_euler", frame=0)
+                initialized.add(key)
+            obj.location = from_world
+            obj.rotation_euler = rot0
+            obj.keyframe_insert("location", frame=start_frame)
+            obj.keyframe_insert("rotation_euler", frame=start_frame)
+            obj.location = to_world
+            obj.rotation_euler = rot1
+            obj.keyframe_insert("location", frame=end_frame)
+            obj.keyframe_insert("rotation_euler", frame=end_frame)
+            ends[key] = to_local
+            rotations[key] = rot1
+
+
+animate_story_props()
 BLINK = {nm: set() for nm in CAST}
 for si, s_ in enumerate(SHOTS):  # event blinks: every face swap happens behind a 3-frame blink
     for a in s_['actors']:
@@ -258,7 +326,13 @@ def safe_pose(arm, f, anim, phase, amt=1.0):
     try: chars.pose(arm, f, anim, phase, amt)
     except Exception: chars.pose(arm, f, 'idle', phase, amt); MISSING.add(anim)
 MISSING = set()
-ONE_SHOT = {'nod', 'headshake', 'flinch', 'slump', 'jump_joy', 'shock', 'surrender', 'head_tilt', 'what', 'facepalm', 'clap'}
+ONE_SHOT = {'nod', 'headshake', 'flinch', 'slump', 'jump_joy', 'shock', 'surrender', 'head_tilt',
+            'what', 'facepalm', 'clap', 'throw', 'catch', 'thumbs_up'}
+ONE_SHOT_DURATION = {
+    'nod': 0.65, 'headshake': 0.75, 'flinch': 0.45, 'slump': 1.1, 'jump_joy': 0.9,
+    'shock': 0.8, 'surrender': 1.0, 'head_tilt': 0.9, 'what': 0.9, 'facepalm': 1.1,
+    'clap': 0.9, 'throw': 0.65, 'catch': 0.75, 'thumbs_up': 0.9,
+}
 cam_data.dof.use_dof = True
 try: sc.render.motion_blur_position = 'START'  # never sample the previous shot across a cut
 except Exception: pass
@@ -279,6 +353,13 @@ for f in range(N):
         chars.place(arm, f, tuple(p), yaw)
         def eff(x):
             an = at_list(a.get('anim', 'idle'), a.get('animAt'), x)
+            if an in ONE_SHOT:
+                began = 0.0
+                for event_time, event_anim in (a.get('animAt') or []):
+                    if event_time <= x and event_anim == an:
+                        began = event_time
+                if x - began >= ONE_SHOT_DURATION.get(an, 0.8):
+                    an = 'idle'
             if an == 'idle' and a.get('talk') and a['talk'][0] <= x <= a['talk'][1]: an = 'talk'
             return an
         anim = eff(tl); talking = a.get('talk') and a['talk'][0] <= tl <= a['talk'][1]
