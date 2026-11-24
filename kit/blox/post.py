@@ -468,9 +468,51 @@ def mix(d, spec, words):
 
 # ================================================================== picture: word-timed captions
 G = {}
+def draw_hook_card(im, text, highlights=None):
+    """Draw a two-line opening hook in a top safe area; shared by previews and final frames."""
+    words = str(text or "").split()
+    if not words:
+        return im
+    scale = im.width / 1080
+    split = min(range(1, len(words)), key=lambda n: abs(sum(map(len, words[:n])) - sum(map(len, words[n:])))) if len(words) > 1 else 1
+    lines = [words[:split], words[split:]] if len(words) > 1 else [words]
+    size = max(32, int(76 * scale))
+    font = _font(size)
+    while max(font.getlength(" ".join(line)) for line in lines) > 930 * scale and size > 38 * scale:
+        size -= max(1, int(4 * scale))
+        font = _font(size)
+    line_h = int(size * 1.15)
+    card_h = int(line_h * len(lines) + 44 * scale)
+    left, top = int(40 * scale), int(300 * scale)
+    right = im.width - left
+    overlay = Image.new("RGBA", im.size, (0, 0, 0, 0))
+    ImageDraw.Draw(overlay).rounded_rectangle(
+        (left, top, right, top + card_h), radius=int(22 * scale), fill=(12, 12, 20, 218)
+    )
+    im = Image.alpha_composite(im.convert("RGBA"), overlay).convert("RGB")
+    draw = ImageDraw.Draw(im)
+    highlights = {str(word).strip(".,!?;:'\\"()[]").casefold() for word in (highlights or [])}
+    for line_index, line in enumerate(lines):
+        rendered = " ".join(line)
+        y = top + int(22 * scale + line_h * (line_index + 0.5))
+        x = (im.width - font.getlength(rendered)) / 2
+        for word in line:
+            color = (255, 222, 40) if word.strip(".,!?;:'\\"()[]").casefold() in highlights else (255, 255, 255)
+            draw.text(
+                (x, y), word, font=font, anchor="lm", fill=color,
+                stroke_width=max(1, int(3 * scale)), stroke_fill=(14, 10, 20),
+            )
+            x += font.getlength(word + " ")
+    return im
+
+
 def _init(d):
     sp = json.load(open(os.path.join(d, 'timed.json'), encoding='utf8'))
-    G['d'] = d; G['keys'] = set(norm(k) for k in sp.get('keys', [])); words = load_words(d); cap = []
+    G['d'] = d; G['keys'] = set(norm(k) for k in sp.get('keys', []))
+    G['hook'] = str(sp.get('hook', '')).strip()
+    G['hook_duration'] = float(sp.get('hook_duration_seconds', 1.5))
+    G['hook_highlights'] = set(norm(k) for k in sp.get('hook_highlights', []))
+    words = load_words(d); cap = []
     for k, (w, s0, e) in enumerate(words):
         nxt = words[k + 1][1] if k + 1 < len(words) else e + 0.5
         cap.append((re.sub(r"[^\w'$%]", '', w).lower(), s0, min(nxt, s0 + 0.9)))
@@ -497,6 +539,8 @@ def comp_frame(i, n):
         cx, cy = W / 2, 1290 / 1920 * H; dr = ImageDraw.Draw(im)
         dr.text((cx, cy + 6 * s), w, font=f, anchor='mm', fill=(0, 0, 0), stroke_width=int(11 * sc * s), stroke_fill=(0, 0, 0))
         dr.text((cx, cy), w, font=f, anchor='mm', fill=(255, 222, 40) if key else (255, 255, 255), stroke_width=int(10 * sc * s), stroke_fill=(20, 15, 25))
+    if G.get('hook') and t < G['hook_duration']:
+        im = draw_hook_card(im, G['hook'], G.get('hook_highlights', []))
     im.convert('RGB').save(os.path.join(d, 'comp', f'{i:05d}.jpg'), quality=94)
 
 def tag_frame(i, n, W, H):
