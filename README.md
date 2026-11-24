@@ -1,126 +1,116 @@
-# AnimationFusion — Short Studio
+# AnimationFusion
 
-> **GitHub description:** Local-first toolkit for researching, scripting, reviewing, and rendering 60 fps vertical animated shorts in blocky 3D, monochrome, or vector styles.
+**Local-first toolkit for researching, scripting, reviewing, and rendering 60 fps vertical animated shorts.** Choose blocky 3D, monochrome, or the original vector style.
 
-Short Studio is a local-first toolkit for planning and producing vertical animated shorts from one or more topics. It combines the supplied What If vector animation project with the blocky Blender renderer from [BetaVersionHQ/beta-version-blox-studio](https://github.com/BetaVersionHQ/beta-version-blox-studio).
+AnimationFusion combines the supplied What If Remotion project with the Blender-based blocky renderer from [BetaVersionHQ/beta-version-blox-studio](https://github.com/BetaVersionHQ/beta-version-blox-studio). It includes a Claude Code `/short-studio` command to guide a topic from research through a reviewed, ready-to-post video.
 
-## What it does
+## Use it with Claude Code
 
-- Starts a topic batch with up to three video slots per topic.
-- Supports three selectable looks: `blocky-3d` (the primary look), `monochrome`, and `what-if` (the original vector animation style).
-- Guides a Claude Code or OpenCode session through trend research, up to three distinct pitches, script review, storyboard review, and rendering. Each video needs user approval before preparation and again before render after storyboard inspection.
-- Produces a vertical 1080 × 1920 H.264 MP4 at 60 fps for short-form platforms.
-- Keeps research, scripting, voices, music, rendering, and post-processing local wherever the selected engine allows.
+### 1. Get the project and install the tools
 
-The provided `Brave Search` URL is a search query rather than another source repository. It is documented with the other upstream references in [`references/upstream-integration.md`](references/upstream-integration.md). This package also uses a small offline quality-check utility from [baerozgaarmard/animated-shorts-skill](https://github.com/baerozgaarmard/animated-shorts-skill).
-
-## Cost and network behavior
-
-No paid API key is required by the default workflow. The batch manager and renderers do not make generative API calls. Research uses the web search/browser tools already available to the agent or user; there is no Brave Search API client or paid search integration. Speech uses installed OS voices. The Blox renderer synthesizes its music and sound effects locally; the What If renderer uses local narration and can be paired with user-provided audio. Its legacy ElevenLabs voice and SFX scripts are not called by `/short-studio`.
-
-Using `/short-studio` in Claude Code still uses the user's configured Claude plan or account. The project itself does not make an additional model API call. ElevenLabs and other external voice services are optional and are not called by the default batch workflow. Users can also provide a recorded `vo.wav` and word timings.
-
-Rendering uses local CPU/GPU time and disk space. Blender, FFmpeg, Python packages, and Node packages are free to download; check each tool's own license and any applicable commercial terms. Social media publishing is manual: this package exports files and captions, and does not connect to social accounts.
-
-## Requirements
-
-For blocky 3D or monochrome rendering:
-
-- Windows, macOS, or Linux
-- Blender 5.2 available on `PATH`, or set `BLENDER` to the executable path
-- Python 3.11 recommended
-- FFmpeg and `ffprobe` on `PATH`
-- The Python packages in `kit/requirements.txt`
-
-For the What If vector renderer:
-
-- Node.js 18 or newer and npm
-- FFmpeg and `ffprobe`
-- Python 3.11 recommended, plus the Python packages in `kit/requirements.txt` for local voice and quality tools
-
-Claude Code or OpenCode is optional for manual CLI production, but is needed for the guided research and script workflow. Research availability depends on the search/browser tools configured in that agent environment.
-
-## Install
+Clone the GitHub repository or download and extract its ZIP. Install Python 3.11, Blender 5.2, and FFmpeg with `ffprobe`; make Blender and FFmpeg available on `PATH`.
 
 From the project folder, install the Python packages:
 
 ```powershell
-python -m venv .venv
+py -3.11 -m venv .venv
 .\.venv\Scripts\Activate.ps1
-python -m pip install -r kit/requirements.txt
+python -m pip install -r kit\requirements.txt
 ```
 
-On macOS or Linux, activate with `source .venv/bin/activate` instead. Install Blender, FFmpeg, and Node.js separately using their official installers. For Blender, either add `blender` to `PATH` or set the environment variable, for example:
+On macOS or Linux, activate the environment with `source .venv/bin/activate` instead. If Blender is not on `PATH`, set its path in PowerShell before opening Claude Code:
 
 ```powershell
 $env:BLENDER = "C:\Program Files\Blender Foundation\Blender 5.2\blender.exe"
 ```
 
-Install the Remotion dependencies only if using the `what-if` theme:
+The `what-if` vector theme also needs Node.js 18+ and npm. Install its packages once:
 
 ```powershell
-Set-Location studio
+cd studio
 npm ci
-Set-Location ..
+cd ..
 ```
 
-No model, voice, sound, or search API key is needed for the local-first flow.
+### 2. Start Claude Code from the project folder
 
-## Use `/short-studio`
-
-Open Claude Code or OpenCode with the project folder as the working directory. The project includes a `/short-studio` command for both environments. Start with one or more topics, for example:
+Open Claude Code with the AnimationFusion folder as its working directory. Enter one or more topics, separated by semicolons:
 
 ```text
-/short-studio Roblox myths; strange ocean facts; everyday science
+/short-studio economics; motivation; Roblox myths
 ```
 
-The command runs a compact research pass for each topic, prepares up to three distinct ideas per topic, then presents one pitch and full script at a time for approval. The user can revise, skip, or approve each idea and can pick a theme for each video. After approval, the agent prepares the storyboard; inspect it before approving the render. The queue can contain 3 topics × 3 videos, 4 × 3, or any other size, with a hard maximum of three videos for each topic.
+If no topics are supplied, `/short-studio` asks for them. It creates a local batch with up to three short-video slots per topic, researches each topic using available browser or search access, and prepares ideas one at a time.
 
-Research notes should cite a few dated sources and distinguish observed interest from speculation. Trends cannot be predicted with certainty. Keep only useful evidence in the project to reduce prompt size; reuse the topic research for that topic's three shorts.
+For each short, review the idea and full script, then reply **approve**, **revise**, or **skip**. Choose a theme for each video. After approving a script, review its storyboard before asking Claude to render. This keeps you in control of what gets produced.
 
-See [`FRIEND_GUIDE.md`](FRIEND_GUIDE.md) for the full friend-facing setup and an explanation of each queue command.
+### 3. Find the finished videos
 
-## Use the batch CLI
-
-Create a topic list, one topic per line. A suffix after `|` can hold topic-specific notes:
+Rendered MP4s, captions, scripts, research notes, and storyboards are saved locally under:
 
 ```text
-Roblox myths | Keep the stories original and suitable for a general audience
-Ocean facts
+out/short-studio/<batch-id>/<topic-id>/short-01/
 ```
 
-Initialize the queue:
-
-```powershell
-python scripts/short_studio.py init --topics-file topics.txt --limit 3 --batch-id my-first-batch
-```
-
-The CLI stores scripts, sources, approval state, and project templates in `production/batches/`. Use `python scripts/short_studio.py --help` for commands and arguments. The CLI requires the pitch and script to be supplied before approval; writing and trend research are performed by the agent workflow, not by a hidden API service.
+The video is a vertical 1080 × 1920 H.264 MP4 at 60 fps. Upload it to TikTok, Instagram Reels, YouTube Shorts, or Facebook Reels yourself; AnimationFusion does not post to social accounts.
 
 ## Themes
 
-| Theme | Renderer | Notes |
+| Theme | Look | Renderer |
 |---|---|---|
-| `blocky-3d` | Vendored Blender / Blox Studio kit | Primary style; original characters, sets, props, and shot plans. |
-| `monochrome` | Same Blender kit | Black-and-white finishing grade. |
-| `what-if` | Existing Remotion project | Original vector look, adapted for vertical 60 fps compositions. |
+| `blocky-3d` | Customizable blocky 3D animation | Blender; primary theme |
+| `monochrome` | Black-and-white blocky animation | Blender with a monochrome grade |
+| `what-if` | Original vector animation style | Remotion |
 
-The Blox renderer generates draft stills before the full animation. The Remotion engine has its own storyboard flow. Review the storyboard for framing, readability, character continuity, and factual visual details before rendering.
+### Visual examples
 
-## Output and workflow files
+These are external style references and upstream demos, not renders made by AnimationFusion:
 
-- Batch state and per-episode source: `production/batches/<batch-id>/`
-- Rendered social-ready MP4s and copy: `out/short-studio/<batch-id>/<topic>/<short>/`
-- Blender assets and API: `kit/`
-- What If Remotion project: `studio/`
-- Local speech and queue tools: `scripts/`
-- Claude Code command: `.claude/commands/short-studio.md`
-- OpenCode command: `.opencode/commands/short-studio.md`
-- Skill instructions: `SKILL.md`
-- Upstream sources and license notes: `references/upstream-integration.md`, `licenses/upstream/`
+- **Blocky 3D:** [Blox Studio showcase video](https://github.com/BetaVersionHQ/beta-version-blox-studio/blob/main/showcase.mp4) and the [TikTok reference](https://www.tiktok.com/@zaylento.yt/video/7706689478533909792?is_from_webapp=1).
+- **Monochrome:** [black-and-white TikTok reference](https://www.tiktok.com/@silversociety_0/video/7706208134599019808?is_from_webapp=1&sender_device=pc). AnimationFusion applies a monochrome grade to its blocky 3D render.
+- **What If vector:** the project includes the `Rewind` and `CopyPaste` example episodes under [`studio/src/episodes/`](studio/src/episodes/). To preview them, run `npm run studio` from the `studio/` directory and select an example composition.
 
-The MP4 is ready to upload manually to Reels, TikTok, YouTube Shorts, or Facebook Reels. Captions and scripts are exported alongside it.
+## Commands
 
-## Licensing
+The main Claude Code command is `/short-studio <topics>`. The project also has an OpenCode command with the same name.
 
-This folder includes code from more than one project. Keep all notices in [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md) and [`licenses/upstream/`](licenses/upstream/) when redistributing it. The bundled Blox kit and copied QA utility retain their upstream MIT notices. The Remotion project also includes its own fonts, packages, and example media with separate terms; review those terms before commercial redistribution. This README does not grant rights to third-party characters, platform branding, or creator-specific stories.
+For manual queue management, run `python scripts/short_studio.py <command>` from the project folder:
+
+| CLI command | What it does |
+|---|---|
+| `init` | Creates a batch and up to three short slots per topic. |
+| `pitch` | Saves an idea, script, research, caption, and theme for review. |
+| `decide` | Records `approve`, `revise`, or `skip`. |
+| `prepare` | Prepares the voice and storyboard after approval. |
+| `render` | Renders a prepared short and copies its files to the output folder. |
+| `status` | Shows each topic's queue status. |
+
+Example:
+
+```powershell
+python scripts/short_studio.py init --topics-file topics.txt --limit 3 --batch-id my-batch
+python scripts/short_studio.py status --batch-id my-batch
+```
+
+The CLI manages files and approvals; it does not write scripts or perform research by itself. See [`FRIEND_GUIDE.md`](FRIEND_GUIDE.md) for detailed CLI examples.
+
+## Cost and local files
+
+No paid API key is needed by default. Voice and rendering run locally; the Blox renderer also creates music and sound effects locally. `/short-studio` uses the Claude account or plan configured by its user, but the project does not make additional model-provider API calls. Trend research needs browser or search access; if none is available, Claude should say it cannot verify current trends rather than inventing evidence.
+
+Batch files and rendered videos stay on the computer in `production/` and `out/`; those generated folders are ignored by Git. External voice services such as ElevenLabs are optional and are not called unless explicitly selected.
+
+## Project files and licenses
+
+- `SKILL.md` — full research, script approval, and production workflow
+- `.claude/commands/short-studio.md` — Claude Code slash command
+- `.opencode/commands/short-studio.md` — OpenCode slash command
+- `scripts/short_studio.py` — local batch and approval manager
+- `scripts/local_tts.py` — offline system-voice support
+- `kit/` — Blender renderer and blocky 3D templates
+- `studio/` — Remotion vector animation project
+- `references/upstream-integration.md` — source integration notes
+- `THIRD_PARTY_NOTICES.md` and `licenses/upstream/` — license notices
+
+This package includes code from multiple projects. Preserve their notices when redistributing it. See [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md) and [`licenses/upstream/`](licenses/upstream/) for details.
+
