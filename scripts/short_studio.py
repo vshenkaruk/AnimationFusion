@@ -8,6 +8,7 @@ workflow; no generative API is called by this utility.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import re
 import shutil
@@ -245,6 +246,85 @@ def validate_duration(actual: float, target: int, stage: str) -> None:
         )
 
 
+def validate_blocky_story_plan(spec: dict[str, Any], topic: dict[str, Any], slot: dict[str, Any]) -> None:
+    if spec.get("_starter_template") is True:
+        raise SystemExit(
+            "This is still the generic starter scene. Replace the starter shot plan with original scenes "
+            "for the approved story, then prepare again."
+        )
+    if slugify(spec.get("story_title", "")) != slugify(slot.get("title", "")):
+        raise SystemExit("Set story_title in shots.py to the approved pitch title before preparation.")
+    if slugify(spec.get("story_topic", "")) != slugify(topic.get("title", "")):
+        raise SystemExit("Set story_topic in shots.py to this batch topic before preparation.")
+
+    shots = spec.get("shots")
+    if not isinstance(shots, list) or not shots:
+        raise SystemExit("The story-specific shot plan must contain shots.")
+    target = int(slot.get("target_duration_seconds") or spec.get("dur", 0))
+    minimum = max(4, (target + 7) // 8)
+    if len(shots) < minimum:
+        raise SystemExit(
+            f"The {target}s plan has {len(shots)} shots; use at least {minimum} story beats "
+            "(about one visual change every 6–8 seconds)."
+        )
+    cameras = {str(shot.get("cam", "ms")) for shot in shots if isinstance(shot, dict)}
+    if len(cameras) < 2:
+        raise SystemExit("Vary the camera framing across at least two shots before preparation.")
+    actions = set()
+    for shot in shots:
+        if not isinstance(shot, dict):
+            continue
+        for actor in shot.get("actors", []):
+            if not isinstance(actor, dict):
+                continue
+            if actor.get("anim"):
+                actions.add(str(actor["anim"]))
+            for event in actor.get("animAt", []):
+                if isinstance(event, (list, tuple)) and len(event) > 1:
+                    actions.add(str(event[1]))
+    if len(actions) < 2:
+        raise SystemExit("Give the cast at least two distinct actions across the story shot plan.")
+
+
+def _storyboard_review_files(slot: dict[str, Any]) -> tuple[Path, list[Path]]:
+    if slot.get("theme") in ("blocky-3d", "monochrome"):
+        project = ROOT / slot.get("renderer_project", "")
+        return project / "stills_sheet.jpg", [project / "shots.py", project / "timed.json"]
+    if slot.get("theme") == "what-if":
+        slug = slot.get("renderer_slug") or slugify(slot.get("title", ""))
+        episode = ROOT / "studio" / "src" / "episodes" / slug
+        studio_out = ROOT / "studio" / "out" / slug
+        return studio_out / "storyboard.jpg", [
+            episode / "episode.json",
+            episode / "shots.tsx",
+            episode / "index.tsx",
+            episode / "timeline.json",
+            ROOT / "studio" / "src" / "episodes" / "index.ts",
+        ]
+    raise SystemExit(f"Unsupported storyboard theme: {slot.get('theme')}")
+
+
+def _fingerprint_files(paths: list[Path]) -> str:
+    digest = hashlib.sha256()
+    for path in paths:
+        if not path.is_file():
+            raise SystemExit(f"Storyboard review input is missing: {path}")
+        digest.update(str(path.relative_to(ROOT)).encode("utf-8"))
+        digest.update(b"\0")
+        digest.update(path.read_bytes())
+        digest.update(b"\0")
+    return digest.hexdigest()
+
+
+def _current_storyboard_fingerprint(slot: dict[str, Any]) -> tuple[Path, str, str]:
+    board, sources = _storyboard_review_files(slot)
+    if not board.is_file():
+        raise SystemExit(f"Storyboard is missing: {board}. Run prepare again.")
+    source_fingerprint = _fingerprint_files(sources)
+    full_fingerprint = _fingerprint_files([board, *sources])
+    return board, source_fingerprint, full_fingerprint
+
+
 def run(command: list[str], cwd: Path, env: dict[str, str] | None = None) -> None:
     print("$", " ".join(command))
     subprocess.run(command, cwd=cwd, env=env, check=True)
@@ -254,8 +334,8 @@ def command_prepare(args: argparse.Namespace) -> None:
     batch_dir, manifest = load_batch(args.batch_id)
     topic = locate_topic(manifest, args.topic)
     slot = locate_slot(topic, args.slot)
-    if slot["status"] != "approved":
-        raise SystemExit("The user must approve the pitch and script before preparation.")
+    if slot["status"] not in ("approved", "storyboard_ready"):
+        raise SystemExit("Approve the pitch first, or revise the current storyboard before preparing.")
     folder = slot_path(batch_dir, topic, slot)
     py = sys.executable
     if slot["theme"] in ("blocky-3d", "monochrome"):
@@ -263,11 +343,18 @@ def command_prepare(args: argparse.Namespace) -> None:
         shots_path = project / "shots.py"
         if not shots_path.is_file():
             raise SystemExit(f"Write the story-specific shot plan first: {shots_path}")
+        starter_path = TEMPLATE / "shots.py"
+        shot_source = shots_path.read_text(encoding="utf-8")
+        if (starter_path.is_file() and shots_path.read_bytes() == starter_path.read_bytes()) or "STARTER_TEMPLATE = True" in shot_source:
+            raise SystemExit(
+                f"{shots_path} is still marked as the starter scene. Replace it with the approved story's shot plan."
+            )
         env = dict(**__import__("os").environ)
         env["SHORT_STUDIO_VOICE"] = "system"
         run([py, str(ROOT / "kit" / "run.py"), str(project), "shots"], ROOT, env)
         spec_path = project / "timed.json"
         spec = read_json(spec_path)
+        validate_blocky_story_plan(spec, topic, slot)
         target_duration = slot.get("target_duration_seconds")
         if target_duration is not None:
             validate_duration(float(spec.get("dur", 0)), int(target_duration), "Blender scene")
@@ -324,10 +411,61 @@ def command_prepare(args: argparse.Namespace) -> None:
         slot["renderer_slug"] = slug
     else:
         raise SystemExit(f"Unsupported theme: {slot['theme']}")
-    slot["status"] = "prepared"
+    _, source_fingerprint, _ = _current_storyboard_fingerprint(slot)
+    slot["status"] = "storyboard_ready"
     slot["prepared_at"] = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    slot["storyboard_reviewed"] = False
+    slot["prepared_source_fingerprint"] = source_fingerprint
+    slot.pop("storyboard_fingerprint", None)
+    slot.pop("storyboard_reviewed_at", None)
     write_json(batch_dir / "manifest.json", manifest)
-    print(f"Prepared {topic['id']} short {args.slot:02d}; review the storyboard in {folder} before render.")
+    board, _, _ = _current_storyboard_fingerprint(slot)
+    print(f"Storyboard ready for {topic['id']} short {args.slot:02d}: {board}")
+    print("Show the storyboard to the user. Render stays blocked until review-storyboard --decision approve.")
+
+
+def command_review_storyboard(args: argparse.Namespace) -> None:
+    batch_dir, manifest = load_batch(args.batch_id)
+    topic = locate_topic(manifest, args.topic)
+    slot = locate_slot(topic, args.slot)
+    if slot["status"] not in ("storyboard_ready", "prepared"):
+        raise SystemExit(
+            f"Slot status is '{slot['status']}', expected storyboard_ready. Run prepare first."
+        )
+    board, source_fingerprint, full_fingerprint = _current_storyboard_fingerprint(slot)
+    prepared_source = slot.get("prepared_source_fingerprint")
+    if prepared_source and prepared_source != source_fingerprint:
+        if args.decision == "approve":
+            raise SystemExit(
+                "The shot plan or render source changed after the storyboard was built. "
+                "Run review-storyboard --decision revise, then prepare and review the new storyboard."
+            )
+        slot["status"] = "approved"
+        slot["storyboard_reviewed"] = False
+        slot.pop("storyboard_fingerprint", None)
+        slot.pop("prepared_source_fingerprint", None)
+        slot.pop("storyboard_reviewed_at", None)
+        slot["storyboard_decision"] = "revise"
+        slot["storyboard_decision_at"] = datetime.now(timezone.utc).isoformat(timespec="seconds")
+        write_json(batch_dir / "manifest.json", manifest)
+        print("Storyboard marked for revision because its source changed. Run prepare to build a matching preview.")
+        return
+    if args.decision == "approve":
+        slot["status"] = "prepared"
+        slot["storyboard_reviewed"] = True
+        slot["storyboard_fingerprint"] = full_fingerprint
+        slot["prepared_source_fingerprint"] = source_fingerprint
+        slot["storyboard_reviewed_at"] = datetime.now(timezone.utc).isoformat(timespec="seconds")
+        print(f"Storyboard approved for {topic['id']} short {args.slot:02d}: {board}")
+    else:
+        slot["status"] = "approved"
+        slot["storyboard_reviewed"] = False
+        slot.pop("storyboard_fingerprint", None)
+        slot.pop("prepared_source_fingerprint", None)
+        slot.pop("storyboard_reviewed_at", None)
+        print(f"Storyboard needs changes for {topic['id']} short {args.slot:02d}; edit the plan, then prepare again.")
+    slot["storyboard_decision"] = args.decision
+    write_json(batch_dir / "manifest.json", manifest)
 
 
 def command_render(args: argparse.Namespace) -> None:
@@ -335,7 +473,16 @@ def command_render(args: argparse.Namespace) -> None:
     topic = locate_topic(manifest, args.topic)
     slot = locate_slot(topic, args.slot)
     if slot["status"] != "prepared":
-        raise SystemExit("Render is blocked until the approved script has been prepared.")
+        raise SystemExit("Render is blocked until the storyboard has been explicitly approved.")
+    expected_fingerprint = slot.get("storyboard_fingerprint")
+    if not expected_fingerprint:
+        raise SystemExit("Review this storyboard first with review-storyboard --decision approve.")
+    _, _, current_fingerprint = _current_storyboard_fingerprint(slot)
+    if current_fingerprint != expected_fingerprint:
+        raise SystemExit(
+            "The storyboard or its source files changed after approval. Review the current storyboard again "
+            "before rendering."
+        )
     py = sys.executable
     folder = slot_path(batch_dir, topic, slot)
     if slot["theme"] in ("blocky-3d", "monochrome"):
@@ -601,7 +748,14 @@ def build_parser() -> argparse.ArgumentParser:
     prepare.add_argument("--slot", type=int, required=True)
     prepare.set_defaults(func=command_prepare)
 
-    render = sub.add_parser("render", help="render an approved, prepared episode")
+    storyboard_review = sub.add_parser("review-storyboard", help="approve a storyboard or request shot-plan changes")
+    storyboard_review.add_argument("--batch-id", required=True)
+    storyboard_review.add_argument("--topic", required=True)
+    storyboard_review.add_argument("--slot", type=int, required=True)
+    storyboard_review.add_argument("--decision", choices=("approve", "revise"), required=True)
+    storyboard_review.set_defaults(func=command_review_storyboard)
+
+    render = sub.add_parser("render", help="render only after storyboard approval")
     render.add_argument("--batch-id", required=True)
     render.add_argument("--topic", required=True)
     render.add_argument("--slot", type=int, required=True)
