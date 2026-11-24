@@ -1,4 +1,5 @@
-"""A small, original blocky short example. Replace it with your approved story."""
+"""Generic starter only; it must be rewritten for an approved story before rendering."""
+STARTER_TEMPLATE = True
 import json
 import os
 
@@ -43,6 +44,9 @@ shots = [
 ]
 
 spec = {
+    "_starter_template": STARTER_TEMPLATE,
+    "story_title": "REPLACE WITH THE APPROVED PITCH TITLE",
+    "story_topic": "REPLACE WITH THIS BATCH TOPIC",
     "dur": 12.0,
     "theme": "blocky-3d",
     "voice": "system",
