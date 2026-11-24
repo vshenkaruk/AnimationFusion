@@ -624,7 +624,7 @@ def build_parser() -> argparse.ArgumentParser:
     set_format.add_argument("--story-format", choices=STORY_FORMATS, required=True)
     set_format.set_defaults(func=command_set_format)
 
-    set_duration = sub.add_parser("set-duration", help="save a 30-60 second target before approval")
+    set_duration = sub.add_parser("set-duration", help="save a 30-60 second target before research")
     set_duration.add_argument("--batch-id", required=True)
     set_duration.add_argument("--topic", required=True)
     set_duration.add_argument("--slot", type=int, required=True)
