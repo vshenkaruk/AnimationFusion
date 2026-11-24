@@ -13,7 +13,9 @@ import bpy, bmesh, math
 from mathutils import Matrix, Vector, Euler, Quaternion
 
 ANIMS = ['idle', 'talk', 'walk', 'run', 'point', 'shrug', 'shock', 'scared', 'cheer', 'eat',
-         'cross_arms', 'think', 'sad', 'angry', 'wave', 'sit', 'facepalm']
+         'cross_arms', 'think', 'sad', 'angry', 'wave', 'sit', 'facepalm', 'clap', 'surrender',
+         'nod', 'headshake', 'flinch', 'slump', 'jump_joy', 'head_tilt', 'what', 'throw', 'catch',
+         'thumbs_up']
 EXPRS = ['neutral', 'smile', 'grin', 'laugh', 'shock', 'scared', 'sad', 'worried', 'angry',
          'smug', 'think', 'blink']
 VISEMES = ['A', 'O', 'E', 'M']
@@ -827,6 +829,57 @@ def _static(anim, t):
         P.update(_arm_fk(-1, fwd=120, out=20, elbow=50, spread=-70))
         P.update(_arm_fk(1, fwd=4, out=3, elbow=10))
         P['torso'] = _R(8, 0, -6); P['head'] = _R(14, 8, -10)
+    elif anim == 'clap':
+        pulse = 0.5 + 0.5 * math.sin(2 * math.pi * 2.0 * t)
+        P.update(_arm_fk(-1, fwd=78, out=8, elbow=88, spread=-58 - 8 * pulse))
+        P.update(_arm_fk(1, fwd=78, out=-8, elbow=88, spread=-58 - 8 * pulse))
+        P['torso'] = _R(-2 * pulse, 0, 0)
+    elif anim == 'surrender':
+        for s in (1, -1):
+            P.update(_arm_fk(s, fwd=95, out=145, elbow=10, spread=18))
+        P['head'] = _R(-3, 0, 0)
+    elif anim == 'nod':
+        P['head'] = _R(18 * math.sin(2 * math.pi * 1.35 * t) * math.exp(-2.5 * t), 0, 0)
+    elif anim == 'headshake':
+        P['head'] = _R(0, 24 * math.sin(2 * math.pi * 1.4 * t) * math.exp(-2.1 * t), 0)
+    elif anim == 'flinch':
+        pulse = math.exp(-4.0 * t)
+        for s in (1, -1):
+            P.update(_arm_fk(s, fwd=65, out=10, elbow=92, spread=18))
+        P['torso'] = _R(-18 * pulse, 0, 8 * pulse)
+        P['head'] = _R(-8 * pulse, 0, 0)
+    elif anim == 'slump':
+        P.update(_arm_fk(-1, fwd=4, out=2, elbow=12))
+        P.update(_arm_fk(1, fwd=4, out=2, elbow=12))
+        P['torso'] = _R(19, 0, 0); P['head'] = _R(25, 0, -3)
+        root = Vector((0, 0, -0.05))
+    elif anim == 'jump_joy':
+        pulse = max(0.0, math.sin(math.pi * min(1.0, t / 0.68)))
+        for s in (1, -1):
+            P.update(_arm_fk(s, fwd=18, out=145, elbow=18, spread=14))
+        P['torso'] = _R(-7, 0, 0); P['head'] = _R(-12, 0, 0)
+        root = Vector((0, 0, 0.48 * pulse))
+    elif anim == 'head_tilt':
+        P['head'] = _R(-4, 0, 18)
+    elif anim == 'what':
+        for s in (1, -1):
+            P.update(_arm_fk(s, fwd=10, out=28, elbow=72, spread=34))
+        P['head'] = _R(-6, -5, 8); P['torso'] = _R(-3, 0, 0)
+    elif anim == 'throw':
+        release = min(1.0, max(0.0, t / 0.3))
+        P.update(_arm_fk(-1, fwd=18 + 100 * release, out=18 * (1 - release), elbow=88 - 78 * release))
+        P.update(_arm_fk(1, fwd=12, out=4, elbow=12))
+        P['torso'] = _R(-8 + 12 * release, 0, -13 * (1 - release))
+        P['head'] = _R(-4, 0, -6)
+    elif anim == 'catch':
+        reach = min(1.0, max(0.0, t / 0.28))
+        for s in (1, -1):
+            P.update(_arm_fk(s, fwd=70 + 20 * reach, out=18, elbow=45 - 21 * reach, spread=36 - 21 * reach))
+        P['torso'] = _R(-5, 0, 0)
+    elif anim == 'thumbs_up':
+        P.update(_arm_fk(-1, fwd=34, out=82, elbow=24, spread=10))
+        P.update(_arm_fk(1, fwd=4, out=3, elbow=10))
+        P['head'] = _R(-2, 0, -5)
     else:
         raise ValueError(anim)
     return P, root
