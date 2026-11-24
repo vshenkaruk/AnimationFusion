@@ -131,16 +131,19 @@ const hookLines = (hook: string): string[][] => {
 };
 
 const HookCard: React.FC<{ hook: string; highlights: string[] }> = ({ hook, highlights }) => {
+  const lines = hookLines(hook);
+  const widestLine = Math.max(1, ...lines.map((line) => line.join(' ').length));
+  const fontSize = Math.min(64, Math.max(36, Math.floor(900 / (widestLine * 0.58))));
   const marked = new Set(highlights.map((word) => word.replace(/^[^\\w]+|[^\\w]+$/g, '').toLowerCase()));
   return (
     <AbsoluteFill style={{ pointerEvents: 'none', alignItems: 'center', padding: '0 52px', zIndex: 20 }}>
       <div style={{
         position: 'absolute', top: 300, left: 52, right: 52, boxSizing: 'border-box',
         padding: '24px 28px', borderRadius: 24, background: 'rgba(12, 12, 20, 0.86)',
-        color: '#fff', fontSize: 64, fontWeight: 900, lineHeight: 1.12, textAlign: 'center',
+        color: '#fff', fontSize, fontWeight: 900, lineHeight: 1.12, textAlign: 'center',
         textShadow: '0 3px 4px #000', letterSpacing: '-1px',
       }}>
-        {hookLines(hook).map((line, lineIndex) => (
+        {lines.map((line, lineIndex) => (
           <div key={lineIndex}>
             {line.map((word, wordIndex) => (
               <React.Fragment key={wordIndex}>
