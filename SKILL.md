@@ -65,36 +65,59 @@ stories original. Do not copy a creator's exact story or identifiable character.
 For the next empty or revised slot:
 
 1. Choose a distinct hook and story angle. Draft the complete narration (usually
-   30-60 seconds, unless the user asks for another duration) and choose a
-   suggested theme. The user can override the theme for any short.
-2. Show the trend signal, its source, the pitch, the complete script, the
-   selected theme, approximate duration, and sources in chat. Ask for one clear
-   decision: approve, revise, or skip. Do not generate a full render before
-   approval.
-3. Save the pitch, script, research, caption, and theme with `short_studio.py
-   pitch`. Pass paths to text files when content is multiline. For a What If
-   episode, set `--renderer-slug` to its lower-case folder name.
-4. Record the decision with `short_studio.py decide`. If approved, create the
-   selected engine source files from the script, then prepare the storyboard:
-
+   30-60 seconds, unless the user asks for another duration) and suggest one
+   theme.
+2. Show the trend signal, its source, the pitch, complete script, approximate
+   duration, sources, and all three theme choices:
+   - `blocky-3d` — Blender blocky 3D
+   - `monochrome` — black-and-white blocky 3D
+   - `what-if` — vector animation rendered with Remotion
+   Explicitly ask which theme the user wants for this video and whether to
+   approve, revise, or skip the script. A suggested theme is only a suggestion:
+   do not treat a bare approval as theme selection. If the user approves without
+   choosing a theme, ask them to choose before proceeding.
+3. Save the pitch, script, research, caption, and suggested theme with
+   `short_studio.py pitch`. Pass paths to text files when content is multiline.
+   For a What If episode, set `--renderer-slug` to its lower-case folder name.
+4. After the user explicitly chooses a theme, save that choice before recording
+   an approval:
+   ```powershell
+   python scripts/short_studio.py set-theme --batch-id <batch-id> --topic <topic-id> --slot <1-3> --theme <blocky-3d|monochrome|what-if>
+   ```
+   Then record their decision with `short_studio.py decide`. Approval is
+   blocked until a theme choice has been saved. If approved, create the selected
+   engine source files from the script, then prepare the storyboard:
    ```powershell
    python scripts/short_studio.py decide --batch-id <batch-id> --topic <topic-id> --slot <1-3> --decision approve
    python scripts/short_studio.py prepare --batch-id <batch-id> --topic <topic-id> --slot <1-3>
    ```
-
 5. Inspect every storyboard still. Correct framing, characters, text, motion,
    or scene errors before rendering. Keep scenes and props story-specific.
 6. Render only after preparation succeeds:
-
    ```powershell
    python scripts/short_studio.py render --batch-id <batch-id> --topic <topic-id> --slot <1-3>
    ```
-
 7. Deliver the MP4, storyboard, script, research sources, and post caption in
    `out/short-studio/<batch-id>/<topic-id>/short-<n>/`. Do not upload to social
    accounts; the user asked for a ready-to-post file, not account access.
 8. Continue to the next pitch until the user skips it or the topic reaches
    three rendered shorts, then continue to the next topic.
+
+## Continue and rename a saved batch
+
+- `/short-studio-list` runs `python scripts/short_studio.py list` to show saved
+  batch IDs and their topic/slot states.
+- `/short-studio-rename <batch-id> <new-name>` runs the CLI rename operation.
+  It moves the existing batch folder and any rendered output folder, then
+  updates stored paths in the manifest. It does not initialize a new batch.
+- `/short-studio-continue <batch-id>` resumes the existing manifest and slots.
+  Run `status`, inspect saved files, and continue at the first unfinished slot.
+  Never run `init` or copy the episode template while continuing. Reuse saved
+  research, scripts, storyboards, and renders. For `awaiting_approval`, show
+  the saved pitch/script and wait for the user's decision and explicit theme
+  choice; for `approved`, finish missing source/preparation work; for
+  `prepared`, show the saved storyboard and wait for render approval; skip
+  `rendered` and `skipped` slots. If the user renamed a batch, use its new ID.
 
 ## Theme-specific production
 
