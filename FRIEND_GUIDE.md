@@ -59,7 +59,7 @@ Start Claude Code **from the project folder**, then type:
 
 Separate topics with semicolons or put each on a new line. The command researches each topic using available browser/search access, then presents one idea and complete script at a time. It shows the sources and suggested theme so you can review them.
 
-For each video, reply **approve**, **revise**, or **skip**. After you approve a script, the agent prepares a storyboard. Look it over and ask for corrections if needed; then tell the agent to render it. Repeat for the next pitch. The maximum is three videos per topic.
+For each video, Claude asks you to choose a theme—**blocky 3D**, **monochrome**, or **What If vector**—and to **approve**, **revise**, or **skip** the script. Choose a theme explicitly before approval. After approval, Claude prepares a storyboard in that theme. Look it over and ask for corrections if needed; then tell Claude to render it. Repeat for the next pitch. The maximum is three videos per topic.
 
 The output is saved under:
 
@@ -106,7 +106,13 @@ python scripts/short_studio.py pitch --batch-id first-batch --topic roblox-myths
 python scripts/short_studio.py decide --batch-id first-batch --topic roblox-myths --slot 1 --decision approve
 ```
 
-Replace `approve` with `revise` or `skip` as appropriate. Only an approved slot can be prepared.
+Replace `approve` with `revise` or `skip` as appropriate. Only an approved slot can be prepared. Before approval, save the user's explicit theme choice:
+
+```powershell
+python scripts/short_studio.py set-theme --batch-id first-batch --topic roblox-myths --slot 1 --theme what-if
+```
+
+Choose `blocky-3d`, `monochrome`, or `what-if`. The CLI blocks approval until a theme has been explicitly saved.
 
 ### `prepare` — create the voice and storyboard
 
@@ -131,6 +137,28 @@ python scripts/short_studio.py status --batch-id first-batch
 ```
 
 Possible states include `empty`, `awaiting_approval`, `approved`, `prepared`, `rendered`, and `skipped`.
+
+### List, rename, and continue a batch
+
+List saved batches and their IDs:
+
+```powershell
+python scripts/short_studio.py list
+```
+
+Rename a batch in place. Its queue, saved files, manifest paths, and rendered outputs move with it:
+
+```powershell
+python scripts/short_studio.py rename --batch-id first-batch --new-name december-shorts
+```
+
+In Claude Code or OpenCode, continue the existing queue with its current ID:
+
+```text
+/short-studio-continue december-shorts
+```
+
+This resumes the existing slots; it does not create a new batch or copy the episode templates again. Use `/short-studio-rename <old-id> <new-name>` to rename from chat, or `/short-studio-list` to find the ID.
 
 ## OpenCode
 
