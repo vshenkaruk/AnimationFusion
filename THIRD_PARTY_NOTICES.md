@@ -1,0 +1,19 @@
+# Third-party notices
+
+This distribution combines multiple upstream projects. Retain the license files in `licenses/upstream/` when copying or redistributing the corresponding code.
+
+## What If animation starter
+
+The original project files in `studio/`, `scripts/`, `references/`, and the root project were supplied from [kelano86/what-if-animation](https://github.com/kelano86/what-if-animation). Its MIT license and attribution are in `LICENSE` (FreshStack, 2026). The Remotion packages and included media have their own terms; see the upstream source documentation and package licenses before commercial redistribution.
+
+## Beta Version Blox Studio
+
+The Blender engine in `kit/` is adapted from [BetaVersionHQ/beta-version-blox-studio](https://github.com/BetaVersionHQ/beta-version-blox-studio), under MIT. The upstream license and notice are in `licenses/upstream/blox-studio-MIT.txt` and `licenses/upstream/blox-studio-NOTICE.md`. This distribution changes the output to 60 fps and vertical 1080 × 1920, uses local system speech by default, and removes the upstream brand graphics and branded end card. Beta Version and Roblox names and marks remain their respective owners' trademarks; this project is not affiliated with or endorsed by them.
+
+## Animated Shorts Skill
+
+The offline QA helper in `scripts/quality/short_qa.py` is adapted from [baerozgaarmard/animated-shorts-skill](https://github.com/baerozgaarmard/animated-shorts-skill), under MIT. Its license is preserved in `licenses/upstream/animated-shorts-skill-MIT.txt`.
+
+## Search and style references
+
+The user-provided Brave URL is a search query, not a repository: `https://search.brave.com/search?q=githuib+animation+short+studio`. The search results included [mromidev/claude-animated-shorts](https://github.com/mromidev/claude-animated-shorts), which was reviewed as a related Remotion project; no code or assets from it were copied. The supplied TikTok links were treated as high-level style direction only. No video, audio, character, or other creator asset from those posts is included.

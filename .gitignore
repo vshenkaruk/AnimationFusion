@@ -1,0 +1,15 @@
+node_modules/
+out/
+production/
+__pycache__/
+*.pyc
+.env
+.env.*
+what-if-studio/
+.venv/
+venv/
+kit/config.json
+*.blend1
+*.blend2
+*.wav
+*.mp4
