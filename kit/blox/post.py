@@ -491,13 +491,13 @@ def draw_hook_card(im, text, highlights=None):
     )
     im = Image.alpha_composite(im.convert("RGBA"), overlay).convert("RGB")
     draw = ImageDraw.Draw(im)
-    highlights = {str(word).strip(".,!?;:'\\"()[]").casefold() for word in (highlights or [])}
+    highlights = {norm(word) for word in (highlights or [])}
     for line_index, line in enumerate(lines):
         rendered = " ".join(line)
         y = top + int(22 * scale + line_h * (line_index + 0.5))
         x = (im.width - font.getlength(rendered)) / 2
         for word in line:
-            color = (255, 222, 40) if word.strip(".,!?;:'\\"()[]").casefold() in highlights else (255, 255, 255)
+            color = (255, 222, 40) if norm(word) in highlights else (255, 255, 255)
             draw.text(
                 (x, y), word, font=font, anchor="lm", fill=color,
                 stroke_width=max(1, int(3 * scale)), stroke_fill=(14, 10, 20),
