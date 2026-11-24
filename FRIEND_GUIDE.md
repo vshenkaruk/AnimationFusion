@@ -1,47 +1,22 @@
 # Quick start for friends
 
-Short Studio researches topics, drafts up to three short video ideas per topic, and renders approved scripts as vertical 60 fps videos. Choose between blocky 3D, monochrome, and the original vector style. It exports files for social platforms; it does not post to social accounts.
+AnimationFusion researches and scripts vertical animated shorts, then renders approved videos in blocky 3D, monochrome, or original What If vector style. Each video is 30–60 seconds, gets its own fresh research, and ends with a spoken call to action. It exports files; it does not post to social accounts.
 
-## Start with Claude Code
+## Install tools
 
-### 1. Install the tools
+For `blocky-3d` and `monochrome`, install Python 3.11, Blender 5.2, FFmpeg, and `ffprobe`. Make Blender and FFmpeg available on PATH.
 
-For the main `blocky-3d` and `monochrome` themes, install:
+For `what-if`, also install Node.js 18+ and npm. No ElevenLabs key or paid search API is needed for the default workflow.
 
-- Python 3.11
-- Blender 5.2
-- FFmpeg, with `ffprobe`, and make both commands available on PATH
-
-For the `what-if` vector theme, also install Node.js 18+ and npm. You do not need an ElevenLabs key or any search API key for the default workflow.
-
-### 2. Download the project
-
-Clone the repository, replacing the example URL with the link the owner shared:
-
-```powershell
-git clone https://github.com/OWNER/REPOSITORY.git
-cd REPOSITORY
-```
-
-Or use GitHub's **Code → Download ZIP**, then extract it. Open the project folder in PowerShell.
-
-### 3. Install Python packages
+Install Python packages from the project folder:
 
 ```powershell
 py -3.11 -m venv .venv
-.\.venv\Scripts\Activate.ps1
-python -m pip install -r kit\requirements.txt
+.\\.venv\\Scripts\\Activate.ps1
+python -m pip install -r kit\\requirements.txt
 ```
 
-If PowerShell blocks activation, use `python -m pip install -r kit\requirements.txt` from the project folder; the system Python can install the same packages.
-
-If Blender is not on PATH, set its location in the same PowerShell window before starting Claude Code:
-
-```powershell
-$env:BLENDER = "C:\Program Files\Blender Foundation\Blender 5.2\blender.exe"
-```
-
-For the `what-if` theme, install the Node dependencies once:
+On macOS or Linux, activate with `source .venv/bin/activate`. Install What If's Node packages once:
 
 ```powershell
 cd studio
@@ -49,93 +24,78 @@ npm ci
 cd ..
 ```
 
-### 4. Start Claude Code and make a batch
+## Get the current repo commands
 
-Start Claude Code **from the project folder**, then type:
+If you already cloned AnimationFusion, go into its folder and run:
+
+```powershell
+git pull
+```
+
+If you use a ZIP, download and extract the latest copy from GitHub. Start Claude Code or OpenCode with the updated AnimationFusion folder as its working directory. Commands in `.claude/commands/` and `.opencode/commands/` are project-local; there is nothing to install into a separate chat.
+
+## Make videos
+
+Start a batch:
 
 ```text
-/short-studio Roblox myths; strange ocean facts; everyday science
+/short-studio Roblox myths; strange ocean facts
 ```
 
-Separate topics with semicolons or put each on a new line. The command researches each topic using available browser/search access, then presents one idea and complete script at a time. It shows the sources and suggested theme so you can review them.
-
-For each video, reply **approve**, **revise**, or **skip**. After you approve a script, the agent prepares a storyboard. Look it over and ask for corrections if needed; then tell the agent to render it. Repeat for the next pitch. The maximum is three videos per topic.
-
-The output is saved under:
+Make one video only:
 
 ```text
-out/short-studio/<batch-id>/<topic-id>/short-01/final.mp4
+/short-studio-one strange ocean facts
 ```
 
-The script, research notes, caption, and storyboard are saved next to the MP4. Upload the final MP4 manually to the social platform you choose.
-
-## What the CLI commands do
-
-The Python CLI stores batch state and enforces the approval order. It does not generate research or scripts by itself; Claude Code or OpenCode does that when you use `/short-studio`. You can also use the CLI manually if you provide the research, pitch, script, and renderer source files yourself.
-
-### `init` — create a queue
-
-Create `topics.txt`, one topic per line. Optional notes can follow a `|`:
+Add one fresh video to a topic in a saved batch, or one to every topic:
 
 ```text
-Roblox myths | Keep stories original
-Ocean facts
+/short-studio-add december-shorts roblox-myths
+/short-studio-add december-shorts all
 ```
 
-Then run:
+The optional count is the number of new slots per selected topic. Check a batch ID and topic IDs with `/short-studio-list`. To rename and resume a saved batch:
 
-```powershell
-python scripts/short_studio.py init --topics-file topics.txt --limit 3 --batch-id first-batch
+```text
+/short-studio-rename december-shorts winter-shorts
+/short-studio-continue winter-shorts
 ```
 
-`--limit` accepts 1, 2, or 3. The default is 3, and the tool will not accept a higher limit.
+Continuing or adding videos reuses the existing batch folder. It does not rebuild the old slots. Every new video gets fresh topic-specific research.
 
-### `pitch` — save a pitch and full script for review
+For each slot, Claude/OpenCode asks you to choose:
 
-Save the pitch, script, research, and caption as text files, then run:
+- A render theme: `blocky-3d`, `monochrome`, or `what-if`.
+- A story format: `standalone` or an optional `choice-story` with an A/B decision.
+- An exact target length from 30 to 60 seconds.
 
-```powershell
-python scripts/short_studio.py pitch --batch-id first-batch --topic roblox-myths --slot 1 --theme blocky-3d --title "The Myth" --hook "What if this were true?" --idea .\idea.md --script .\script.md --research .\research.md --caption .\caption.txt
+Then it researches the topic and chosen style again, prepares a complete script with a spoken CTA, and waits for review. A choice-story asks viewers to comment A or B and gives the first short its own payoff. The CTA says “Part 2” only if the creator has decided to make one; generating a Part 2 is manual in this version.
+
+Research looks for recent high-performing examples in the chosen style, current topic signals, and evidence of youth relevance when available. It notes source links, dates, and what is a fact versus a forecast. It does not promise a topic will go viral or copy another creator's content.
+
+Choose the theme and story only after reviewing the idea, sources, and full script. After approval, inspect the storyboard and ask for changes if needed, then render.
+
+## Output files
+
+Each finished folder is under:
+
+```text
+out/short-studio/<batch-id>/<topic-id>/short-01/
 ```
 
-`--theme` must be `blocky-3d`, `monochrome`, or `what-if`. This saves the files and sets the slot to `awaiting_approval`.
+It contains `final.mp4`, `script.md`, `research.md`, `post-caption.txt`, and `storyboard.jpg`. The video is a vertical 1080×1920 H.264 MP4 at 60 fps. Upload it manually to the social platform you choose.
 
-### `decide` — approve, request a revision, or skip
+## Theme notes
 
-```powershell
-python scripts/short_studio.py decide --batch-id first-batch --topic roblox-myths --slot 1 --decision approve
-```
+| Theme | Renderer | Notes |
+|---|---|---|
+| `blocky-3d` | Blender | Original blocky 3D look and characters |
+| `monochrome` | Blender + FFmpeg | Same blocky renderer with a final black-and-white grade |
+| `what-if` | Remotion | Original vector animation |
 
-Replace `approve` with `revise` or `skip` as appropriate. Only an approved slot can be prepared.
+The blocky theme is generic and does not use official Roblox assets. New What If episodes need files under `studio/src/episodes/<slug>/` and a registration in `studio/src/episodes/index.ts`. The prepare command checks this.
 
-### `prepare` — create the voice and storyboard
+## Cost and research tools
 
-```powershell
-python scripts/short_studio.py prepare --batch-id first-batch --topic roblox-myths --slot 1
-```
-
-The approved script needs renderer source files before preparation: a `shots.py` plan inside the Blox project for the 3D themes, or an episode under `studio/src/episodes/` for the vector theme. The AI command creates these as part of its workflow. Inspect the storyboard before rendering.
-
-### `render` — export the approved, prepared video
-
-```powershell
-python scripts/short_studio.py render --batch-id first-batch --topic roblox-myths --slot 1
-```
-
-The command stops if the script was not approved or the slot was not prepared. It copies the MP4, script, research, caption, and storyboard into `out/short-studio/`.
-
-### `status` — check the queue
-
-```powershell
-python scripts/short_studio.py status --batch-id first-batch
-```
-
-Possible states include `empty`, `awaiting_approval`, `approved`, `prepared`, `rendered`, and `skipped`.
-
-## OpenCode
-
-The project also includes an OpenCode `/short-studio` command. Start OpenCode from the project folder and enter the same topic prompt. The setup and approval flow is the same.
-
-## Cost and research
-
-The project code makes no paid API calls by default. Local voices and rendering use the computer; the Blox theme also synthesizes music and sound effects locally. Claude Code uses the plan/account configured by its user. Trend research depends on browser/search access; if that is unavailable, ask the owner to provide sources rather than treating guesses as current trends. ElevenLabs and other external services are optional and are not called unless explicitly selected.
+Voice and rendering are local. Trend research uses the browser/search access available in Claude Code or OpenCode; if access is unavailable, the assistant should say it cannot verify current signals. Public starting points include Google Trends, TikTok Creative Center, and YouTube Culture & Trends. The repository does not read a creator's post analytics, generate a Part 2 automatically from views, or post to a social account.

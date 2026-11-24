@@ -25,6 +25,11 @@ export type Timeline = {
   title: string;
   fps: number;
   total: number;
+  hook?: string;
+  hookHighlights?: string[];
+  hookDurationSeconds?: number;
+  cta?: string;
+  ctaDurationSeconds?: number;
   segments: Seg[];
   shots: ShotInfo[];
   fx: Fx[];
@@ -113,6 +118,46 @@ export const ShotFrame: React.FC<{ children: React.ReactNode; output?: EpisodeOu
   </svg>
 );
 
+const hookLines = (hook: string): string[][] => {
+  const words = hook.trim().split(/\s+/).filter(Boolean);
+  if (words.length < 2) return [words];
+  let split = 1;
+  let best = Number.POSITIVE_INFINITY;
+  for (let i = 1; i < words.length; i += 1) {
+    const delta = Math.abs(words.slice(0, i).join(' ').length - words.slice(i).join(' ').length);
+    if (delta < best) { best = delta; split = i; }
+  }
+  return [words.slice(0, split), words.slice(split)];
+};
+
+const HookCard: React.FC<{ hook: string; highlights: string[] }> = ({ hook, highlights }) => {
+  const lines = hookLines(hook);
+  const widestLine = Math.max(1, ...lines.map((line) => line.join(' ').length));
+  const fontSize = Math.min(64, Math.max(36, Math.floor(900 / (widestLine * 0.58))));
+  const marked = new Set(highlights.map((word) => word.replace(/^[^\w]+|[^\w]+$/g, '').toLowerCase()));
+  return (
+    <AbsoluteFill style={{ pointerEvents: 'none', alignItems: 'center', padding: '0 52px', zIndex: 20 }}>
+      <div style={{
+        position: 'absolute', top: 300, left: 52, right: 52, boxSizing: 'border-box',
+        padding: '24px 28px', borderRadius: 24, background: 'rgba(12, 12, 20, 0.86)',
+        color: '#fff', fontSize, fontWeight: 900, lineHeight: 1.12, textAlign: 'center',
+        textShadow: '0 3px 4px #000', letterSpacing: '-1px',
+      }}>
+        {lines.map((line, lineIndex) => (
+          <div key={lineIndex}>
+            {line.map((word, wordIndex) => (
+              <React.Fragment key={wordIndex}>
+                {wordIndex ? ' ' : ''}
+                <span style={{ color: marked.has(word.replace(/^[^\w]+|[^\w]+$/g, '').toLowerCase()) ? '#FFDE28' : '#fff' }}>{word}</span>
+              </React.Fragment>
+            ))}
+          </div>
+        ))}
+      </div>
+    </AbsoluteFill>
+  );
+};
+
 export type EpisodeProps = { timeline: Timeline; shots: ShotMap; looks?: Record<string, LookDef>; grain?: boolean; vignette?: boolean; bg?: string; output?: EpisodeOutput };
 
 export const Episode: React.FC<EpisodeProps> = ({ timeline: tl, shots, looks = {}, grain = true, vignette = true, bg = '#0E0C1E', output = DEFAULT_OUTPUT }) => {
@@ -138,6 +183,12 @@ export const Episode: React.FC<EpisodeProps> = ({ timeline: tl, shots, looks = {
         </svg>
       ) : null}
       {flash ? <AbsoluteFill style={{ backgroundColor: flash.color, opacity: flash.o }} /> : null}
+      {tl.hook && f / tl.fps < (tl.hookDurationSeconds ?? 1.5) ? (
+        <HookCard hook={tl.hook} highlights={tl.hookHighlights ?? []} />
+      ) : null}
+      {tl.cta && (tl.total - f) / tl.fps <= (tl.ctaDurationSeconds ?? 3.5) ? (
+        <HookCard hook={tl.cta} highlights={[]} />
+      ) : null}
       {A.voice ? <Audio src={staticFile(A.voice)} volume={A.voiceVol ?? 1} /> : null}
       {A.sfx ? <Audio src={staticFile(A.sfx)} volume={A.sfxVol ?? 1} /> : null}
       {A.music ? <Audio src={staticFile(A.music)} volume={A.musicVol ?? 1} /> : null}
@@ -154,6 +205,8 @@ export const Board: React.FC<{ timeline: Timeline; shots: ShotMap; grain?: boole
     <AbsoluteFill style={{ backgroundColor: bg }}>
       <ShotFrame output={output}>{Shot ? <Shot t={info.key} len={info.len} f={info.first + info.key} /> : null}</ShotFrame>
       <Grade f={info.key} grain={grain} vignette={vignette} output={output} />
+      {f === 0 && tl.hook ? <HookCard hook={tl.hook} highlights={tl.hookHighlights ?? []} /> : null}
+      {f === tl.shots.length - 1 && tl.cta ? <HookCard hook={tl.cta} highlights={[]} /> : null}
     </AbsoluteFill>
   );
 };
