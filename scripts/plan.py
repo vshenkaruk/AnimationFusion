@@ -105,6 +105,9 @@ if ep.get('hook'):
     tl['hook'] = str(ep['hook'])
     tl['hookHighlights'] = list(ep.get('hook_highlights', []))
     tl['hookDurationSeconds'] = float(ep.get('hook_duration_seconds', 1.5))
+if ep.get('cta'):
+    tl['cta'] = str(ep['cta'])
+    tl['ctaDurationSeconds'] = float(ep.get('cta_duration_seconds', 3.5))
 save_json(ep_dir(slug) / 'timeline.json', tl)
 
 # ---------------------------------------------------------------- the pace report and the shot list
