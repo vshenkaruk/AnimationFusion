@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Local batch manager for Short Studio.
 
-This manages topic queues, the maximum of three episode slots, review state,
+This manages topic queues, initial episode slots, review state,
 and the approved local render. Research and writing are performed by the agent
 workflow; no generative API is called by this utility.
 """
@@ -154,7 +154,7 @@ def command_init(args: argparse.Namespace) -> None:
             )
     write_json(target / "manifest.json", manifest)
     print(target / "manifest.json")
-    print(f"Created {len(topics)} topic(s), up to {args.limit} episode slot(s) each (hard maximum {MAX_PER_TOPIC}).")
+    print(f"Created {len(topics)} topic(s), up to {args.limit} episode slot(s) each (initial maximum {INITIAL_MAX_PER_TOPIC}).")
 
 
 def command_pitch(args: argparse.Namespace) -> None:
@@ -165,6 +165,9 @@ def command_pitch(args: argparse.Namespace) -> None:
         raise SystemExit(f"Slot status is '{slot['status']}'. Create pitches only in empty or revise slots.")
     if args.theme not in STYLES:
         raise SystemExit(f"Theme must be one of: {', '.join(STYLES)}")
+    if slot.get("theme_confirmed") and slot.get("theme") != args.theme:
+        raise SystemExit("This pitch's theme differs from the user's saved choice; ask them before changing it.")
+    theme_confirmed = bool(slot.get("theme_confirmed") and slot.get("theme") == args.theme)
     title = read_text_arg(args.title, "title", required=True)
     hook = read_text_arg(args.hook, "hook", required=True)
     hook_highlights = [word.strip() for word in args.hook_highlights if word.strip()]
@@ -183,7 +186,7 @@ def command_pitch(args: argparse.Namespace) -> None:
     (folder / "script.md").write_text(script + "\n", encoding="utf-8")
     (folder / "research.md").write_text((research or "No research notes attached.\n") + "\n", encoding="utf-8")
     (folder / "post-caption.txt").write_text((caption or hook) + "\n", encoding="utf-8")
-    slot.update({"status": "awaiting_approval", "theme": args.theme, "theme_confirmed": False,
+    slot.update({"status": "awaiting_approval", "theme": args.theme, "theme_confirmed": theme_confirmed,
                  "title": title, "hook": hook, "hook_highlights": hook_highlights,
                  "renderer_slug": args.renderer_slug or slugify(title), "updated_at": datetime.now(timezone.utc).isoformat(timespec="seconds")})
     write_json(batch_dir / "manifest.json", manifest)
@@ -373,8 +376,10 @@ def command_add(args: argparse.Namespace) -> None:
         topics = manifest["topics"]
     else:
         topics = [locate_topic(manifest, args.topic)]
+    if not TEMPLATE.is_dir():
+        raise SystemExit(f"Short template is missing: {TEMPLATE}")
 
-    added = []
+    planned = []
     for topic in topics:
         next_slot = max((slot["slot"] for slot in topic["episodes"]), default=0) + 1
         for offset in range(args.count):
@@ -384,16 +389,33 @@ def command_add(args: argparse.Namespace) -> None:
                 "renderer_slug": None, "target_duration_seconds": None, "hook_highlights": [],
             }
             folder = slot_path(batch_dir, topic, slot)
+            if folder.exists():
+                raise SystemExit(f"Refusing to overwrite an existing slot folder: {folder}")
+            planned.append((topic, slot, folder))
+
+    created = []
+    added = []
+    try:
+        for topic, slot, folder in planned:
             folder.mkdir(parents=True, exist_ok=False)
+            created.append(folder)
             slot["directory"] = str(folder.relative_to(ROOT)).replace("\\", "/")
             shutil.copytree(TEMPLATE, folder / "project")
             (folder / "README.md").write_text(
-                f"# {topic['title']} · short {number:02d}\n\nAdd fresh research, an approved hook, a script, and a theme choice here.\n",
+                f"# {topic['title']} · short {slot['slot']:02d}\n\n"
+                "Research this new video from scratch. Ask the user for a theme and 30–60 second target first.\n",
                 encoding="utf-8",
             )
             topic["episodes"].append(slot)
-            added.append(f"{topic['id']} short {number:02d}")
-    write_json(batch_dir / "manifest.json", manifest)
+            added.append(f"{topic['id']} short {slot['slot']:02d}")
+        write_json(batch_dir / "manifest.json", manifest)
+    except Exception:
+        for topic, slot, folder in planned:
+            if slot in topic["episodes"]:
+                topic["episodes"].remove(slot)
+        for folder in reversed(created):
+            shutil.rmtree(folder, ignore_errors=True)
+        raise
     print(f"Added {len(added)} slot(s): {', '.join(added)}")
 
 
@@ -482,19 +504,20 @@ def command_set_theme(args: argparse.Namespace) -> None:
     batch_dir, manifest = load_batch(args.batch_id)
     topic = locate_topic(manifest, args.topic)
     slot = locate_slot(topic, args.slot)
-    if slot["status"] != "awaiting_approval":
-        raise SystemExit(f"Slot status is '{slot['status']}', expected awaiting_approval.")
+    if slot["status"] not in ("empty", "revise", "awaiting_approval"):
+        raise SystemExit(
+            f"Slot status is '{slot['status']}', expected empty, revise, or awaiting_approval."
+        )
     if args.theme not in STYLES:
         raise SystemExit(f"Theme must be one of: {', '.join(STYLES)}")
     folder = slot_path(batch_dir, topic, slot)
     pitch_path = folder / "pitch.md"
-    if not pitch_path.is_file():
-        raise SystemExit(f"Pitch not found: {pitch_path}")
-    pitch = pitch_path.read_text(encoding="utf-8")
-    theme_line = re.compile(r"(?m)^\*\*Theme:\*\* .+$")
-    if not theme_line.search(pitch):
-        raise SystemExit(f"Pitch has no theme line to update: {pitch_path}")
-    pitch_path.write_text(theme_line.sub(f"**Theme:** {args.theme}", pitch, count=1), encoding="utf-8")
+    if pitch_path.is_file():
+        pitch = pitch_path.read_text(encoding="utf-8")
+        theme_line = re.compile(r"(?m)^\\*\\*Theme:\\*\\* .+$")
+        if not theme_line.search(pitch):
+            raise SystemExit(f"Pitch has no theme line to update: {pitch_path}")
+        pitch_path.write_text(theme_line.sub(f"**Theme:** {args.theme}", pitch, count=1), encoding="utf-8")
     slot.update({
         "theme": args.theme,
         "theme_confirmed": True,
