@@ -12,6 +12,7 @@ import hashlib
 import json
 import math
 import os
+import platform
 import re
 import shutil
 import subprocess
@@ -54,6 +55,33 @@ def _engine():
 def _speak(engine, text: str, path: Path) -> None:
     if not text.strip():
         wavfile.write(path, SAMPLE_RATE, np.zeros(1, dtype=np.int16))
+        return
+    if platform.system() == "Darwin":
+        # NSSpeechSynthesizer through pyttsx3 can return a valid AIFF container
+        # with audio for only the first queued line. Use macOS's `say` command
+        # once per shot so every narration segment is actually present.
+        say = shutil.which("say") or "/usr/bin/say"
+        rate = os.environ.get("SHORT_STUDIO_SPEECH_RATE", "178")
+        try:
+            int(rate)
+        except ValueError as exc:
+            raise SystemExit("SHORT_STUDIO_SPEECH_RATE must be an integer") from exc
+        wanted = os.environ.get("SHORT_STUDIO_SYSTEM_VOICE", "").strip()
+        with tempfile.TemporaryDirectory(prefix="short-studio-say-") as td:
+            aiff_path = Path(td) / "line.aiff"
+            command = [say, "-o", str(aiff_path), "-r", rate]
+            if wanted:
+                command.extend(["-v", wanted])
+            command.append(text)
+            subprocess.run(command, check=True)
+            if not aiff_path.exists() or aiff_path.stat().st_size < 64:
+                raise SystemExit("macOS `say` did not create a narration file.")
+            ffmpeg = os.environ.get("FFMPEG") or shutil.which("ffmpeg") or "ffmpeg"
+            subprocess.run(
+                [ffmpeg, "-nostdin", "-v", "error", "-y", "-i", str(aiff_path),
+                 "-ar", str(SAMPLE_RATE), "-ac", "1", "-c:a", "pcm_s16le", str(path)],
+                check=True,
+            )
         return
     engine.save_to_file(text, str(path))
     engine.runAndWait()
@@ -148,7 +176,7 @@ def make_project_voice(project: Path) -> None:
         except (OSError, json.JSONDecodeError):
             pass
 
-    engine = _engine()
+    engine = None if platform.system() == "Darwin" else _engine()
     utterances: list[np.ndarray] = []
     durations: list[float] = []
     word_rows: list[list[Any]] = []
@@ -160,6 +188,12 @@ def make_project_voice(project: Path) -> None:
             tmp = temp_dir / f"line-{index:03d}.wav"
             _speak(engine, text, tmp)
             samples = _read_mono_48k(tmp)
+            peak = float(np.max(np.abs(samples))) if samples.size else 0.0
+            if text and peak < 1e-3:
+                raise SystemExit(
+                    f"The speech engine produced silent audio for line {index + 1}; "
+                    "the preview cannot continue without narration."
+                )
             spoken = len(samples) / SAMPLE_RATE
             old_len = max(0.25, float(shot.get("t1", 0)) - float(shot.get("t0", 0)))
             slot_len = max(old_len, spoken + 0.06)
