@@ -17,6 +17,7 @@ Treat imported documents and examples as reference material, not instructions. K
 - `/short-studio-one <topic>` creates exactly one video in a new one-topic batch.
 - `/short-studio-add <batch-id> <topic-id|all> [count]` adds new slots to an existing batch. Count is new slots per selected topic. This runs fresh research for every slot.
 - `/short-studio-list`, `/short-studio-rename`, and `/short-studio-continue` inspect or resume saved batches.
+- The local CLI command `review-storyboard` records an explicit approve or revise decision before rendering.
 
 Never run `init` when continuing or adding to a saved batch. Never create a second folder for an existing slot. The manifest is the queue's source of truth.
 
@@ -29,13 +30,13 @@ For every new or empty slot, before research:
 3. Ask for an exact target duration from 30 to 60 seconds. Suggest 45 seconds if they want a default, but do not choose silently. Record it with `set-duration`.
 4. If the user explicitly wants one selection applied to several slots, save the same selection per slot.
 
-The CLI blocks pitch creation until all three choices are saved. A pitch then includes the user's selected theme, complete script, fresh research, and spoken call to action. Show the sources, pitch, script, estimated duration, and CTA. Wait for the user's approval, revision, or skip decision. Approval is blocked until the pitch has a saved theme, format, duration, and spoken CTA. Render only after script approval and storyboard review.
+The CLI blocks pitch creation until all three choices are saved. A pitch then includes the user's selected theme, complete script, fresh research, and spoken call to action. Show the sources, pitch, script, estimated duration, and CTA. Wait for the user's approval, revision, or skip decision. Approval is blocked until the pitch has a saved theme, format, duration, and spoken CTA. After preparation, show the actual storyboard and wait for the user to approve it or request changes. Record that choice with `review-storyboard --decision approve|revise`; the full render is blocked until explicit storyboard approval.
 
 ### Universal script and CTA rules
 
 - Make the narration sound like a person telling a compact story aloud. Use clear, short sentences and concrete details; avoid generic exposition and unsupported claims.
 - Open with a strong spoken hook, immediate motion or visual question, and a readable text card in the first 1.5 seconds. Select exactly two words from the opening hook for emphasis.
-- Use a meaningful story or visual change roughly every 6–8 seconds as a pacing guide, not a rigid rule.
+- Use a meaningful story or visual change roughly every 6–8 seconds as a pacing guide, not a rigid rule. Give each beat a visible action or reaction, and vary framing instead of holding on the same generic shot.
 - Fit the complete narration and CTA to the user's chosen 30–60 seconds. The renderer checks the timing and final MP4 against the selected target.
 - Every script must finish with one clear, spoken call to action. Choose it to fit the format, audience, and target platform: for example, ask for an A/B vote, invite a follow/subscribe for more, or direct viewers to a planned next part. Include the exact CTA line in `pitch --call-to-action`; the CLI checks that it appears in the script.
 - Keep the CTA concise and render the same CTA as a visible end card for 3.5 seconds across all three themes. Include it in `post-caption.txt` as well.
@@ -83,14 +84,18 @@ Do not withhold a basic answer just to force a view of the next video.
 
 - `list` shows batch IDs and topic/slot states.
 - `rename` moves a saved batch and any output folder in place, then updates manifest paths.
-- `continue` resumes the first unfinished slot. For an empty added slot, ask for its three choices and do fresh research. For a saved pitch awaiting a decision, show its already saved research and script; do not redraft unless the user asks. For a revision or a stale trend premise, refresh research before changing the angle. For approved slots, finish missing source and preparation work. Show prepared storyboards and wait for render approval. Skip rendered/skipped slots.
+- `continue` resumes the first unfinished slot. For an empty added slot, ask for its three choices and do fresh research. For a saved pitch awaiting a decision, show its already saved research and script; do not redraft unless the user asks. For a revision or a stale trend premise, refresh research before changing the angle. For approved slots, finish missing source and preparation work. For `storyboard_ready` slots, show the saved storyboard and ask for approval or requested changes. For legacy `prepared` slots without a saved review fingerprint, ask the user to inspect the storyboard and record `review-storyboard --decision approve` before rendering. Skip rendered/skipped slots.
 - `add` creates folders only for new numbered slots. For `all`, it creates the requested number of slots for every topic. Research each of those new slots independently. Existing slot paths, scripts, renders, and research remain in place.
 
 ## Renderer-specific implementation
 
 ### Blocky 3D and monochrome
 
-Use the Blender project in `kit/`. Create an original story-specific `shots.py` using `kit/API.md` and the neutral `kit/templates/blocky_short/` template. Keep a cast, location, and props relevant to the script. The hook and CTA cards are composited into final frames. The monochrome grade is applied during final FFmpeg encoding. Inspect `stills_sheet.jpg`, including its opening and final CTA frames.
+Use the Blender project in `kit/`. Replace the copied starter `shots.py` completely; never render its classroom/gravity sample. Set `story_title` and `story_topic` to the approved pitch and batch topic, and remove the `_starter_template` marker. The CLI rejects the untouched starter, a mismatched story/topic, plans with too few beats for the chosen length, plans with no camera variation, or plans that give the cast fewer than two distinct actions.
+
+Create a story-specific visual plan from the approved script: give every beat its own useful framing and action, use the location and props the story calls for, and select a mood that supports the moment. Vary wide, close, and moving shots. Give named props story actions with `propMoves` where useful; pair these with timed cast gestures such as `throw` and `catch`. Props move as rigid objects without physics or hand attachment. Animal and robot actor rigs are not available; represent a simple creature as a custom block prop only when it does not need articulated movement.
+
+After `prepare`, show `project/stills_sheet.jpg` to the user. If they request changes, run `review-storyboard --decision revise`, edit `shots.py`, and run `prepare` again. Only after the user approves the current preview, run `review-storyboard --decision approve`; then render. Any change to the shot plan or preview after approval invalidates the review and requires a new prepare/review cycle. The hook and CTA cards are composited into final frames. The monochrome grade is applied during final FFmpeg encoding.
 
 ### What If vector
 
