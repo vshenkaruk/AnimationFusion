@@ -1,4 +1,4 @@
-# Short Studio
+# AnimationFusion — Short Studio
 
 > **GitHub description:** Local-first toolkit for researching, scripting, reviewing, and rendering 60 fps vertical animated shorts in blocky 3D, monochrome, or vector styles.
 
