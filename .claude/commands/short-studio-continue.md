@@ -19,6 +19,6 @@ target. Save those choices, then run fresh research for that video. For an
 including the spoken CTA, and wait for the user's decision. For a revised
 slot, refresh research if the user requests a new angle or the old trend signal
 has gone stale. For `approved`, finish missing source/preparation work; for
-`prepared`, show the storyboard and wait for render approval. Skip
+`storyboard_ready`, show the current storyboard and ask for approval or changes. Legacy `prepared` slots without a review fingerprint still need an explicit `review-storyboard --decision approve` before rendering. Skip
 `rendered` and `skipped` slots. Do not regenerate or duplicate completed
 slot folders.
