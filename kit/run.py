@@ -129,6 +129,13 @@ class Project:
             p = s.p('stills', f'{f:05d}.jpg')
             if not os.path.exists(p): continue
             im = Image.open(p).convert('RGB').resize((W, H))
+            if i == 0 and sp.get('hook'):
+                sys.path.insert(0, BLOX)
+                try:
+                    from post import draw_hook_card
+                    im = draw_hook_card(im, sp['hook'], sp.get('hook_highlights', []))
+                finally:
+                    sys.path.pop(0)
             if sp.get('theme') == 'monochrome': im = ImageOps.grayscale(im).convert('RGB')
             d = ImageDraw.Draw(im)
             d.rectangle((0, 0, W, 16), fill=(0, 0, 0)); d.text((3, 2), f'{i} {sp["shots"][i]["text"][:28]}', fill=(255, 220, 0))
