@@ -59,6 +59,22 @@ def _speak(engine, text: str, path: Path) -> None:
     engine.runAndWait()
     if not path.exists() or path.stat().st_size < 64:
         raise SystemExit(f"The local speech engine did not create {path}. Check that this computer has a system voice installed.")
+    # pyttsx3's macOS NSSpeechSynthesizer driver writes AIFF bytes even when
+    # the requested filename ends in .wav. Normalize that output so the WAV
+    # reader below works consistently across operating systems.
+    header = path.read_bytes()[:12]
+    if header[:4] == b"FORM" and header[8:12] in (b"AIFF", b"AIFC"):
+        ffmpeg = os.environ.get("FFMPEG") or shutil.which("ffmpeg") or "ffmpeg"
+        aiff_path = path.with_suffix(".aiff")
+        path.replace(aiff_path)
+        try:
+            subprocess.run(
+                [ffmpeg, "-nostdin", "-v", "error", "-y", "-i", str(aiff_path),
+                 "-ar", str(SAMPLE_RATE), "-ac", "1", "-c:a", "pcm_s16le", str(path)],
+                check=True,
+            )
+        finally:
+            aiff_path.unlink(missing_ok=True)
 
 
 def _read_mono_48k(path: Path) -> np.ndarray:
