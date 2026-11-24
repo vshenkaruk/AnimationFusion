@@ -101,6 +101,10 @@ for k in ['voice', 'sfx', 'music']:
         audio[k] = f'{slug}/{f.name}'
 title = ep.get('title', ['', ''])
 tl = {'slug': slug, 'title': ' '.join(title) if isinstance(title, list) else title, 'fps': FPS, 'total': end, 'segments': segments, 'shots': info, 'fx': fx, 'audio': audio}
+if ep.get('hook'):
+    tl['hook'] = str(ep['hook'])
+    tl['hookHighlights'] = list(ep.get('hook_highlights', []))
+    tl['hookDurationSeconds'] = float(ep.get('hook_duration_seconds', 1.5))
 save_json(ep_dir(slug) / 'timeline.json', tl)
 
 # ---------------------------------------------------------------- the pace report and the shot list
