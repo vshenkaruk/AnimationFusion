@@ -459,8 +459,8 @@ def command_set_duration(args: argparse.Namespace) -> None:
     batch_dir, manifest = load_batch(args.batch_id)
     topic = locate_topic(manifest, args.topic)
     slot = locate_slot(topic, args.slot)
-    if slot["status"] not in ("empty", "revise", "awaiting_approval"):
-        raise SystemExit(f"Slot status is '{slot['status']}', expected empty, revise, or awaiting_approval.")
+    if slot["status"] not in ("empty", "revise"):
+        raise SystemExit(f"Slot status is '{slot['status']}', expected empty or revise. Use revise to refresh the pitch first.")
     if args.seconds < 30 or args.seconds > 60:
         raise SystemExit("Target duration must be between 30 and 60 seconds.")
     slot["target_duration_seconds"] = args.seconds
@@ -639,7 +639,7 @@ def build_parser() -> argparse.ArgumentParser:
     rename.add_argument("--new-name", required=True)
     rename.set_defaults(func=command_rename)
 
-    set_theme = sub.add_parser("set-theme", help="save the user's theme choice before approval")
+    set_theme = sub.add_parser("set-theme", help="save the user's theme choice before research")
     set_theme.add_argument("--batch-id", required=True)
     set_theme.add_argument("--topic", required=True)
     set_theme.add_argument("--slot", type=int, required=True)
