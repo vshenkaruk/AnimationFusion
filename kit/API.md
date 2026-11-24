@@ -40,13 +40,14 @@
 | `at` | `[x, y]` on the set floor; the camera side is -y. Keep people 2.5+ apart |
 | `walkTo` | `[x, y]`: walks there during the shot (feet locked to the floor, no sliding) |
 | `yaw` | facing in degrees: 0 faces the camera side (-y), 90 faces +x, -90 faces -x |
-| `anim` | idle, talk, walk, run, point, shrug, shock, scared, cheer, eat, cross_arms, think, sad, angry, wave, sit, facepalm |
+| `anim` | idle, talk, walk, run, point, shrug, shock, scared, cheer, eat, cross_arms, think, sad, angry, wave, sit, facepalm, clap, surrender, nod, headshake, flinch, slump, jump_joy, head_tilt, what, throw, catch, thumbs_up |
 | `animAt` | `[[t, anim], ...]` switch the animation at shot time t |
 | `face` | neutral, smile, grin, laugh, shock, scared, sad, worried, angry, smug, think, blink |
 | `faceAt` | `[[t, face], ...]` |
 | `talk` | `[t_start, t_end]` mouth moves (follows the words in `words.json`) |
 | `look` | `[x, y]` eye direction, -1..1 |
 | `fx` | `['name@t', ...]`: `drizzle`, `raincloud`, `storm`, `bigstorm` (a cloud above the head that rains), `bolt`, `smoke`, `crumbs`. `@-1` = already there when the shot starts |
+| `propMoves` | Optional rigid motion for a named prop in this set; see **Moving story props** below. |
 
 ## Places (the world comes from the story)
 Every location in the script gets its own place. A shot's `set` names one of:
@@ -122,8 +123,34 @@ Parts (x, y, z = the part's centre in studs; the floor is z 0, the front faces -
 | `ball` | `['ball', colour, r, [x, y, z]]`; `{'scale': [1, 1, 0.6]}` squashes it |
 
 Part options: `glow` 0-5 (lights up), `metal`, `tilt` `[rx, ry, rz]` degrees, `main` (the prop option `color` recolours
-it). Prop options for a thing: `s` (scale), `color`, `name`, `in_clear`. Things don't move: a creature that has to act
-is a cast member with a costume, not a thing.
+it). Prop options for a thing: `s` (scale), `color`, `name`, `in_clear`. A named prop or story-built thing can move
+as one rigid object with `propMoves`; movement has no physics and does not attach the object to a character's hand.
+Blocky animal and robot actor rigs are not included yet.
+
+## Moving story props
+
+Add a custom or catalogue prop under the active place's `props` list and give it a stable `name`. Use that same name
+inside a shot's `propMoves` list. Positions are `[x, y, z]` in that set's local studs; `start` and `end` are seconds
+relative to the shot. `to` is required. `from` defaults to the prop's authored placement (or its previous motion's end).
+`spin` is an optional three-axis rotation delta in degrees.
+
+```python
+PLACES = {
+    'LaunchStreet': dict(kind='outdoor', ground='asphalt', backdrop='city', props=[
+        ['rocket', 1, 0, 0, {'name': 'rocket', 'in_clear': True}],
+    ]),
+}
+shots = [{
+    't0': 0, 't1': 6, 'text': 'The rocket lifts into the air.', 'set': 'LaunchStreet',
+    'cam': 'low', 'subject': 'Kai', 'mood': 'night',
+    'actors': [A('Kai', [0, 2], anim='throw', face='shock')],
+    'propMoves': [{'name': 'rocket', 'start': 1.0, 'end': 4.0, 'to': [1, 0, 18], 'spin': [0, 0, 90]}],
+}]
+```
+
+Use `throw`, `catch`, or another timed gesture to sell the action. The prop moves as a rigid block: it does not bend,
+bounce from collisions, or follow a character's hand. Keep the storyboard preview open and revise positions that overlap
+the cast or scenery.
 
 ## Voice
 The `voice` step (Kokoro TTS) speaks each shot's `text` and writes `vo.wav` + `words.json`. A shot shorter than its line
