@@ -22,7 +22,7 @@ BATCH_ROOT = ROOT / "production" / "batches"
 OUTPUT_ROOT = ROOT / "out" / "short-studio"
 TEMPLATE = ROOT / "kit" / "templates" / "blocky_short"
 STYLES = ("blocky-3d", "monochrome", "what-if")
-MAX_PER_TOPIC = 3
+INITIAL_MAX_PER_TOPIC = 3
 
 
 def slugify(value: str) -> str:
@@ -66,8 +66,8 @@ def locate_topic(manifest: dict[str, Any], topic_id: str) -> dict[str, Any]:
 
 
 def locate_slot(topic: dict[str, Any], number: int) -> dict[str, Any]:
-    if number < 1 or number > MAX_PER_TOPIC:
-        raise SystemExit(f"Episode slot must be 1-{MAX_PER_TOPIC}.")
+    if number < 1:
+        raise SystemExit("Episode slot must be a positive number.")
     for slot in topic["episodes"]:
         if slot["slot"] == number:
             return slot
@@ -90,8 +90,8 @@ def read_text_arg(value: str | None, label: str, required: bool = False) -> str:
 
 
 def command_init(args: argparse.Namespace) -> None:
-    if args.limit < 1 or args.limit > MAX_PER_TOPIC:
-        raise SystemExit(f"--limit must be between 1 and {MAX_PER_TOPIC}.")
+    if args.limit < 1 or args.limit > INITIAL_MAX_PER_TOPIC:
+        raise SystemExit(f"--limit must be between 1 and {INITIAL_MAX_PER_TOPIC} for a new batch.")
     raw_topics = []
     if args.topics_file:
         source = Path(args.topics_file)
@@ -121,7 +121,9 @@ def command_init(args: argparse.Namespace) -> None:
             topic_id = f"{base}-{suffix}"
             suffix += 1
         titles.add(topic_id)
-        episodes = [{"slot": i, "status": "empty", "theme": None, "renderer_slug": None} for i in range(1, args.limit + 1)]
+        episodes = [{"slot": i, "status": "empty", "theme": None, "theme_confirmed": False,
+                     "renderer_slug": None, "target_duration_seconds": None, "hook_highlights": []}
+                    for i in range(1, args.limit + 1)]
         topics.append({"id": topic_id, "title": title, "notes": notes.strip(), "episodes": episodes})
     if not topics:
         raise SystemExit("No valid topics found.")
@@ -132,7 +134,7 @@ def command_init(args: argparse.Namespace) -> None:
         "created_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "profile": {"width": 1080, "height": 1920, "fps": 60, "container": "mp4", "video_codec": "h264"},
         "default_voice": "system-offline",
-        "max_episodes_per_topic": MAX_PER_TOPIC,
+        "initial_episodes_per_topic": args.limit,
         "topics": topics,
     }
     target.mkdir(parents=True)
@@ -165,6 +167,10 @@ def command_pitch(args: argparse.Namespace) -> None:
         raise SystemExit(f"Theme must be one of: {', '.join(STYLES)}")
     title = read_text_arg(args.title, "title", required=True)
     hook = read_text_arg(args.hook, "hook", required=True)
+    hook_highlights = [word.strip() for word in args.hook_highlights if word.strip()]
+    hook_tokens = {word.strip(".,!?;:'\"()[]").casefold() for word in hook.split()}
+    if len(hook_highlights) != 2 or any(word.casefold() not in hook_tokens for word in hook_highlights):
+        raise SystemExit("Choose exactly two emphasis words that appear in the opening hook.")
     idea = read_text_arg(args.idea, "idea", required=True)
     script = read_text_arg(args.script, "script", required=True)
     research = read_text_arg(args.research, "research", required=True)
@@ -178,7 +184,7 @@ def command_pitch(args: argparse.Namespace) -> None:
     (folder / "research.md").write_text((research or "No research notes attached.\n") + "\n", encoding="utf-8")
     (folder / "post-caption.txt").write_text((caption or hook) + "\n", encoding="utf-8")
     slot.update({"status": "awaiting_approval", "theme": args.theme, "theme_confirmed": False,
-                 "title": title, "hook": hook,
+                 "title": title, "hook": hook, "hook_highlights": hook_highlights,
                  "renderer_slug": args.renderer_slug or slugify(title), "updated_at": datetime.now(timezone.utc).isoformat(timespec="seconds")})
     write_json(batch_dir / "manifest.json", manifest)
     print(f"Pitch saved for {topic['id']} short {args.slot:02d}; status=awaiting_approval")
@@ -193,6 +199,8 @@ def command_decide(args: argparse.Namespace) -> None:
         raise SystemExit(f"Slot status is '{slot['status']}', expected awaiting_approval.")
     if args.decision == "approve" and not slot.get("theme_confirmed", False):
         raise SystemExit("Choose and save a theme with the set-theme command before approval.")
+    if args.decision == "approve" and not slot.get("target_duration_seconds"):
+        raise SystemExit("Choose and save a target length with the set-duration command before approval.")
     if args.decision == "approve":
         for name in ("pitch.md", "script.md", "research.md"):
             if not (folder / name).is_file() or not (folder / name).read_text(encoding="utf-8").strip():
@@ -206,6 +214,16 @@ def command_decide(args: argparse.Namespace) -> None:
     slot["decision"] = args.decision
     write_json(batch_dir / "manifest.json", manifest)
     print(f"{topic['id']} short {args.slot:02d}: {slot['status']}")
+
+
+
+def validate_duration(actual: float, target: int, stage: str) -> None:
+    tolerance = max(3.0, target * 0.08)
+    if abs(actual - target) > tolerance:
+        raise SystemExit(
+            f"{stage} is {actual:.1f}s; target is {target}s (allowed difference {tolerance:.1f}s). "
+            "Revise the script or scene timing before continuing."
+        )
 
 
 def run(command: list[str], cwd: Path, env: dict[str, str] | None = None) -> None:
@@ -231,7 +249,13 @@ def command_prepare(args: argparse.Namespace) -> None:
         run([py, str(ROOT / "kit" / "run.py"), str(project), "shots"], ROOT, env)
         spec_path = project / "timed.json"
         spec = read_json(spec_path)
+        target_duration = slot.get("target_duration_seconds")
+        if target_duration is not None:
+            validate_duration(float(spec.get("dur", 0)), int(target_duration), "Blender scene")
         spec["theme"] = slot["theme"]
+        spec["hook"] = slot.get("hook", "")
+        spec["hook_highlights"] = slot.get("hook_highlights", [])
+        spec["hook_duration_seconds"] = 1.5
         write_json(spec_path, spec)
         run([py, str(ROOT / "kit" / "run.py"), str(project), "voice", "compile", "stills"], ROOT, env)
         slot["renderer_project"] = str(project.relative_to(ROOT)).replace("\\", "/")
@@ -240,12 +264,39 @@ def command_prepare(args: argparse.Namespace) -> None:
         ep = ROOT / "studio" / "src" / "episodes" / slug
         if not (ep / "episode.json").is_file() or not (ep / "shots.tsx").is_file() or not (ep / "index.tsx").is_file():
             raise SystemExit(f"Complete the vertical Remotion episode files first under {ep}")
-        run([py, str(ROOT / "scripts" / "local_tts.py"), "--episode", slug], ROOT)
         studio = ROOT / "studio"
+        registry_path = studio / "src" / "episodes" / "index.ts"
+        if not registry_path.is_file():
+            raise SystemExit(f"Episode registry is missing: {registry_path}")
+        registry = registry_path.read_text(encoding="utf-8")
+        import_match = re.search(
+            r"import\s+\{\s*([A-Za-z_$][\w$]*)\s*\}\s+from\s+['\"]\./" + re.escape(slug) + r"['\"]",
+            registry,
+        )
+        episode_list = re.search(r"export\s+const\s+EPISODES\s*=\s*\[([^\]]*)\]", registry, re.S)
+        if not import_match or not episode_list or import_match.group(1) not in re.findall(r"[A-Za-z_$][\w$]*", episode_list.group(1)):
+            raise SystemExit(
+                f"Register {slug} in {registry_path}: import its named episode and add it to EPISODES."
+            )
+        episode_path = ep / "episode.json"
+        episode = read_json(episode_path)
+        episode["hook"] = slot.get("hook", "")
+        episode["hook_highlights"] = slot.get("hook_highlights", [])
+        episode["hook_duration_seconds"] = 1.5
+        write_json(episode_path, episode)
+        run([py, str(ROOT / "scripts" / "local_tts.py"), "--episode", slug], ROOT)
         run([py, str(ROOT / "scripts" / "plan.py"), slug], studio)
+        target_duration = slot.get("target_duration_seconds")
+        timeline = read_json(ep / "timeline.json")
+        if target_duration is not None:
+            timeline_fps = float(timeline.get("fps", 0))
+            if timeline_fps <= 0:
+                raise SystemExit(f"Invalid timeline fps in {ep / 'timeline.json'}")
+            validate_duration(float(timeline.get("total", 0)) / timeline_fps, int(target_duration), "Remotion timeline")
         npm = shutil.which("npm.cmd") or shutil.which("npm") or "npm"
         run([npm, "run", "typecheck"], studio)
         run(["node", str(ROOT / "scripts" / "stills.mjs"), slug], studio)
+        run(["node", str(ROOT / "scripts" / "stills.mjs"), slug, "--frames", "0"], studio)
         run([py, str(ROOT / "scripts" / "board.py"), slug], studio)
         slot["renderer_slug"] = slug
     else:
@@ -274,6 +325,13 @@ def command_render(args: argparse.Namespace) -> None:
         source = ROOT / "studio" / "out" / slug / f"{slug}-final.mp4"
     if not source.is_file():
         raise SystemExit(f"Expected render was not created: {source}")
+    target_duration = slot.get("target_duration_seconds")
+    if target_duration is not None:
+        measured = subprocess.run(
+            ["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "default=noprint_wrappers=1:nokey=1", str(source)],
+            check=True, capture_output=True, text=True,
+        )
+        validate_duration(float(measured.stdout.strip()), int(target_duration), "Rendered MP4")
     destination = OUTPUT_ROOT / manifest["id"] / topic["id"] / f"short-{args.slot:02d}"
     destination.mkdir(parents=True, exist_ok=True)
     target = destination / "final.mp4"
@@ -287,6 +345,10 @@ def command_render(args: argparse.Namespace) -> None:
         board = ROOT / "studio" / "out" / slot["renderer_slug"] / "storyboard.jpg"
     if board.is_file():
         shutil.copy2(board, destination / "storyboard.jpg")
+    if slot["theme"] == "what-if":
+        first_frame = ROOT / "studio" / "out" / slot["renderer_slug"] / "frames" / "f0000.png"
+        if first_frame.is_file():
+            shutil.copy2(first_frame, destination / "frame-one.png")
     slot["status"] = "rendered"
     slot["output"] = str(target.relative_to(ROOT)).replace("\\", "/")
     slot["rendered_at"] = datetime.now(timezone.utc).isoformat(timespec="seconds")
@@ -301,6 +363,52 @@ def command_status(args: argparse.Namespace) -> None:
         rows = ", ".join(f"{slot['slot']}:{slot['status']}" for slot in topic["episodes"])
         print(f"{topic['id']} — {topic['title']} — {rows}")
 
+
+
+def command_add(args: argparse.Namespace) -> None:
+    batch_dir, manifest = load_batch(args.batch_id)
+    if args.count < 1:
+        raise SystemExit("--count must be at least 1.")
+    if args.topic.casefold() == "all":
+        topics = manifest["topics"]
+    else:
+        topics = [locate_topic(manifest, args.topic)]
+
+    added = []
+    for topic in topics:
+        next_slot = max((slot["slot"] for slot in topic["episodes"]), default=0) + 1
+        for offset in range(args.count):
+            number = next_slot + offset
+            slot = {
+                "slot": number, "status": "empty", "theme": None, "theme_confirmed": False,
+                "renderer_slug": None, "target_duration_seconds": None, "hook_highlights": [],
+            }
+            folder = slot_path(batch_dir, topic, slot)
+            folder.mkdir(parents=True, exist_ok=False)
+            slot["directory"] = str(folder.relative_to(ROOT)).replace("\\", "/")
+            shutil.copytree(TEMPLATE, folder / "project")
+            (folder / "README.md").write_text(
+                f"# {topic['title']} · short {number:02d}\n\nAdd fresh research, an approved hook, a script, and a theme choice here.\n",
+                encoding="utf-8",
+            )
+            topic["episodes"].append(slot)
+            added.append(f"{topic['id']} short {number:02d}")
+    write_json(batch_dir / "manifest.json", manifest)
+    print(f"Added {len(added)} slot(s): {', '.join(added)}")
+
+
+def command_set_duration(args: argparse.Namespace) -> None:
+    batch_dir, manifest = load_batch(args.batch_id)
+    topic = locate_topic(manifest, args.topic)
+    slot = locate_slot(topic, args.slot)
+    if slot["status"] not in ("empty", "revise", "awaiting_approval"):
+        raise SystemExit(f"Slot status is '{slot['status']}', expected empty, revise, or awaiting_approval.")
+    if args.seconds < 30 or args.seconds > 60:
+        raise SystemExit("Target duration must be between 30 and 60 seconds.")
+    slot["target_duration_seconds"] = args.seconds
+    slot["duration_selected_at"] = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    write_json(batch_dir / "manifest.json", manifest)
+    print(f"Target duration for {topic['id']} short {args.slot:02d} set to {args.seconds}s.")
 
 
 def command_list(args: argparse.Namespace) -> None:
@@ -413,6 +521,7 @@ def build_parser() -> argparse.ArgumentParser:
     pitch.add_argument("--theme", choices=STYLES, required=True)
     pitch.add_argument("--title", required=True)
     pitch.add_argument("--hook", required=True)
+    pitch.add_argument("--hook-highlights", nargs=2, required=True, help="two words from the hook to emphasize")
     pitch.add_argument("--idea", required=True, help="text or path to a text file")
     pitch.add_argument("--script", required=True, help="text or path to a text file")
     pitch.add_argument("--research", required=True, help="text or path to a research notes file")
@@ -442,6 +551,19 @@ def build_parser() -> argparse.ArgumentParser:
     status = sub.add_parser("status", help="show the current review and render queue")
     status.add_argument("--batch-id", required=True)
     status.set_defaults(func=command_status)
+
+    add = sub.add_parser("add", help="add new slot(s) to one topic or every topic in a saved batch")
+    add.add_argument("--batch-id", required=True)
+    add.add_argument("--topic", required=True, help="topic ID or 'all'")
+    add.add_argument("--count", type=int, default=1, help="new slots per selected topic")
+    add.set_defaults(func=command_add)
+
+    set_duration = sub.add_parser("set-duration", help="save a 30-60 second target before approval")
+    set_duration.add_argument("--batch-id", required=True)
+    set_duration.add_argument("--topic", required=True)
+    set_duration.add_argument("--slot", type=int, required=True)
+    set_duration.add_argument("--seconds", type=int, required=True)
+    set_duration.set_defaults(func=command_set_duration)
 
     list_cmd = sub.add_parser("list", help="list saved batches and their queue states")
     list_cmd.set_defaults(func=command_list)
