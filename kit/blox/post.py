@@ -521,10 +521,11 @@ def _init(d):
     G['cap'] = cap; G['fonts'] = {}
 
 def _font(size):
-    if size not in G['fonts']:
+    fonts = G.setdefault('fonts', {})
+    if size not in fonts:
         path = next((p for p in FONT_CANDIDATES if os.path.exists(p)), None)
-        G['fonts'][size] = ImageFont.truetype(path, size) if path else ImageFont.load_default()
-    return G['fonts'][size]
+        fonts[size] = ImageFont.truetype(path, size) if path else ImageFont.load_default()
+    return fonts[size]
 
 def comp_frame(i, n):
     d = G['d']; src = os.path.join(d, 'frames', f'{min(i, n - 1):05d}.jpg')
