@@ -383,7 +383,7 @@ def command_set_theme(args: argparse.Namespace) -> None:
     if not pitch_path.is_file():
         raise SystemExit(f"Pitch not found: {pitch_path}")
     pitch = pitch_path.read_text(encoding="utf-8")
-    theme_line = re.compile(r"(?m)^\\*\\*Theme:\\*\\* .+$")
+    theme_line = re.compile(r"(?m)^\*\*Theme:\*\* .+$")
     if not theme_line.search(pitch):
         raise SystemExit(f"Pitch has no theme line to update: {pitch_path}")
     pitch_path.write_text(theme_line.sub(f"**Theme:** {args.theme}", pitch, count=1), encoding="utf-8")
