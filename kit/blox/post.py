@@ -512,6 +512,8 @@ def _init(d):
     G['hook'] = str(sp.get('hook', '')).strip()
     G['hook_duration'] = float(sp.get('hook_duration_seconds', 1.5))
     G['hook_highlights'] = set(norm(k) for k in sp.get('hook_highlights', []))
+    G['cta'] = str(sp.get('cta', '')).strip()
+    G['cta_duration'] = float(sp.get('cta_duration_seconds', 3.5))
     words = load_words(d); cap = []
     for k, (w, s0, e) in enumerate(words):
         nxt = words[k + 1][1] if k + 1 < len(words) else e + 0.5
@@ -541,6 +543,8 @@ def comp_frame(i, n):
         dr.text((cx, cy), w, font=f, anchor='mm', fill=(255, 222, 40) if key else (255, 255, 255), stroke_width=int(10 * sc * s), stroke_fill=(20, 15, 25))
     if G.get('hook') and t < G['hook_duration']:
         im = draw_hook_card(im, G['hook'], G.get('hook_highlights', []))
+    if G.get('cta') and n / FPS - t <= G['cta_duration']:
+        im = draw_hook_card(im, G['cta'])
     im.convert('RGB').save(os.path.join(d, 'comp', f'{i:05d}.jpg'), quality=94)
 
 def tag_frame(i, n, W, H):
