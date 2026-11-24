@@ -82,7 +82,7 @@ For the next empty or revised slot:
 4. After the user explicitly chooses a theme, save that choice before recording
    an approval:
    ```powershell
-   python scripts/short_studio.py set-theme --batch-id <batch-id> --topic <topic-id> --slot <1-3> --theme <blocky-3d|monochrome|what-if>
+   python scripts/short_studio.py set-theme --batch-id <batch-id> --topic <topic-id> --slot <1-3> --theme <selected-theme>
    ```
    Then record their decision with `short_studio.py decide`. Approval is
    blocked until a theme choice has been saved. If approved, create the selected
