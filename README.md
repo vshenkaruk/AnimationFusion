@@ -29,7 +29,7 @@ Useful public research starting points include [Google Trends](https://trends.go
 
 Choose either a self-contained story or an optional A/B choice story. Every script ends with one clear spoken CTA. The same CTA is shown in an end card across all three render themes. A Part 2 is created only when the creator asks for it; this version does not connect to social analytics or publish videos automatically.
 
-The opening hook appears on screen in the first 1.5 seconds. The creator reviews the pitch and full script, then the theme-specific storyboard, before rendering. The final folder contains the MP4, caption, script, research notes, and storyboard under:
+The opening hook appears on screen in the first 1.5 seconds. The creator reviews the pitch and full script, then the actual storyboard. A CLI review gate blocks the full render until the creator approves that storyboard; edits afterward require a fresh prepare and review. The final folder contains the MP4, caption, script, research notes, and storyboard under:
 
 ```text
 out/short-studio/<batch-id>/<topic-id>/short-01/
@@ -41,11 +41,11 @@ The portrait master is 1080 × 1920 H.264 at 60 fps. Upload it to TikTok, Instag
 
 | Theme | Rendering path | What it produces |
 |---|---|---|
-| `blocky-3d` | Blender | Original, customizable blocky 3D scenes |
+| `blocky-3d` | Blender | Original blocky 3D scenes with story-specific sets, varied shots, added character gestures, and keyframed rigid story props |
 | `monochrome` | Blender + FFmpeg | Blocky 3D scenes with a black-and-white grade |
 | `what-if` | Remotion | Original vector animation |
 
-The blocky style uses original generic block characters; it does not include official Roblox characters or assets. The monochrome grade is applied to the final MP4. Each new What If episode must be registered in `studio/src/episodes/index.ts`; preparation checks the registration.
+The blocky style uses original generic human characters; it does not include official Roblox characters or assets. Named story props can move as rigid objects, without physics or hand attachment. Animal and robot character rigs are not included. The monochrome grade is applied to the final MP4. Each new What If episode must be registered in `studio/src/episodes/index.ts`; preparation checks the registration.
 
 Visual references and upstream demos are in [FRIEND_GUIDE.md](FRIEND_GUIDE.md). They are examples, not output renders from this repository.
 
@@ -62,8 +62,9 @@ Run `python scripts/short_studio.py <command>` from the project folder.
 | `set-duration` | Save the 30–60 second target before research. |
 | `pitch` | Save the researched pitch, complete script, spoken CTA, and caption. |
 | `decide` | Record `approve`, `revise`, or `skip`. |
-| `prepare` | Build the approved video and storyboard. |
-| `render` | Render a prepared video and copy its delivery files. |
+| `prepare` | Build voice, storyboard, and a story-specific scene. |
+| `review-storyboard` | Approve the current storyboard or request changes; rendering stays blocked until approval. |
+| `render` | Render only after storyboard approval and copy its delivery files. |
 | `status` / `list` | Inspect one queue or all saved batches. |
 | `rename` | Rename a saved batch and move its files and outputs in place. |
 
