@@ -28,6 +28,8 @@ export type Timeline = {
   hook?: string;
   hookHighlights?: string[];
   hookDurationSeconds?: number;
+  cta?: string;
+  ctaDurationSeconds?: number;
   segments: Seg[];
   shots: ShotInfo[];
   fx: Fx[];
@@ -181,6 +183,9 @@ export const Episode: React.FC<EpisodeProps> = ({ timeline: tl, shots, looks = {
       {tl.hook && f / tl.fps < (tl.hookDurationSeconds ?? 1.5) ? (
         <HookCard hook={tl.hook} highlights={tl.hookHighlights ?? []} />
       ) : null}
+      {tl.cta && (tl.total - f) / tl.fps <= (tl.ctaDurationSeconds ?? 3.5) ? (
+        <HookCard hook={tl.cta} highlights={[]} />
+      ) : null}
       {A.voice ? <Audio src={staticFile(A.voice)} volume={A.voiceVol ?? 1} /> : null}
       {A.sfx ? <Audio src={staticFile(A.sfx)} volume={A.sfxVol ?? 1} /> : null}
       {A.music ? <Audio src={staticFile(A.music)} volume={A.musicVol ?? 1} /> : null}
@@ -197,6 +202,8 @@ export const Board: React.FC<{ timeline: Timeline; shots: ShotMap; grain?: boole
     <AbsoluteFill style={{ backgroundColor: bg }}>
       <ShotFrame output={output}>{Shot ? <Shot t={info.key} len={info.len} f={info.first + info.key} /> : null}</ShotFrame>
       <Grade f={info.key} grain={grain} vignette={vignette} output={output} />
+      {f === 0 && tl.hook ? <HookCard hook={tl.hook} highlights={tl.hookHighlights ?? []} /> : null}
+      {f === tl.shots.length - 1 && tl.cta ? <HookCard hook={tl.cta} highlights={[]} /> : null}
     </AbsoluteFill>
   );
 };
