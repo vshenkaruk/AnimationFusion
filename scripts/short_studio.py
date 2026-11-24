@@ -22,6 +22,7 @@ BATCH_ROOT = ROOT / "production" / "batches"
 OUTPUT_ROOT = ROOT / "out" / "short-studio"
 TEMPLATE = ROOT / "kit" / "templates" / "blocky_short"
 STYLES = ("blocky-3d", "monochrome", "what-if")
+STORY_FORMATS = ("standalone", "choice-story")
 INITIAL_MAX_PER_TOPIC = 3
 
 
@@ -122,7 +123,8 @@ def command_init(args: argparse.Namespace) -> None:
             suffix += 1
         titles.add(topic_id)
         episodes = [{"slot": i, "status": "empty", "theme": None, "theme_confirmed": False,
-                     "renderer_slug": None, "target_duration_seconds": None, "hook_highlights": []}
+                     "renderer_slug": None, "target_duration_seconds": None, "hook_highlights": [],
+                     "story_format": None, "format_confirmed": False, "call_to_action": None}
                     for i in range(1, args.limit + 1)]
         topics.append({"id": topic_id, "title": title, "notes": notes.strip(), "episodes": episodes})
     if not topics:
@@ -165,9 +167,13 @@ def command_pitch(args: argparse.Namespace) -> None:
         raise SystemExit(f"Slot status is '{slot['status']}'. Create pitches only in empty or revise slots.")
     if args.theme not in STYLES:
         raise SystemExit(f"Theme must be one of: {', '.join(STYLES)}")
-    if slot.get("theme_confirmed") and slot.get("theme") != args.theme:
-        raise SystemExit("This pitch's theme differs from the user's saved choice; ask them before changing it.")
-    theme_confirmed = bool(slot.get("theme_confirmed") and slot.get("theme") == args.theme)
+    if not slot.get("theme_confirmed") or slot.get("theme") != args.theme:
+        raise SystemExit("Choose and save the visual theme with set-theme before researching or pitching.")
+    if not slot.get("target_duration_seconds"):
+        raise SystemExit("Choose the target length with set-duration before researching or pitching.")
+    theme_confirmed = True
+    if not slot.get("format_confirmed") or slot.get("story_format") != args.story_format:
+        raise SystemExit("Choose and save this video's story format with set-format before researching or pitching.")
     title = read_text_arg(args.title, "title", required=True)
     hook = read_text_arg(args.hook, "hook", required=True)
     hook_highlights = [word.strip() for word in args.hook_highlights if word.strip()]
@@ -178,17 +184,23 @@ def command_pitch(args: argparse.Namespace) -> None:
     script = read_text_arg(args.script, "script", required=True)
     research = read_text_arg(args.research, "research", required=True)
     caption = read_text_arg(args.caption, "caption")
+    call_to_action = read_text_arg(args.call_to_action, "call to action", required=True)
+    normalized_script = " ".join(script.casefold().split())
+    normalized_cta = " ".join(call_to_action.casefold().split())
+    if normalized_cta not in normalized_script:
+        raise SystemExit("The exact call-to-action line must appear in the spoken script.")
     if len(script.split()) < 20:
         raise SystemExit("The script is unusually short; provide the complete narration before asking for approval.")
     folder = slot_path(batch_dir, topic, slot)
     folder.mkdir(parents=True, exist_ok=True)
-    (folder / "pitch.md").write_text(f"# {title}\n\n**Topic:** {topic['title']}\n\n**Theme:** {args.theme}\n\n**Hook:** {hook}\n\n{idea}\n", encoding="utf-8")
+    (folder / "pitch.md").write_text(f"# {title}\n\n**Topic:** {topic['title']}\n\n**Theme:** {args.theme}\n\n**Format:** {args.story_format}\n\n**Hook:** {hook}\n\n**Call to action:** {call_to_action}\n\n{idea}\n", encoding="utf-8")
     (folder / "script.md").write_text(script + "\n", encoding="utf-8")
     (folder / "research.md").write_text((research or "No research notes attached.\n") + "\n", encoding="utf-8")
-    (folder / "post-caption.txt").write_text((caption or hook) + "\n", encoding="utf-8")
+    (folder / "post-caption.txt").write_text((caption or f"{hook}\n\n{call_to_action}") + "\n", encoding="utf-8")
     slot.update({"status": "awaiting_approval", "theme": args.theme, "theme_confirmed": theme_confirmed,
                  "title": title, "hook": hook, "hook_highlights": hook_highlights,
-                 "renderer_slug": args.renderer_slug or slugify(title), "updated_at": datetime.now(timezone.utc).isoformat(timespec="seconds")})
+                 "story_format": args.story_format, "format_confirmed": True, "call_to_action": call_to_action,
+                 "renderer_slug": args.renderer_slug or slugify(title), "research_updated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"), "updated_at": datetime.now(timezone.utc).isoformat(timespec="seconds")})
     write_json(batch_dir / "manifest.json", manifest)
     print(f"Pitch saved for {topic['id']} short {args.slot:02d}; status=awaiting_approval")
 
@@ -204,6 +216,10 @@ def command_decide(args: argparse.Namespace) -> None:
         raise SystemExit("Choose and save a theme with the set-theme command before approval.")
     if args.decision == "approve" and not slot.get("target_duration_seconds"):
         raise SystemExit("Choose and save a target length with the set-duration command before approval.")
+    if args.decision == "approve" and not slot.get("format_confirmed"):
+        raise SystemExit("Choose and save a story format with the set-format command before approval.")
+    if args.decision == "approve" and not slot.get("call_to_action"):
+        raise SystemExit("Add a spoken call to action before approval.")
     if args.decision == "approve":
         for name in ("pitch.md", "script.md", "research.md"):
             if not (folder / name).is_file() or not (folder / name).read_text(encoding="utf-8").strip():
@@ -259,6 +275,8 @@ def command_prepare(args: argparse.Namespace) -> None:
         spec["hook"] = slot.get("hook", "")
         spec["hook_highlights"] = slot.get("hook_highlights", [])
         spec["hook_duration_seconds"] = 1.5
+        spec["cta"] = slot.get("call_to_action", "")
+        spec["cta_duration_seconds"] = 3.5
         write_json(spec_path, spec)
         run([py, str(ROOT / "kit" / "run.py"), str(project), "voice", "compile", "stills"], ROOT, env)
         slot["renderer_project"] = str(project.relative_to(ROOT)).replace("\\", "/")
@@ -286,6 +304,8 @@ def command_prepare(args: argparse.Namespace) -> None:
         episode["hook"] = slot.get("hook", "")
         episode["hook_highlights"] = slot.get("hook_highlights", [])
         episode["hook_duration_seconds"] = 1.5
+        episode["cta"] = slot.get("call_to_action", "")
+        episode["cta_duration_seconds"] = 3.5
         write_json(episode_path, episode)
         run([py, str(ROOT / "scripts" / "local_tts.py"), "--episode", slug], ROOT)
         run([py, str(ROOT / "scripts" / "plan.py"), slug], studio)
@@ -387,6 +407,7 @@ def command_add(args: argparse.Namespace) -> None:
             slot = {
                 "slot": number, "status": "empty", "theme": None, "theme_confirmed": False,
                 "renderer_slug": None, "target_duration_seconds": None, "hook_highlights": [],
+                "story_format": None, "format_confirmed": False, "call_to_action": None,
             }
             folder = slot_path(batch_dir, topic, slot)
             if folder.exists():
@@ -417,6 +438,21 @@ def command_add(args: argparse.Namespace) -> None:
             shutil.rmtree(folder, ignore_errors=True)
         raise
     print(f"Added {len(added)} slot(s): {', '.join(added)}")
+
+
+def command_set_format(args: argparse.Namespace) -> None:
+    batch_dir, manifest = load_batch(args.batch_id)
+    topic = locate_topic(manifest, args.topic)
+    slot = locate_slot(topic, args.slot)
+    if slot["status"] not in ("empty", "revise"):
+        raise SystemExit(f"Slot status is '{slot['status']}', expected empty or revise.")
+    if args.story_format not in STORY_FORMATS:
+        raise SystemExit(f"Format must be one of: {', '.join(STORY_FORMATS)}")
+    slot["story_format"] = args.story_format
+    slot["format_confirmed"] = True
+    slot["format_selected_at"] = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    write_json(batch_dir / "manifest.json", manifest)
+    print(f"Story format for {topic['id']} short {args.slot:02d} set to {args.story_format}.")
 
 
 def command_set_duration(args: argparse.Namespace) -> None:
@@ -504,10 +540,8 @@ def command_set_theme(args: argparse.Namespace) -> None:
     batch_dir, manifest = load_batch(args.batch_id)
     topic = locate_topic(manifest, args.topic)
     slot = locate_slot(topic, args.slot)
-    if slot["status"] not in ("empty", "revise", "awaiting_approval"):
-        raise SystemExit(
-            f"Slot status is '{slot['status']}', expected empty, revise, or awaiting_approval."
-        )
+    if slot["status"] not in ("empty", "revise"):
+        raise SystemExit(f"Slot status is '{slot['status']}', expected empty or revise. Use revise to refresh the pitch first.")
     if args.theme not in STYLES:
         raise SystemExit(f"Theme must be one of: {', '.join(STYLES)}")
     folder = slot_path(batch_dir, topic, slot)
@@ -545,6 +579,8 @@ def build_parser() -> argparse.ArgumentParser:
     pitch.add_argument("--title", required=True)
     pitch.add_argument("--hook", required=True)
     pitch.add_argument("--hook-highlights", nargs=2, required=True, help="two words from the hook to emphasize")
+    pitch.add_argument("--story-format", choices=STORY_FORMATS, required=True)
+    pitch.add_argument("--call-to-action", required=True, help="spoken CTA line; must also appear in --script")
     pitch.add_argument("--idea", required=True, help="text or path to a text file")
     pitch.add_argument("--script", required=True, help="text or path to a text file")
     pitch.add_argument("--research", required=True, help="text or path to a research notes file")
@@ -580,6 +616,13 @@ def build_parser() -> argparse.ArgumentParser:
     add.add_argument("--topic", required=True, help="topic ID or 'all'")
     add.add_argument("--count", type=int, default=1, help="new slots per selected topic")
     add.set_defaults(func=command_add)
+
+    set_format = sub.add_parser("set-format", help="choose standalone or A/B choice-story format before research")
+    set_format.add_argument("--batch-id", required=True)
+    set_format.add_argument("--topic", required=True)
+    set_format.add_argument("--slot", type=int, required=True)
+    set_format.add_argument("--story-format", choices=STORY_FORMATS, required=True)
+    set_format.set_defaults(func=command_set_format)
 
     set_duration = sub.add_parser("set-duration", help="save a 30-60 second target before approval")
     set_duration.add_argument("--batch-id", required=True)
