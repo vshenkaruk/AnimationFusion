@@ -1,16 +1,18 @@
 """Beta Version Blox Studio: one command from a shot list to a finished video.
 
   python kit/run.py projects/<name>                 # shots -> voice -> compile -> stills (look first)
+  python kit/run.py projects/<name> preview         # half-resolution review video with narration
   python kit/run.py projects/<name> render post     # full render (parallel) -> captions, music, mp4
   python kit/run.py projects/<name> all             # everything in one go
 
-Stages: shots voice compile stills render post
+Stages: shots voice compile stills render preview post
   shots    runs <project>/shots.py, which writes timed.json (and placeholder word times)
   voice    local system speech reads each shot's text -> vo.wav + words.json; no API is called
            (bring vo.wav + words.json to use a recording; optional Kokoro is never installed automatically)
   compile  Blender builds the scene, keys every frame and checks that no two characters overlap
   stills   one draft frame per shot -> <project>/stills_sheet.jpg (check the look before the full render)
   render   all frames, on several Blender processes at once (count picked from free RAM)
+  preview  half-resolution, reduced-effect review render with the same narration and mix
   post     captions, coded music and sound effects -> <project>/out/<name>.mp4
 
 Blender: set BLENDER to blender.exe, or put the path in kit/config.json {"blender": "..."}, or have it on PATH.
@@ -149,10 +151,16 @@ class Project:
             S.paste(im, ((i % cols) * W, (i // cols) * H))
         S.save(s.p('stills_sheet.jpg')); print('   ->', s.p('stills_sheet.jpg'))
 
-    def render(s):
+    def render(s, resolution_percentage=100):
         if os.path.isdir(s.p('frames')): shutil.rmtree(s.p('frames'))
-        sh([sys.executable, os.path.join(BLOX, 'render_par.py'), s.d, str(procs())], log=s.p('render.log'))
+        sh([sys.executable, os.path.join(BLOX, 'render_par.py'), s.d, str(procs()),
+            '--resolution-percentage', str(resolution_percentage)], log=s.p('render.log'))
         print('  ', open(s.p('render.log')).read().strip().split('\n')[-1])
+
+    def preview(s):
+        s.render(resolution_percentage=50)
+        sh([sys.executable, os.path.join(BLOX, 'post.py'), s.d, '--preview'], log=s.p('preview.log'))
+        print('   ->', s.p('out', s.name + '-preview.mp4'))
 
     def post(s):
         sh([sys.executable, os.path.join(BLOX, 'post.py'), s.d], log=s.p('post.log'))

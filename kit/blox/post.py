@@ -565,8 +565,10 @@ def _has_nvenc():
         return r.returncode == 0
     except Exception: return False
 
-def encode(d, wav, out, style='blocky-3d'):
-    v = (['-c:v', 'h264_nvenc', '-preset', 'p7', '-rc', 'vbr', '-cq', '18', '-b:v', '0'] if _has_nvenc() else ['-c:v', 'libx264', '-preset', 'medium', '-crf', '18'])
+def encode(d, wav, out, style='blocky-3d', preview=False):
+    v = (['-c:v', 'libx264', '-preset', 'ultrafast', '-crf', '28'] if preview else
+         (['-c:v', 'h264_nvenc', '-preset', 'p7', '-rc', 'vbr', '-cq', '18', '-b:v', '0'] if _has_nvenc()
+          else ['-c:v', 'libx264', '-preset', 'medium', '-crf', '18']))
     grade = ['-vf', 'hue=s=0,eq=contrast=1.16:brightness=-0.01'] if style in ('monochrome', 'black-and-white', 'bw') else []
     cmd = [FFMPEG, '-v', 'error', '-y', '-framerate', str(FPS), '-i', os.path.join(d, 'comp', '%05d.jpg'), '-i', wav] + v + grade + \
           ['-pix_fmt', 'yuv420p', '-r', str(FPS), '-c:a', 'aac', '-b:a', '192k', '-ac', '2', '-ar', str(SR), '-shortest',
@@ -574,7 +576,7 @@ def encode(d, wav, out, style='blocky-3d'):
     print('encode:', v[1], flush=True); subprocess.run(cmd, check=True)
 
 
-def post(d):
+def post(d, preview=False):
     d = os.path.abspath(d); t_start = time.time(); name = os.path.basename(d.rstrip('\\/'))
     spec = json.load(open(os.path.join(d, 'timed.json'), encoding='utf8')); words = load_words(d)
     n = int(math.ceil(spec['dur'] * FPS)); ntag = int(round(TAG_S * FPS))
@@ -586,11 +588,12 @@ def post(d):
         r = pool.map_async(_work, [(i, n, W, H) for i in range(n + ntag)], chunksize=4)
         audio = mix(d, spec, words); r.get()
     wav = os.path.join(d, 'mix.wav'); wavfile.write(wav, SR, audio)
-    out = os.path.join(d, 'out', f'{name}.mp4'); encode(d, wav, out, spec.get('theme', spec.get('style', 'blocky-3d')))
+    out = os.path.join(d, 'out', f'{name}{"-preview" if preview else ""}.mp4')
+    encode(d, wav, out, spec.get('theme', spec.get('style', 'blocky-3d')), preview=preview)
     print(f'wrote {out} ({n} frames + {ntag} end card) in {time.time() - t_start:.0f}s', flush=True)
     return out
 
 
 if __name__ == '__main__':
     if len(sys.argv) < 2: sys.exit(__doc__)
-    post(sys.argv[1])
+    post(sys.argv[1], preview='--preview' in sys.argv[2:])

@@ -7,16 +7,15 @@ or any other tool.
 
 ## Pace
 
-| | The genre | Our target for 15-25 s |
+| | The genre reference | Our 30–60 s target |
 |---|---|---|
-| Cuts per minute, opening | about 27 (first 90 s) | 27 or more; the cold open can run 40-70 with reversals |
-| Median shot | 2.7 s in the opening | 0.7 to 3 s |
-| Long holds | up to about 12 s, always with action inside | nothing static over about 3 s |
+| Shot changes | Use the opening pace as one reference | Change shot size, place, camera angle, or scene state to support each beat; make a meaningful change every 6–8 s |
+| Holds | Longer holds work when action continues | Avoid an unmotivated static image; animate or reframe during longer dialogue |
 
 - Cuts come from **changing shot size**, not from motion: wide, then a macro insert, then a medium, then a close-up
   of a hand, then a reaction. No two neighbouring shots share a size and angle.
-- The opening runs about twice as fast as the rest. Cut on the word: `plan.py` lands each cut 2 frames before its
-  cue word.
+- The opening can move faster than the middle, but do not target a fixed cuts-per-minute count. Cut on a word or
+  action when it strengthens the beat; the 30–60 second house duration takes precedence.
 
 ## Light does most of the work
 
@@ -53,8 +52,9 @@ or any other tool.
 
 ## On-screen text
 
-Almost none. The title card, and small UI readouts in the mono face (a timer, a chip naming the power, a short
-label). No speech bubbles, no "HA HA", no captions of the voice.
+Keep decorative type restrained: use the title card and small UI readouts (a timer, a short label, or a number).
+Burned-in narration captions remain required across all themes; keep them in their own clear, phone-safe caption
+area. Avoid speech bubbles, redundant labels, and bouncing text that competes with the spoken line.
 
 ## The storyboard self-check (step 5)
 
@@ -77,7 +77,7 @@ again. Only a board that passes goes to animation.
 8. **Acting matches the line.** The expression and pose say the line without the voice; the hand that moves is the
    near one (with `yaw < 0` the far arm hides behind the body).
 9. **Continuity.** Same costume, same set layout, same props in the same places across shots of one place.
-10. **Only the title and readouts as text,** spelled right, inside the frame.
+10. **Text is clean and safe,** including the title, UI readouts, and universal burned-in narration captions.
 11. **Ours.** Nothing resembles a famous character, a channel's hero or a brand.
 
 ## The motion check (step 6)

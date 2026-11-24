@@ -1,10 +1,8 @@
 ---
 name: short-studio
-description: Manage topic research, script review, and local production of up to three vertical animated shorts per topic. Supports blocky 3D, monochrome, and the original What If vector style. Uses local voices by default and makes no paid API calls unless a provider is explicitly selected.
+description: Manage topic research, script review, audio preview, and local production of vertical animated shorts. Supports blocky 3D, monochrome, and the original What If vector style; visual treatment is research-scored automatically.
 ---
 
 # Short Studio
 
-Follow the full production workflow in the root `SKILL.md`. It defines the
-research, pitch approval, storyboard review, renderer, and batch queue steps
-for `/short-studio`.
+Follow the root `SKILL.md` for research, treatment scoring, script approval, storyboard review, quick audio preview, final rendering, and saved batch workflows. Claude Code may use parallel research subagents when available; OpenCode runs the same workflow directly.

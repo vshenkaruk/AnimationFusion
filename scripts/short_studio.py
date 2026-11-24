@@ -13,7 +13,9 @@ import json
 import re
 import shutil
 import subprocess
+import statistics
 import sys
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -24,6 +26,8 @@ OUTPUT_ROOT = ROOT / "out" / "short-studio"
 TEMPLATE = ROOT / "kit" / "templates" / "blocky_short"
 STYLES = ("blocky-3d", "monochrome", "what-if")
 STORY_FORMATS = ("standalone", "choice-story")
+TREATMENTS = ("character-led", "graphics-led", "hybrid")
+TREATMENT_CHOICES = ("auto",) + TREATMENTS
 INITIAL_MAX_PER_TOPIC = 3
 
 
@@ -125,7 +129,7 @@ def command_init(args: argparse.Namespace) -> None:
         titles.add(topic_id)
         episodes = [{"slot": i, "status": "empty", "theme": None, "theme_confirmed": False,
                      "renderer_slug": None, "target_duration_seconds": None, "hook_highlights": [],
-                     "story_format": None, "format_confirmed": False, "call_to_action": None}
+                     "story_format": None, "format_confirmed": False, "visual_treatment": None, "visual_treatment_mode": "auto", "treatment_confirmed": True, "call_to_action": None}
                     for i in range(1, args.limit + 1)]
         topics.append({"id": topic_id, "title": title, "notes": notes.strip(), "episodes": episodes})
     if not topics:
@@ -172,6 +176,17 @@ def command_pitch(args: argparse.Namespace) -> None:
         raise SystemExit("Choose and save the visual theme with set-theme before researching or pitching.")
     if not slot.get("target_duration_seconds"):
         raise SystemExit("Choose the target length with set-duration before researching or pitching.")
+    if args.visual_treatment not in TREATMENTS:
+        raise SystemExit(f"Selected visual treatment must be one of: {', '.join(TREATMENTS)}")
+    if not slot.get("treatment_confirmed"):
+        raise SystemExit("Set the visual treatment to auto or choose an override with set-treatment before pitching.")
+    treatment_mode = slot.get("visual_treatment_mode", "auto")
+    treatment_scorecard = ""
+    if treatment_mode == "auto":
+        treatment_scorecard = read_text_arg(args.treatment_scorecard, "treatment scorecard", required=True)
+        validate_treatment_scorecard(treatment_scorecard, args.visual_treatment)
+    elif slot.get("visual_treatment") != args.visual_treatment:
+        raise SystemExit("Use the saved treatment or set a new override with set-treatment before pitching.")
     theme_confirmed = True
     if not slot.get("format_confirmed") or slot.get("story_format") != args.story_format:
         raise SystemExit("Choose and save this video's story format with set-format before researching or pitching.")
@@ -181,6 +196,8 @@ def command_pitch(args: argparse.Namespace) -> None:
     hook_tokens = {word.strip(".,!?;:'\"()[]").casefold() for word in hook.split()}
     if len(hook_highlights) != 2 or any(word.casefold() not in hook_tokens for word in hook_highlights):
         raise SystemExit("Choose exactly two emphasis words that appear in the opening hook.")
+    visual_plan = read_text_arg(args.visual_plan, "visual plan", required=True)
+    validate_visual_plan(visual_plan)
     idea = read_text_arg(args.idea, "idea", required=True)
     script = read_text_arg(args.script, "script", required=True)
     research = read_text_arg(args.research, "research", required=True)
@@ -194,13 +211,16 @@ def command_pitch(args: argparse.Namespace) -> None:
         raise SystemExit("The script is unusually short; provide the complete narration before asking for approval.")
     folder = slot_path(batch_dir, topic, slot)
     folder.mkdir(parents=True, exist_ok=True)
-    (folder / "pitch.md").write_text(f"# {title}\n\n**Topic:** {topic['title']}\n\n**Theme:** {args.theme}\n\n**Format:** {args.story_format}\n\n**Hook:** {hook}\n\n**Call to action:** {call_to_action}\n\n{idea}\n", encoding="utf-8")
+    (folder / "pitch.md").write_text(f"# {title}\n\n**Topic:** {topic['title']}\n\n**Theme:** {args.theme}\n\n**Visual treatment:** {args.visual_treatment} ({'auto-selected' if treatment_mode == 'auto' else 'manual override'})\n\n**Format:** {args.story_format}\n\n**Hook:** {hook}\n\n**Call to action:** {call_to_action}\n\n{idea}\n", encoding="utf-8")
+    (folder / "visual-plan.md").write_text(visual_plan + "\n", encoding="utf-8")
+    if treatment_scorecard:
+        (folder / "treatment-scorecard.md").write_text(treatment_scorecard + "\n", encoding="utf-8")
     (folder / "script.md").write_text(script + "\n", encoding="utf-8")
     (folder / "research.md").write_text((research or "No research notes attached.\n") + "\n", encoding="utf-8")
     (folder / "post-caption.txt").write_text((caption or f"{hook}\n\n{call_to_action}") + "\n", encoding="utf-8")
     slot.update({"status": "awaiting_approval", "theme": args.theme, "theme_confirmed": theme_confirmed,
                  "title": title, "hook": hook, "hook_highlights": hook_highlights,
-                 "story_format": args.story_format, "format_confirmed": True, "call_to_action": call_to_action,
+                 "story_format": args.story_format, "format_confirmed": True, "visual_treatment": args.visual_treatment, "visual_treatment_mode": treatment_mode, "treatment_confirmed": True, "call_to_action": call_to_action,
                  "renderer_slug": args.renderer_slug or slugify(title), "research_updated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"), "updated_at": datetime.now(timezone.utc).isoformat(timespec="seconds")})
     write_json(batch_dir / "manifest.json", manifest)
     print(f"Pitch saved for {topic['id']} short {args.slot:02d}; status=awaiting_approval")
@@ -219,10 +239,15 @@ def command_decide(args: argparse.Namespace) -> None:
         raise SystemExit("Choose and save a target length with the set-duration command before approval.")
     if args.decision == "approve" and not slot.get("format_confirmed"):
         raise SystemExit("Choose and save a story format with the set-format command before approval.")
+    if args.decision == "approve" and not slot.get("treatment_confirmed"):
+        raise SystemExit("Set the visual treatment to auto or choose an override before approval.")
     if args.decision == "approve" and not slot.get("call_to_action"):
         raise SystemExit("Add a spoken call to action before approval.")
     if args.decision == "approve":
-        for name in ("pitch.md", "script.md", "research.md"):
+        required = ["pitch.md", "script.md", "research.md", "visual-plan.md"]
+        if slot.get("visual_treatment_mode", "auto") == "auto":
+            required.append("treatment-scorecard.md")
+        for name in required:
             if not (folder / name).is_file() or not (folder / name).read_text(encoding="utf-8").strip():
                 raise SystemExit(f"Cannot approve without {folder / name}")
         slot["status"] = "approved"
@@ -235,6 +260,33 @@ def command_decide(args: argparse.Namespace) -> None:
     write_json(batch_dir / "manifest.json", manifest)
     print(f"{topic['id']} short {args.slot:02d}: {slot['status']}")
 
+
+
+def validate_treatment_scorecard(scorecard: str, selected: str) -> None:
+    scores: dict[str, int] = {}
+    for treatment in TREATMENTS:
+        match = re.search(rf"(?m)^\s*{re.escape(treatment)}\s*:\s*topic=(\d),\s*story=(\d),\s*reference=(\d)\s*$", scorecard)
+        if not match:
+            raise SystemExit(f"Treatment scorecard needs a '{treatment}: topic=0, story=0, reference=0' row.")
+        parts = [int(value) for value in match.groups()]
+        if any(value > 2 for value in parts):
+            raise SystemExit("Each treatment-fit score must be between 0 and 2.")
+        scores[treatment] = sum(parts)
+    if "evidence:" not in scorecard.casefold() or "why:" not in scorecard.casefold():
+        raise SystemExit("Treatment scorecard must include evidence and why sections grounded in this video's research.")
+    highest = max(scores.values())
+    if scores["hybrid"] >= highest - 1 or scores["character-led"] == scores["graphics-led"]:
+        recommended = "hybrid"
+    else:
+        recommended = max(("character-led", "graphics-led"), key=lambda name: scores[name])
+    if selected != recommended:
+        raise SystemExit(f"Scorecard recommends {recommended} (character {scores['character-led']}/6, graphics {scores['graphics-led']}/6, hybrid {scores['hybrid']}/6); set --visual-treatment to that choice or use a manual override.")
+
+
+def validate_visual_plan(plan: str) -> None:
+    beats = [line for line in plan.splitlines() if re.match(r"^\s*(?:\d+[.)]|[-*])\s+\S", line)]
+    if not 5 <= len(beats) <= 7:
+        raise SystemExit(f"Visual plan must have 5–7 numbered or bulleted key-image beats; found {len(beats)}.")
 
 
 def validate_duration(actual: float, target: int, stage: str) -> None:
@@ -326,16 +378,24 @@ def _current_storyboard_fingerprint(slot: dict[str, Any]) -> tuple[Path, str, st
 
 
 def run(command: list[str], cwd: Path, env: dict[str, str] | None = None) -> None:
-    print("$", " ".join(command))
+    print("$", " ".join(command), flush=True)
+    started = time.monotonic()
     subprocess.run(command, cwd=cwd, env=env, check=True)
+    print(f"   completed in {time.monotonic() - started:.1f}s", flush=True)
 
 
 def command_prepare(args: argparse.Namespace) -> None:
+    prepare_started = time.monotonic()
     batch_dir, manifest = load_batch(args.batch_id)
     topic = locate_topic(manifest, args.topic)
     slot = locate_slot(topic, args.slot)
     if slot["status"] not in ("approved", "storyboard_ready"):
         raise SystemExit("Approve the pitch first, or revise the current storyboard before preparing.")
+    eta = _stage_eta(manifest, slot, "prepare_duration_seconds")
+    if eta is None:
+        print("No comparable local preparation timing yet. Voice and storyboard preparation is roughly 2–10 minutes per video; the first run is unbenchmarked.")
+    else:
+        print(f"Estimated voice and storyboard preparation time from comparable local videos: about {eta / 60:.1f} minutes (rough estimate).")
     folder = slot_path(batch_dir, topic, slot)
     py = sys.executable
     if slot["theme"] in ("blocky-3d", "monochrome"):
@@ -359,6 +419,7 @@ def command_prepare(args: argparse.Namespace) -> None:
         if target_duration is not None:
             validate_duration(float(spec.get("dur", 0)), int(target_duration), "Blender scene")
         spec["theme"] = slot["theme"]
+        spec["visual_treatment"] = slot.get("visual_treatment", "character-led")
         spec["hook"] = slot.get("hook", "")
         spec["hook_highlights"] = slot.get("hook_highlights", [])
         spec["hook_duration_seconds"] = 1.5
@@ -413,14 +474,19 @@ def command_prepare(args: argparse.Namespace) -> None:
         raise SystemExit(f"Unsupported theme: {slot['theme']}")
     _, source_fingerprint, _ = _current_storyboard_fingerprint(slot)
     slot["status"] = "storyboard_ready"
+    slot["prepare_duration_seconds"] = round(time.monotonic() - prepare_started, 1)
     slot["prepared_at"] = datetime.now(timezone.utc).isoformat(timespec="seconds")
     slot["storyboard_reviewed"] = False
     slot["prepared_source_fingerprint"] = source_fingerprint
     slot.pop("storyboard_fingerprint", None)
     slot.pop("storyboard_reviewed_at", None)
+    for key in ("preview", "preview_audio_qa", "previewed_at", "preview_duration_seconds",
+                "preview_reviewed", "preview_fingerprint", "preview_decision", "preview_decision_at"):
+        slot.pop(key, None)
     write_json(batch_dir / "manifest.json", manifest)
     board, _, _ = _current_storyboard_fingerprint(slot)
     print(f"Storyboard ready for {topic['id']} short {args.slot:02d}: {board}")
+    print(f"Voice and storyboard preparation took {slot['prepare_duration_seconds'] / 60:.1f} minutes.")
     print("Show the storyboard to the user. Render stays blocked until review-storyboard --decision approve.")
 
 
@@ -468,12 +534,12 @@ def command_review_storyboard(args: argparse.Namespace) -> None:
     write_json(batch_dir / "manifest.json", manifest)
 
 
-def command_render(args: argparse.Namespace) -> None:
+def _approved_render_slot(args: argparse.Namespace) -> tuple[Path, dict[str, Any], dict[str, Any], dict[str, Any], Path]:
     batch_dir, manifest = load_batch(args.batch_id)
     topic = locate_topic(manifest, args.topic)
     slot = locate_slot(topic, args.slot)
     if slot["status"] != "prepared":
-        raise SystemExit("Render is blocked until the storyboard has been explicitly approved.")
+        raise SystemExit("Rendering is blocked until the storyboard has been explicitly approved.")
     expected_fingerprint = slot.get("storyboard_fingerprint")
     if not expected_fingerprint:
         raise SystemExit("Review this storyboard first with review-storyboard --decision approve.")
@@ -483,8 +549,127 @@ def command_render(args: argparse.Namespace) -> None:
             "The storyboard or its source files changed after approval. Review the current storyboard again "
             "before rendering."
         )
+    return batch_dir, manifest, topic, slot, slot_path(batch_dir, topic, slot)
+
+
+def _narration_source(slot: dict[str, Any]) -> Path:
+    if slot["theme"] in ("blocky-3d", "monochrome"):
+        return ROOT / slot["renderer_project"] / "vo.wav"
+    slug = slot.get("renderer_slug") or slugify(slot.get("title", ""))
+    return ROOT / "studio" / "public" / slug / "voice.wav"
+
+
+def command_preview(args: argparse.Namespace) -> None:
+    batch_dir, manifest, topic, slot, folder = _approved_render_slot(args)
+    preview_started = time.monotonic()
+    eta = _stage_eta(manifest, slot, "preview_duration_seconds")
+    if eta is None:
+        print("No comparable local preview timing yet. This half-resolution 540x960 preview is unbenchmarked on this computer.")
+    else:
+        print(f"Estimated preview time from comparable local videos: about {eta / 60:.1f} minutes (rough estimate).")
     py = sys.executable
-    folder = slot_path(batch_dir, topic, slot)
+    if slot["theme"] in ("blocky-3d", "monochrome"):
+        project = ROOT / slot["renderer_project"]
+        run([py, str(ROOT / "kit" / "run.py"), str(project), "preview"], ROOT)
+        source = project / "out" / f"{project.name}-preview.mp4"
+    else:
+        slug = slot["renderer_slug"]
+        run([py, str(ROOT / "scripts" / "master.py"), slug, "--preview"], ROOT / "studio")
+        source = ROOT / "studio" / "out" / slug / f"{slug}-preview-final.mp4"
+    if not source.is_file():
+        raise SystemExit(f"Expected review preview was not created: {source}")
+    qa = folder / "audio-qa-preview.md"
+    qa_command = [py, str(ROOT / "scripts" / "quality" / "audio_qa.py"), str(source),
+                  "--report", str(qa), "--voice-source", str(_narration_source(slot))]
+    print("$", " ".join(qa_command), flush=True)
+    qa_started = time.monotonic()
+    qa_result = subprocess.run(qa_command, cwd=ROOT, check=False)
+    print(f"   audio check completed in {time.monotonic() - qa_started:.1f}s", flush=True)
+    destination = OUTPUT_ROOT / manifest["id"] / topic["id"] / f"short-{args.slot:02d}"
+    destination.mkdir(parents=True, exist_ok=True)
+    preview_target = destination / "preview.mp4"
+    shutil.copy2(source, preview_target)
+    shutil.copy2(qa, destination / "audio-qa-preview.md")
+    slot["preview"] = str(preview_target.relative_to(ROOT)).replace("\\", "/")
+    slot["preview_audio_qa"] = str((destination / "audio-qa-preview.md").relative_to(ROOT)).replace("\\", "/")
+    slot["previewed_at"] = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    slot["preview_duration_seconds"] = round(time.monotonic() - preview_started, 1)
+    slot["preview_reviewed"] = False
+    slot.pop("preview_fingerprint", None)
+    write_json(batch_dir / "manifest.json", manifest)
+    print(f"Preview ready: {preview_target}; preview render took {slot['preview_duration_seconds']:.1f}s")
+    if qa_result.returncode:
+        print("Audio QA failed. You can still listen to diagnose it, but final rendering stays blocked until the audio is fixed and a new preview passes.")
+    print("Listen to the narration and check timing. If it is good and the audio report passes, run review-preview --decision approve. The 540x960 preview does not replace the 1080x1920 final render.")
+
+
+def _stage_eta(manifest: dict[str, Any], slot: dict[str, Any], duration_key: str) -> float | None:
+    theme = slot.get("theme")
+    target = float(slot.get("target_duration_seconds") or 0)
+    samples = []
+    for topic in manifest.get("topics", []):
+        for previous in topic.get("episodes", []):
+            if previous is slot or previous.get("theme") != theme:
+                continue
+            seconds = previous.get(duration_key)
+            duration = float(previous.get("target_duration_seconds") or 0)
+            if seconds and duration > 0:
+                samples.append(float(seconds) * target / duration)
+    return statistics.median(samples) if samples else None
+
+
+def _render_eta(manifest: dict[str, Any], slot: dict[str, Any]) -> float | None:
+    return _stage_eta(manifest, slot, "render_duration_seconds")
+
+
+def _current_preview_fingerprint(slot: dict[str, Any], require_pass: bool = True) -> str:
+    preview = ROOT / slot.get("preview", "")
+    report = ROOT / slot.get("preview_audio_qa", "")
+    if not preview.is_file() or not report.is_file():
+        raise SystemExit("Create the review preview first with preview, then listen to it.")
+    if require_pass and "**RESULT: PASS**" not in report.read_text(encoding="utf-8"):
+        raise SystemExit("Preview audio QA did not pass. Fix the narration/audio and create a fresh preview.")
+    return _fingerprint_files([preview, report, _narration_source(slot)])
+
+
+def command_review_preview(args: argparse.Namespace) -> None:
+    batch_dir, manifest = load_batch(args.batch_id)
+    topic = locate_topic(manifest, args.topic)
+    slot = locate_slot(topic, args.slot)
+    if slot.get("status") != "prepared":
+        raise SystemExit("Prepare and approve the storyboard before reviewing its audio preview.")
+    fingerprint = _current_preview_fingerprint(slot, require_pass=args.decision == "approve")
+    if args.decision == "approve":
+        slot["preview_reviewed"] = True
+        slot["preview_fingerprint"] = fingerprint
+        print("Preview approved. The final render is now available.")
+    else:
+        slot["status"] = "approved"
+        slot["preview_reviewed"] = False
+        slot.pop("preview_fingerprint", None)
+        slot.pop("storyboard_fingerprint", None)
+        slot.pop("prepared_source_fingerprint", None)
+        slot.pop("storyboard_reviewed_at", None)
+        print("Preview needs changes. Update the voice or shot plan, then prepare, review, and preview again.")
+    slot["preview_decision"] = args.decision
+    slot["preview_decision_at"] = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    write_json(batch_dir / "manifest.json", manifest)
+
+
+def command_render(args: argparse.Namespace) -> None:
+    batch_dir, manifest, topic, slot, folder = _approved_render_slot(args)
+    if not slot.get("preview_reviewed"):
+        raise SystemExit("Listen to the approved storyboard preview, then run review-preview --decision approve.")
+    current_preview = _current_preview_fingerprint(slot)
+    if current_preview != slot.get("preview_fingerprint"):
+        raise SystemExit("The preview or its audio report changed after approval. Review the current preview again.")
+    py = sys.executable
+    eta = _render_eta(manifest, slot)
+    if eta is None:
+        print("No comparable local render timing yet. A 30–60s, 60 fps short contains 1,800–3,600 frames; first blocky 3D renders can take tens of minutes and may approach 50 minutes on some computers.")
+    else:
+        print(f"Estimated render time from this batch's similar local renders: about {eta / 60:.1f} minutes (rough estimate).")
+    render_started = time.monotonic()
     if slot["theme"] in ("blocky-3d", "monochrome"):
         project = ROOT / slot["renderer_project"]
         run([py, str(ROOT / "kit" / "run.py"), str(project), "render", "post"], ROOT)
@@ -495,6 +680,7 @@ def command_render(args: argparse.Namespace) -> None:
         source = ROOT / "studio" / "out" / slug / f"{slug}-final.mp4"
     if not source.is_file():
         raise SystemExit(f"Expected render was not created: {source}")
+    slot["render_duration_seconds"] = round(time.monotonic() - render_started, 1)
     target_duration = slot.get("target_duration_seconds")
     if target_duration is not None:
         measured = subprocess.run(
@@ -502,11 +688,14 @@ def command_render(args: argparse.Namespace) -> None:
             check=True, capture_output=True, text=True,
         )
         validate_duration(float(measured.stdout.strip()), int(target_duration), "Rendered MP4")
+    qa = folder / "audio-qa.md"
+    run([py, str(ROOT / "scripts" / "quality" / "audio_qa.py"), str(source),
+         "--report", str(qa), "--voice-source", str(_narration_source(slot))], ROOT)
     destination = OUTPUT_ROOT / manifest["id"] / topic["id"] / f"short-{args.slot:02d}"
     destination.mkdir(parents=True, exist_ok=True)
     target = destination / "final.mp4"
     shutil.copy2(source, target)
-    for name in ("pitch.md", "script.md", "research.md", "post-caption.txt"):
+    for name in ("pitch.md", "script.md", "research.md", "post-caption.txt", "visual-plan.md", "treatment-scorecard.md", "audio-qa.md"):
         if (folder / name).is_file():
             shutil.copy2(folder / name, destination / name)
     if slot["theme"] in ("blocky-3d", "monochrome"):
@@ -524,6 +713,7 @@ def command_render(args: argparse.Namespace) -> None:
     slot["rendered_at"] = datetime.now(timezone.utc).isoformat(timespec="seconds")
     write_json(batch_dir / "manifest.json", manifest)
     print(target)
+    print(f"Full render took {slot['render_duration_seconds'] / 60:.1f} minutes.")
     print("One 1080x1920 H.264 file is ready for TikTok, Instagram Reels, YouTube Shorts, and Facebook Reels.")
 
 
@@ -554,7 +744,7 @@ def command_add(args: argparse.Namespace) -> None:
             slot = {
                 "slot": number, "status": "empty", "theme": None, "theme_confirmed": False,
                 "renderer_slug": None, "target_duration_seconds": None, "hook_highlights": [],
-                "story_format": None, "format_confirmed": False, "call_to_action": None,
+                "story_format": None, "format_confirmed": False, "visual_treatment": None, "visual_treatment_mode": "auto", "treatment_confirmed": True, "call_to_action": None,
             }
             folder = slot_path(batch_dir, topic, slot)
             if folder.exists():
@@ -695,7 +885,7 @@ def command_set_theme(args: argparse.Namespace) -> None:
     pitch_path = folder / "pitch.md"
     if pitch_path.is_file():
         pitch = pitch_path.read_text(encoding="utf-8")
-        theme_line = re.compile(r"(?m)^\\*\\*Theme:\\*\\* .+$")
+        theme_line = re.compile(r"(?m)^\*\*Theme:\*\* .+$")
         if not theme_line.search(pitch):
             raise SystemExit(f"Pitch has no theme line to update: {pitch_path}")
         pitch_path.write_text(theme_line.sub(f"**Theme:** {args.theme}", pitch, count=1), encoding="utf-8")
@@ -706,6 +896,36 @@ def command_set_theme(args: argparse.Namespace) -> None:
     })
     write_json(batch_dir / "manifest.json", manifest)
     print(f"Theme for {topic['id']} short {args.slot:02d} set to {args.theme}.")
+
+
+def command_set_treatment(args: argparse.Namespace) -> None:
+    batch_dir, manifest = load_batch(args.batch_id)
+    topic = locate_topic(manifest, args.topic)
+    slot = locate_slot(topic, args.slot)
+    if slot["status"] not in ("empty", "revise"):
+        raise SystemExit(f"Slot status is '{slot['status']}', expected empty or revise. Use revise to refresh the pitch first.")
+    if args.treatment not in TREATMENT_CHOICES:
+        raise SystemExit(f"Treatment must be one of: {', '.join(TREATMENT_CHOICES)}")
+    folder = slot_path(batch_dir, topic, slot)
+    pitch_path = folder / "pitch.md"
+    if pitch_path.is_file():
+        pitch = pitch_path.read_text(encoding="utf-8")
+        treatment_line = re.compile(r"(?m)^\*\*Visual treatment:\*\* .+$")
+        display = "automatic (research-scored)" if args.treatment == "auto" else f"{args.treatment} (manual override)"
+        if treatment_line.search(pitch):
+            pitch = treatment_line.sub(f"**Visual treatment:** {display}", pitch, count=1)
+        else:
+            theme_line = re.compile(r"(?m)^\*\*Theme:\*\* .+$")
+            pitch = theme_line.sub(lambda match: match.group(0) + f"\n\n**Visual treatment:** {display}", pitch, count=1)
+        pitch_path.write_text(pitch, encoding="utf-8")
+    slot.update({
+        "visual_treatment": None if args.treatment == "auto" else args.treatment,
+        "visual_treatment_mode": "auto" if args.treatment == "auto" else "manual",
+        "treatment_confirmed": True,
+        "treatment_selected_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+    })
+    write_json(batch_dir / "manifest.json", manifest)
+    print(f"Visual treatment for {topic['id']} short {args.slot:02d} set to {args.treatment}.")
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -727,6 +947,9 @@ def build_parser() -> argparse.ArgumentParser:
     pitch.add_argument("--hook", required=True)
     pitch.add_argument("--hook-highlights", nargs=2, required=True, help="two words from the hook to emphasize")
     pitch.add_argument("--story-format", choices=STORY_FORMATS, required=True)
+    pitch.add_argument("--visual-treatment", choices=TREATMENTS, required=True, help="final treatment selected by the research scorecard or manual override")
+    pitch.add_argument("--treatment-scorecard", help="required for automatic mode; path or text with the 3-mode fit scores and research evidence")
+    pitch.add_argument("--visual-plan", required=True, help="path or text with 5–7 numbered visual beats, written before the script")
     pitch.add_argument("--call-to-action", required=True, help="spoken CTA line; must also appear in --script")
     pitch.add_argument("--idea", required=True, help="text or path to a text file")
     pitch.add_argument("--script", required=True, help="text or path to a text file")
@@ -755,7 +978,20 @@ def build_parser() -> argparse.ArgumentParser:
     storyboard_review.add_argument("--decision", choices=("approve", "revise"), required=True)
     storyboard_review.set_defaults(func=command_review_storyboard)
 
-    render = sub.add_parser("render", help="render only after storyboard approval")
+    preview = sub.add_parser("preview", help="make a quick half-resolution preview with narration for listening")
+    preview.add_argument("--batch-id", required=True)
+    preview.add_argument("--topic", required=True)
+    preview.add_argument("--slot", type=int, required=True)
+    preview.set_defaults(func=command_preview)
+
+    preview_review = sub.add_parser("review-preview", help="approve the audio preview or request a revision")
+    preview_review.add_argument("--batch-id", required=True)
+    preview_review.add_argument("--topic", required=True)
+    preview_review.add_argument("--slot", type=int, required=True)
+    preview_review.add_argument("--decision", choices=("approve", "revise"), required=True)
+    preview_review.set_defaults(func=command_review_preview)
+
+    render = sub.add_parser("render", help="render only after storyboard and audio preview approval")
     render.add_argument("--batch-id", required=True)
     render.add_argument("--topic", required=True)
     render.add_argument("--slot", type=int, required=True)
@@ -799,6 +1035,13 @@ def build_parser() -> argparse.ArgumentParser:
     set_theme.add_argument("--slot", type=int, required=True)
     set_theme.add_argument("--theme", choices=STYLES, required=True)
     set_theme.set_defaults(func=command_set_theme)
+
+    set_treatment = sub.add_parser("set-treatment", help="save automatic treatment scoring or a manual override")
+    set_treatment.add_argument("--batch-id", required=True)
+    set_treatment.add_argument("--topic", required=True)
+    set_treatment.add_argument("--slot", type=int, required=True)
+    set_treatment.add_argument("--treatment", choices=TREATMENT_CHOICES, default="auto", help="auto (default), or one fixed treatment")
+    set_treatment.set_defaults(func=command_set_treatment)
     return parser
 
 

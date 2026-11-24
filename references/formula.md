@@ -1,9 +1,9 @@
-# The script: the seven-beat What If formula
+# The script: a flexible seven-beat What If reference
 
-Decoded on 21 Oct 2026 from five scripts across four channels that broke out with this format in October 2026
-(Ifverse, FunNotSoFun, IFinity, Could've Been Tales). The full episodes run 7 to 10 minutes and hit all seven beats;
-the skill makes a 15 to 25 second episode, which is the cold open of one: beats 1 to 4 in full, 5 to 7 folded into
-the last line.
+This is a storytelling reference for What If episodes, not a mandatory structure for every theme. Adapt the seven
+beats to AnimationFusion's user-selected 30–60 second duration. Keep the premise original, make the visual plan first,
+and give the first short its own payoff and spoken CTA. Do not shorten the user's duration to the older 15–25 second
+shape that appears in earlier examples below.
 
 ## The seven beats
 
@@ -14,23 +14,29 @@ the last line.
 4. **The not-so-fun part.** The cost, with real science and real numbers woven into the story ("That's real.").
 5. **Someone powerful notices.** A man in a suit, robbers, a government.
 6. **A moral choice with family at stake,** usually a little sister.
-7. **Cliffhanger.** "Part 1 of 2", a question for the comments, sometimes an "is any of this real?" section and
-   sourced science notes in the description.
+7. **Payoff and next action.** Resolve the short's main promise, then use a short CTA. A cliffhanger or Part 2 belongs
+   only in a planned series; it is never required to hold the answer back.
 
 Recurring cast: you (second person), a best friend, a little sister, mum. In our cast: Pip is "you", Mo is the best
 friend, and `sis`, `mom` and `suit` are on the rig for beats 5 and 6.
 
-## The 15 to 25 second shape
+## Adapt the beats to the chosen 30–60 seconds
 
-| Beat | Seconds | What it does | Example (rewind) |
-|---|---|---|---|
-| 1. Cold open | 0 to 11 | Three quick demos: a small everyday problem, the power, the win. The power's word is said every time. | "You knock your coffee off the desk. Rewind. You catch it." x3 |
-| 2. Premise | 11 to 15 | The title card says it: "What if you could ...?", plus one rule. | "What if you could rewind ten seconds, any time you want?" |
-| 3. Fun | 1 to 2 s | One line, or one more escalation. | "Sounds amazing." |
-| 4 to 7. The turn | last 2 to 6 s | The cost, ideally one real fact with a number and "That's real.", then a line that leaves a question open. | "It's about to ruin your life." |
+Use the exact duration saved for the episode; this example only shows a possible 45-second balance:
 
-A longer cut (40 to 60 s) adds beat 4 properly (the fact, then its consequence on screen), the suit noticing (5)
-and the sister in danger (6), and ends on "Part 1".
+| Beat | Approximate time | What it does |
+|---|---:|---|
+| 1. Cold open | 0–3 s | Hook with an image, choice, or problem already in motion. |
+| 2. Premise | 3–8 s | Explain the rule with one clear visual. |
+| 3. Escalation | 8–20 s | Show increasingly useful or surprising consequences. |
+| 4. Cost or proof | 20–30 s | Add a sourced fact or a consequence when the idea needs one. |
+| 5. Complication | 30–37 s | A character, obstacle, or visible change raises the stakes. |
+| 6. Choice or reversal | 37–43 s | Force a meaningful decision or reveal. |
+| 7. Payoff and CTA | 43–45 s | Resolve the promise and deliver the spoken CTA. |
+
+For another duration, stretch or compress the beats to match the narration and visual plan. A/B choice stories should
+show both options, give the first short a satisfying outcome, and invite a vote. Do not add a cliffhanger, a Part 2
+promise, or extra beats merely to fill time.
 
 ## Writing rules
 
@@ -45,10 +51,10 @@ and the sister in danger (6), and ends on "Part 1".
 - **One real fact in the turn, with a number, checked.** Work the arithmetic, write it in the episode's `science`
   field with its source, and only then put it in the script. "That's real." goes straight after it. Never invent a
   number, never round one into a different claim.
-- **End on a question or a threat,** never a resolution: "So where are yours coming from?", "It's about to ruin
-  your life."
-- **Length:** 45 to 65 words lands at 15 to 25 seconds after voice.py tightens the pauses (about 2.7 words a
-  second). Count before you call the voice: every character costs credits.
+- **Finish with a payoff.** A question can invite a vote, but answer the short's core promise before the CTA.
+- **Length:** draft for the chosen 30–60 seconds and check the actual local voice timing. As a rough writing guide,
+  75–150 spoken words can fit that interval; pauses, delivery, and sentence shape matter more than a strict count.
+  Local voices are the default; paid voice APIs are optional.
 - **The title card** is the premise, in capitals: line 1 `WHAT IF YOU COULD`, line 2 the power in four words or
   fewer with a question mark. One word of line 2 can pulse as the accent (`10`, `ANYTHING`).
 
@@ -65,7 +71,8 @@ and the sister in danger (6), and ends on "Part 1".
 
 ## episode.json: the script part
 
-The copy-paste example (`studio/src/episodes/copy-paste/episode.json`), 61 words, 23 s:
+The copy-paste example (`studio/src/episodes/copy-paste/episode.json`), about 61 words and 23 seconds, is a legacy
+schema example only; lengthen or rebuild it to meet the selected 30–60 second production target:
 
 ```json
 "topic": "What if you could copy and paste anything?",

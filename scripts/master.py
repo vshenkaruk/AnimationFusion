@@ -1,8 +1,8 @@
 """Step 8: the master. Renders the episode, then brings the mix to -14 LUFS with true peaks under -1 dBTP (two-pass
 loudnorm, video copied untouched), measures the result and writes the report.
 
-python <skill>/scripts/master.py <slug> [--skip-render] [--concurrency 6]
-Writes out/<slug>/<slug>-raw.mp4, out/<slug>/<slug>-final.mp4 and out/<slug>/report.json
+python <skill>/scripts/master.py <slug> [--skip-render] [--concurrency 6] [--preview]
+Writes an optional half-resolution preview or the full-size master under out/<slug>/
 """
 import json, re, subprocess, sys, time
 
@@ -11,15 +11,20 @@ from wi import STUDIO, ep_dir, load_episode, load_json, loudness, out_dir, save_
 slug = sys.argv[1]
 args = sys.argv[2:]
 conc = args[args.index('--concurrency') + 1] if '--concurrency' in args else None
+preview = '--preview' in args
 ep = load_episode(slug)
 od = out_dir(slug)
-raw = od / f'{slug}-raw.mp4'
-final = od / f'{slug}-final.mp4'
+stem = f'{slug}-preview' if preview else slug
+raw = od / f'{stem}-raw.mp4'
+final = od / f'{stem}-final.mp4'
 npx = 'npx.cmd' if sys.platform == 'win32' else 'npx'
 
 if '--skip-render' not in args:
     t0 = time.time()
-    cmd = [npx, 'remotion', 'render', 'src/index.ts', ep['id'], str(raw), '--log', 'error']
+    cmd = [npx, 'remotion', 'render', 'src/index.ts', ep['id'], str(raw), '--log', 'error',
+           '--image-format', 'jpeg', '--jpeg-quality', '95']
+    if preview:
+        cmd += ['--scale', '0.5']
     if conc:
         cmd += ['--concurrency', conc]
     print(' '.join(cmd))
@@ -45,7 +50,7 @@ report = {
     'segments': len(tl['segments']), 'cuts_per_min': round((len(tl['segments']) - 1) / (tl['total'] / tl['fps']) * 60, 1),
     'elevenlabs_credits': sum(c['credits'] for c in costs), 'cost_lines': costs,
 }
-save_json(od / 'report.json', report)
+save_json(od / f'{stem}-report.json', report)
 print(json.dumps({k: v for k, v in report.items() if k != 'cost_lines'}, indent=1))
 ok = abs(lufs + 14) <= 0.5 and true_peak <= -1.0
 print('loudness OK' if ok else '! loudness off target: check the report')

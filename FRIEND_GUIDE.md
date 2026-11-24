@@ -64,27 +64,33 @@ The optional count is the number of new slots per selected topic. Check a batch 
 
 Continuing or adding videos reuses the existing batch folder. It does not rebuild the old slots. Every new video gets fresh topic-specific research.
 
-For each slot, Claude/OpenCode asks you to choose:
+For each new slot, Claude/OpenCode asks you to choose the render theme, story format (`standalone` or `choice-story`), and an exact target length from 30 to 60 seconds. Treatment is selected automatically after research from character-led, graphics-led, and hybrid options; your friend can override it if desired.
 
-- A render theme: `blocky-3d`, `monochrome`, or `what-if`.
-- A story format: `standalone` or an optional `choice-story` with an A/B decision.
-- An exact target length from 30 to 60 seconds.
+Before work starts, expect roughly 4–10 minutes of research per video; 2–6 minutes for treatment scoring, beat plan, pitch, and script; and 2–10 minutes for voice and storyboard preparation. Choosing the three options is usually quick. Storyboard review and listening pauses depend on you. Preview and full-render times are machine-dependent: this computer uses comparable saved timings after a video completes; first runs are unbenchmarked. A 30–60 second final contains 1,800–3,600 frames at 60 fps, and your friend's computer has taken close to 50 minutes for a render. These are estimates, not guarantees. The CLI records actual preparation, preview, and final-render time so later estimates improve. For `/short-studio-add` with several videos, the research may run in parallel; scripting, preparation, review, preview, and final rendering still add time per video.
 
-Then it researches the topic and chosen style again, prepares a complete script with a spoken CTA, and waits for review. A choice-story asks viewers to comment A or B and gives the first short its own payoff. The CTA says “Part 2” only if the creator has decided to make one; generating a Part 2 is manual in this version.
+For a multi-video batch, Claude Code can research up to three topics in parallel using read-only subagents when its Agent and web-search tools are available. This can cut the serial research wait, but uses additional Claude usage and does not make Blender or Remotion renders run faster. OpenCode and sessions without subagent tools run the same research directly.
+
+Research and topic/style scoring happen first. It makes a 5–7 image beat plan before writing the narration, prepares the complete script and spoken CTA, and waits for your pitch review. After approval, it builds the voice and storyboard; you review the prepared storyboard before preview. A choice-story asks viewers to comment A or B and gives the first short its own payoff. The CTA says “Part 2” only if the creator has decided to make one; generating a Part 2 is manual in this version.
 
 Research looks for recent high-performing examples in the chosen style, current topic signals, and evidence of youth relevance when available. It notes source links, dates, and what is a fact versus a forecast. It does not promise a topic will go viral or copy another creator's content.
 
-Choose the theme and story only after reviewing the idea, sources, and full script. After script approval, inspect the real storyboard. For blocky videos, Claude must replace the copied generic starter shot plan with the approved story's title/topic, enough story beats, varied camera framings, and distinct character actions. If anything looks generic or awkward, ask for revised shots and rebuild the storyboard. The CLI blocks full rendering until you explicitly approve the current storyboard.
+Review the idea, sources, and full script before approving. After script approval, inspect the actual storyboard. For blocky videos, replace the copied starter shot plan with the approved story's title/topic, enough story beats, varied camera framings, layered set depth, scene-specific props, and distinct character actions. Character-led or hybrid stories need a recognizable silhouette, signature color and prop, and a clear role for each character. Follow [the blocky 3D art-direction guide](references/blocky-3d.md) to keep the render clean and readable. Use the storyboard sheet to check the hook, location and scale changes, perspective, character design, and scene continuity on a phone-sized view. Approve the storyboard before a quick audio preview.
 
 ### Manual storyboard review
 
-After `prepare`, the storyboard is saved at `production/batches/<batch-id>/<topic-id>/short-<n>/project/stills_sheet.jpg` for Blender themes or `studio/out/<slug>/storyboard.jpg` for What If. Ask Claude to show it. To approve the current preview:
+After `prepare`, the storyboard is saved at `production/batches/<batch-id>/<topic-id>/short-<n>/project/stills_sheet.jpg` for Blender themes or `studio/out/<slug>/storyboard.jpg` for What If. Ask Claude to show it. To approve the current storyboard:
 
 ```powershell
 python scripts/short_studio.py review-storyboard --batch-id <batch-id> --topic <topic-id> --slot <n> --decision approve
 ```
 
-If changes are needed, use `--decision revise`, edit the scene plan, run `prepare` again, and review the new storyboard. The `render` command refuses to run without approval of the current preview.
+If changes are needed, use `--decision revise`, edit the scene plan, run `prepare` again, and review the new storyboard. The `preview` command uses the approved storyboard to create a fast 540×960 video with narration and the full 60 fps timing. Listen for missing, quiet, or cut-off voice and check scene timing. The automatic audio report checks source and output signal levels but cannot judge pronunciation or whether the narration sounds natural. If it is good, record your review, then run `render` for the unchanged 1080×1920 final. The render command also checks audio before delivering the file.
+
+```powershell
+python scripts/short_studio.py preview --batch-id <batch-id> --topic <topic-id> --slot <n>
+python scripts/short_studio.py review-preview --batch-id <batch-id> --topic <topic-id> --slot <n> --decision approve
+python scripts/short_studio.py render --batch-id <batch-id> --topic <topic-id> --slot <n>
+```
 
 ## Output files
 
@@ -94,7 +100,17 @@ Each finished folder is under:
 out/short-studio/<batch-id>/<topic-id>/short-01/
 ```
 
-It contains `final.mp4`, `script.md`, `research.md`, `post-caption.txt`, and `storyboard.jpg`. The video is a vertical 1080×1920 H.264 MP4 at 60 fps. Upload it manually to the social platform you choose.
+It contains `final.mp4`, `preview.mp4`, `audio-qa.md`, `audio-qa-preview.md`, `script.md`, `research.md`, `visual-plan.md`, `post-caption.txt`, and `storyboard.jpg`. The video is a vertical 1080×1920 H.264 MP4 at 60 fps. Upload it manually to the social platform you choose.
+
+## Treatment notes
+
+| Treatment | How to use it |
+|---|---|
+| `character-led` | Let cast actions, reactions, and relationships tell the story. |
+| `graphics-led` | Let moving props, diagrams, counters, and proof lead; characters are optional. |
+| `hybrid` | Combine a distinctive cast with a clear visual metaphor or diagram. |
+
+The choice reuses the existing renderers. In Blender styles, graphics-led means story-specific 3D props, camera movement, and existing caption/card layers; it does not add a new 2D overlay engine. What If uses its existing vector components. See [the blocky 3D guide](references/blocky-3d.md) for the visual polish checks.
 
 ## Theme notes
 
