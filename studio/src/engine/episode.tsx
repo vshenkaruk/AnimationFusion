@@ -119,7 +119,7 @@ export const ShotFrame: React.FC<{ children: React.ReactNode; output?: EpisodeOu
 );
 
 const hookLines = (hook: string): string[][] => {
-  const words = hook.trim().split(/\\s+/).filter(Boolean);
+  const words = hook.trim().split(/\s+/).filter(Boolean);
   if (words.length < 2) return [words];
   let split = 1;
   let best = Number.POSITIVE_INFINITY;
@@ -134,7 +134,7 @@ const HookCard: React.FC<{ hook: string; highlights: string[] }> = ({ hook, high
   const lines = hookLines(hook);
   const widestLine = Math.max(1, ...lines.map((line) => line.join(' ').length));
   const fontSize = Math.min(64, Math.max(36, Math.floor(900 / (widestLine * 0.58))));
-  const marked = new Set(highlights.map((word) => word.replace(/^[^\\w]+|[^\\w]+$/g, '').toLowerCase()));
+  const marked = new Set(highlights.map((word) => word.replace(/^[^\w]+|[^\w]+$/g, '').toLowerCase()));
   return (
     <AbsoluteFill style={{ pointerEvents: 'none', alignItems: 'center', padding: '0 52px', zIndex: 20 }}>
       <div style={{
@@ -148,7 +148,7 @@ const HookCard: React.FC<{ hook: string; highlights: string[] }> = ({ hook, high
             {line.map((word, wordIndex) => (
               <React.Fragment key={wordIndex}>
                 {wordIndex ? ' ' : ''}
-                <span style={{ color: marked.has(word.replace(/^[^\\w]+|[^\\w]+$/g, '').toLowerCase()) ? '#FFDE28' : '#fff' }}>{word}</span>
+                <span style={{ color: marked.has(word.replace(/^[^\w]+|[^\w]+$/g, '').toLowerCase()) ? '#FFDE28' : '#fff' }}>{word}</span>
               </React.Fragment>
             ))}
           </div>
