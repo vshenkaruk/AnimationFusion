@@ -177,7 +177,8 @@ def command_pitch(args: argparse.Namespace) -> None:
     (folder / "script.md").write_text(script + "\n", encoding="utf-8")
     (folder / "research.md").write_text((research or "No research notes attached.\n") + "\n", encoding="utf-8")
     (folder / "post-caption.txt").write_text((caption or hook) + "\n", encoding="utf-8")
-    slot.update({"status": "awaiting_approval", "theme": args.theme, "title": title, "hook": hook,
+    slot.update({"status": "awaiting_approval", "theme": args.theme, "theme_confirmed": False,
+                 "title": title, "hook": hook,
                  "renderer_slug": args.renderer_slug or slugify(title), "updated_at": datetime.now(timezone.utc).isoformat(timespec="seconds")})
     write_json(batch_dir / "manifest.json", manifest)
     print(f"Pitch saved for {topic['id']} short {args.slot:02d}; status=awaiting_approval")
@@ -190,6 +191,8 @@ def command_decide(args: argparse.Namespace) -> None:
     folder = slot_path(batch_dir, topic, slot)
     if slot["status"] != "awaiting_approval":
         raise SystemExit(f"Slot status is '{slot['status']}', expected awaiting_approval.")
+    if args.decision == "approve" and not slot.get("theme_confirmed", False):
+        raise SystemExit("Choose and save a theme with the set-theme command before approval.")
     if args.decision == "approve":
         for name in ("pitch.md", "script.md", "research.md"):
             if not (folder / name).is_file() or not (folder / name).read_text(encoding="utf-8").strip():
@@ -299,6 +302,100 @@ def command_status(args: argparse.Namespace) -> None:
         print(f"{topic['id']} — {topic['title']} — {rows}")
 
 
+
+def command_list(args: argparse.Namespace) -> None:
+    manifests = sorted(
+        BATCH_ROOT.glob("*/manifest.json"),
+        key=lambda path: path.stat().st_mtime,
+        reverse=True,
+    )
+    if not manifests:
+        print("No saved batches.")
+        return
+    for manifest_path in manifests:
+        manifest = read_json(manifest_path)
+        batch_id = manifest.get("id", manifest_path.parent.name)
+        print(f"{batch_id}  (created {manifest.get('created_at', 'unknown')})")
+        for topic in manifest.get("topics", []):
+            states = ", ".join(
+                f"{slot['slot']}:{slot['status']}" for slot in topic.get("episodes", [])
+            )
+            print(f"  {topic['id']} — {topic['title']} — {states}")
+
+
+def command_rename(args: argparse.Namespace) -> None:
+    batch_dir, manifest = load_batch(args.batch_id)
+    old_id = manifest["id"]
+    new_id = slugify(args.new_name)
+    if new_id == old_id:
+        print(f"Batch is already named '{old_id}'.")
+        return
+
+    target_dir = BATCH_ROOT / new_id
+    old_output_dir = OUTPUT_ROOT / old_id
+    new_output_dir = OUTPUT_ROOT / new_id
+    if target_dir.exists():
+        raise SystemExit(f"Batch already exists: {target_dir}")
+    if new_output_dir.exists():
+        raise SystemExit(f"An output folder already exists for '{new_id}': {new_output_dir}")
+
+    old_batch_prefix = f"production/batches/{old_id}"
+    new_batch_prefix = f"production/batches/{new_id}"
+    old_output_prefix = f"out/short-studio/{old_id}"
+    new_output_prefix = f"out/short-studio/{new_id}"
+    for topic in manifest.get("topics", []):
+        for slot in topic.get("episodes", []):
+            for key, old_prefix, new_prefix in (
+                ("directory", old_batch_prefix, new_batch_prefix),
+                ("renderer_project", old_batch_prefix, new_batch_prefix),
+                ("output", old_output_prefix, new_output_prefix),
+            ):
+                value = slot.get(key)
+                if isinstance(value, str) and (value == old_prefix or value.startswith(old_prefix + "/")):
+                    slot[key] = new_prefix + value[len(old_prefix):]
+    manifest["id"] = new_id
+
+    batch_dir.rename(target_dir)
+    output_moved = False
+    try:
+        if old_output_dir.exists():
+            old_output_dir.rename(new_output_dir)
+            output_moved = True
+        write_json(target_dir / "manifest.json", manifest)
+    except Exception:
+        if output_moved:
+            new_output_dir.rename(old_output_dir)
+        target_dir.rename(batch_dir)
+        raise
+    print(f"Renamed batch '{old_id}' to '{new_id}'. Existing queue and outputs were moved in place.")
+
+
+def command_set_theme(args: argparse.Namespace) -> None:
+    batch_dir, manifest = load_batch(args.batch_id)
+    topic = locate_topic(manifest, args.topic)
+    slot = locate_slot(topic, args.slot)
+    if slot["status"] != "awaiting_approval":
+        raise SystemExit(f"Slot status is '{slot['status']}', expected awaiting_approval.")
+    if args.theme not in STYLES:
+        raise SystemExit(f"Theme must be one of: {', '.join(STYLES)}")
+    folder = slot_path(batch_dir, topic, slot)
+    pitch_path = folder / "pitch.md"
+    if not pitch_path.is_file():
+        raise SystemExit(f"Pitch not found: {pitch_path}")
+    pitch = pitch_path.read_text(encoding="utf-8")
+    theme_line = re.compile(r"(?m)^\\*\\*Theme:\\*\\* .+$")
+    if not theme_line.search(pitch):
+        raise SystemExit(f"Pitch has no theme line to update: {pitch_path}")
+    pitch_path.write_text(theme_line.sub(f"**Theme:** {args.theme}", pitch, count=1), encoding="utf-8")
+    slot.update({
+        "theme": args.theme,
+        "theme_confirmed": True,
+        "theme_selected_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+    })
+    write_json(batch_dir / "manifest.json", manifest)
+    print(f"Theme for {topic['id']} short {args.slot:02d} set to {args.theme}.")
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
@@ -345,6 +442,21 @@ def build_parser() -> argparse.ArgumentParser:
     status = sub.add_parser("status", help="show the current review and render queue")
     status.add_argument("--batch-id", required=True)
     status.set_defaults(func=command_status)
+
+    list_cmd = sub.add_parser("list", help="list saved batches and their queue states")
+    list_cmd.set_defaults(func=command_list)
+
+    rename = sub.add_parser("rename", help="rename a batch and move its files and outputs in place")
+    rename.add_argument("--batch-id", required=True)
+    rename.add_argument("--new-name", required=True)
+    rename.set_defaults(func=command_rename)
+
+    set_theme = sub.add_parser("set-theme", help="save the user's theme choice before approval")
+    set_theme.add_argument("--batch-id", required=True)
+    set_theme.add_argument("--topic", required=True)
+    set_theme.add_argument("--slot", type=int, required=True)
+    set_theme.add_argument("--theme", choices=STYLES, required=True)
+    set_theme.set_defaults(func=command_set_theme)
     return parser
 
 
