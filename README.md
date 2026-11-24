@@ -42,7 +42,7 @@ Open Claude Code with the AnimationFusion folder as its working directory. Enter
 
 If no topics are supplied, `/short-studio` asks for them. It creates a local batch with up to three short-video slots per topic, researches each topic using available browser or search access, and prepares ideas one at a time.
 
-For each short, review the idea and full script, then reply **approve**, **revise**, or **skip**. Choose a theme for each video. After approving a script, review its storyboard before asking Claude to render. This keeps you in control of what gets produced.
+For each short, review the idea and full script. Claude asks you to choose a theme—**blocky 3D**, **monochrome**, or **What If vector**—and to **approve**, **revise**, or **skip**. Choose a theme explicitly before approval. After approving, review the storyboard before asking Claude to render. This keeps you in control of what gets produced.
 
 ### 3. Find the finished videos
 
@@ -84,6 +84,9 @@ For manual queue management, run `python scripts/short_studio.py <command>` from
 | `prepare` | Prepares the voice and storyboard after approval. |
 | `render` | Renders a prepared short and copies its files to the output folder. |
 | `status` | Shows each topic's queue status. |
+| `list` | Lists saved batches and their topic/slot statuses. |
+| `rename` | Renames a saved batch and moves its files and rendered outputs in place. |
+| `set-theme` | Saves the user's explicit theme choice before script approval. |
 
 Example:
 
@@ -91,6 +94,11 @@ Example:
 python scripts/short_studio.py init --topics-file topics.txt --limit 3 --batch-id my-batch
 python scripts/short_studio.py status --batch-id my-batch
 ```
+
+To continue a saved batch, use `/short-studio-list` to find its ID and
+`/short-studio-continue <batch-id>` to resume its existing queue. Rename it in
+place with `/short-studio-rename <batch-id> <new-name>`. These commands reuse
+the saved batch; they do not initialize another one.
 
 The CLI manages files and approvals; it does not write scripts or perform research by itself. See [`FRIEND_GUIDE.md`](FRIEND_GUIDE.md) for detailed CLI examples.
 
