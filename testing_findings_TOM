@@ -3,3 +3,4 @@ hi vit
 when updating github in project it defaults back to standard audio--
 Fix a "processing abandoned" error - when uploading certain files may cancel due to formatting?- (if asked to fix the ai will pretty easily)
 3D engine is trying to be the standard on 2d preset engines that are from other github repos- not good
+collisions on first use and later on can be common with using 3d blox engine, fix 
