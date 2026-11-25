@@ -1,12 +1,12 @@
 # AnimationFusion
 
-**Local-first toolkit for researching, scripting, reviewing, and rendering vertical animated shorts.** Choose blocky 3D, monochrome, or the original What If vector style. Research then scores character-led, graphics-led, and hybrid treatments for each video.
+**Local-first toolkit for researching, scripting, reviewing, and rendering vertical animated shorts.** Choose blocky 3D, monochrome, rule-world 3D, world-story 3D, or the original What If vector style. Research then scores character-led, graphics-led, and hybrid treatments for each video.
 
-AnimationFusion combines the supplied What If Remotion project with a Blender-based blocky renderer. Claude Code and OpenCode commands guide a video from fresh research through a reviewed, ready-to-post MP4.
+AnimationFusion combines the supplied 2D What If Remotion project, a new block-built 3D world-story renderer, and Blender-based renderers. Claude Code and OpenCode commands guide a video from fresh research through a reviewed, ready-to-post MP4.
 
 ## Get started
 
-Install Python 3.11, Blender 5.2, FFmpeg and `ffprobe`. The `what-if` vector theme also needs Node.js 18+ and npm. Detailed platform-specific setup is in [FRIEND_GUIDE.md](FRIEND_GUIDE.md).
+Install Python 3.11, FFmpeg, and `ffprobe`. Blender 5.2 is required for the Blender themes (`blocky-3d`, `monochrome`, and `rule-world-3d`). The Remotion themes (`what-if` and `world-story-3d`) need Node.js 18+ and npm. The `world-story-3d` sample uses Kokoro narration; install its optional voice dependencies with `python -m pip install -r kit/requirements-voice.txt`. Kokoro may need to download its voice model the first time it runs. Detailed platform-specific setup is in [FRIEND_GUIDE.md](FRIEND_GUIDE.md).
 
 Clone the repository or download its ZIP. Start Claude Code or OpenCode **from the AnimationFusion folder**. The slash commands are project-local files; there is no separate command or skill installation.
 
@@ -28,7 +28,7 @@ Each new video gets new research, even when it belongs to a topic already in the
 
 Useful public research starting points include [Google Trends](https://trends.google.com/trending), [TikTok Creative Center](https://ads.tiktok.com/business/creativecenter/), and [YouTube Culture & Trends](https://blog.youtube/culture-and-trends/). Trend evidence guides ideas; it cannot guarantee future popularity. Scripts take inspiration from hooks, pacing, and storytelling patterns without copying a creator's exact script, character, or artwork.
 
-Choose either a self-contained story or an optional A/B choice story. The treatment choice is separate: a video can be a character-led A/B story, a graphics-led A/B story, or any other combination. Every script ends with one clear spoken CTA. The same CTA is shown in an end card across all three render themes. A Part 2 is created only when the creator asks for it; this version does not connect to social analytics or publish videos automatically.
+Choose either a self-contained story or an optional A/B choice story. The treatment choice is separate: a video can be a character-led A/B story, a graphics-led A/B story, or any other combination. Every script ends with one clear spoken CTA. The renderer shows the CTA in a safe end-card area without covering the last timed caption. A Part 2 is created only when the creator asks for it; this version does not connect to social analytics or publish videos automatically.
 
 The opening hook appears on screen in the first 1.5 seconds. Every video gets a 5–7 beat visual plan, original set/cast design notes, and a purposeful cut/transition plan before the complete script. The creator reviews the pitch and full script, then the actual storyboard. A CLI review gate blocks the full render until the creator approves that storyboard; edits afterward require a fresh prepare and review. The final folder contains the MP4, caption, script, research notes, 5–7 beat visual plan, and storyboard under:
 
@@ -36,7 +36,7 @@ The opening hook appears on screen in the first 1.5 seconds. Every video gets a 
 out/short-studio/<batch-id>/<topic-id>/short-01/
 ```
 
-After storyboard approval, `preview` renders a quick 540 × 960 review MP4 with the same voice, music, captions, and 60 fps timing. The audio check verifies that a narration source and audio stream exist and are above a silence threshold; listen to the preview, then record `review-preview --decision approve` before starting the final export. The final portrait master remains 1080 × 1920 H.264 at 60 fps.
+After storyboard approval, `preview` renders a quick 540 × 960 review MP4 with the same voice, music, captions, and frame rate as the selected renderer. The audio check verifies that a narration source and audio stream exist and are above a silence threshold; listen to the preview, then record `review-preview --decision approve` before starting the final export. The final portrait master is 1080 × 1920 H.264: Blender themes and `what-if` render at 60 fps; `world-story-3d` renders at 30 fps.
 
 Typical time per new video, before user review pauses:
 
@@ -50,17 +50,19 @@ Typical time per new video, before user review pauses:
 | 540 × 960 preview | Estimate from this computer's saved preview timings when available; first preview is unbenchmarked |
 | Full 1080 × 1920 render | Estimate from saved same-theme local timings when available; first full render is unbenchmarked and may take tens of minutes (the friend's computer has taken close to 50 minutes) |
 
-These are planning ranges, not guarantees. The CLI records preparation, preview, and render durations, then estimates those machine-bound stages from comparable renders in the same batch, scaled to the requested length. A 30–60 second, 60 fps final contains 1,800–3,600 frames. For `/short-studio-add` with several new videos, independent research may run in groups of up to three; scripts, preparation, review, and final renders still add time per video. Subagents use additional Claude usage and do not speed rendering.
+These are planning ranges, not guarantees. The CLI records preparation, preview, and render durations, then estimates those machine-bound stages from comparable renders in the same batch, scaled to the requested length. A 30–60 second final contains 1,800–3,600 frames at 60 fps for Blender themes and `what-if`, or 900–1,800 frames at 30 fps for `world-story-3d`. For `/short-studio-add` with several new videos, independent research may run in groups of up to three; scripts, preparation, review, and final renders still add time per video. Subagents use additional Claude usage and do not speed rendering.
 
-For speed, the Blender preview renders at half resolution with reduced preview-only effects and per-worker thread caps; the final Blender settings stay at full quality. The What If renderer uses high-quality JPEG frame capture for its opaque scenes, which Remotion documents as faster than PNG. See [Blender's command-line thread controls](https://docs.blender.org/manual/en/latest/advanced/command_line/render.html), [EEVEE sampling costs](https://docs.blender.org/manual/en/5.1/render/eevee/render_settings/sampling.html), and [Remotion's frame-format guidance](https://www.remotion.dev/docs/options/video-image-format).
+For speed, the Blender preview renders at half resolution with reduced preview-only effects and per-worker thread caps; the final Blender settings stay at full quality. Both Remotion themes render video frames as high-quality JPEG; storyboard stills remain PNG. See [Blender's command-line thread controls](https://docs.blender.org/manual/en/latest/advanced/command_line/render.html), [EEVEE sampling costs](https://docs.blender.org/manual/en/5.1/render/eevee/render_settings/sampling.html), and [Remotion's frame-format guidance](https://www.remotion.dev/docs/options/video-image-format).
 
 ## Themes
 
 | Theme | Rendering path | What it produces |
 |---|---|---|
 | `blocky-3d` | Blender | Original blocky 3D scenes with story-specific sets, outlined Roblox-style captions, timed character/prop motion, travelling VFX, and script-to-screen/voice sync checks |
-| `monochrome` | Blender + FFmpeg | Blocky 3D scenes with a black-and-white grade |
-| `what-if` | Remotion | Original vector animation |
+| `monochrome` | Blender + FFmpeg | The same Blender actions and quality checks, with a black-and-white grade on the final video |
+| `what-if` | Remotion | Original 2D vector scenes, animated graphics, overlays, transitions, and its own audio mix |
+| `rule-world-3d` | Blender | Blocky 3D stories built around a visible world rule, with story-specific sets, props, actions, and captions |
+| `world-story-3d` | Remotion + Three.js | Original block-built 3D characters and changing 3D story worlds, with camera/lighting cues, story-specific props, kinetic captions, optional route/map graphics, and timed screen VFX |
 
 The visual treatment is an episode-level choice independent of the theme and A/B format:
 
@@ -70,7 +72,9 @@ The visual treatment is an episode-level choice independent of the theme and A/B
 | graphics-led | Props, diagrams, counters, and visual proof lead; characters are optional. |
 | hybrid | Characters and graphics share the storytelling. |
 
-These treatments reuse the three existing render paths. Graphics-led Blender videos use the kit's current physical props, camera moves, captions, and cards; they do not promise an unimplemented 2D HUD. Blocky 3D now includes a layered `NightCourt` set, bold outlined captions, eased prop arcs/spins, a low-cost layered energy trail, directional sound rings, synced licensed CC0 sound effects, and short post-composited `whip`/`push`/`flash` transitions. Named props still move rigidly without physics or hand attachment. The What If engine uses its existing vector shots and overlays. All themes share script-to-storyboard checks for purposeful action, readable cause/action/result, and useful sound/effects; renderer-specific actions still have to use that renderer's capabilities. The blocky style uses original human characters; it does not include official Roblox characters or assets. Animal and robot character rigs are not included. The monochrome grade is applied to the final MP4. Each new What If episode must be registered in `studio/src/episodes/index.ts`; preparation checks the registration. See [the upstream integration review](references/upstream-integration.md) for source compatibility and license decisions.
+Treatments reuse the available renderers. Graphics-led Blender videos use the kit's physical props, camera moves, captions, and cards; they do not promise an unimplemented 2D HUD. Blocky 3D includes story-specific sets, bold outlined captions, eased prop arcs/spins, a layered energy trail, directional sound rings, CC0 sound effects, and `whip`/`push`/`flash` transitions. Named Blender props still move rigidly without physics or hand attachment. The What If renderer is a separate 2D vector path; it does not use Blender geometry or inherit 3D physics. `world-story-3d` uses a separate Remotion/Three.js renderer with original block geometry, reusable town/forest/home/candy-canyon/sea/harbor/control-room/map-table sets, per-shot camera and lighting choices, map and choice graphics when called for, scripted action components for diving, pickups, doors, moving set pieces and wave impacts, and timed transitions/VFX. It does not require a door, map, or any other fixed prop in every story. Its story and shot data select the locations and objects that make sense for each video; this is authored behavior, not automatic physics or learned motion.
+
+All themes share the same creative sequence: fresh research when the topic needs it, treatment scoring, a 5–7 image plan, an approved script with spoken CTA, script-matched shots, renderer-specific checks, storyboard review, and an audio preview before a full render. CLI checks compare narration, shot text, timed words, duration, and CTA where the renderer exposes those fields. These checks catch omissions they can measure; storyboard review still confirms that a story's needed action and prop read clearly (for example, both options in an A/B choice). Prior clips are not training data: the assistant follows the saved playbook and renderer features, choosing story-specific worlds and props rather than inserting irrelevant objects. The themes use original characters and assets, not official Roblox characters or assets. The monochrome grade is applied to the final MP4. Each Remotion episode must be registered in `studio/src/episodes/index.ts`; preparation checks the registration and includes shared renderer files in the storyboard fingerprint. See the [world-story reference study](references/world-story-3d-reference-study.md), [world-story art-direction guide](references/world-story-3d.md), and [upstream integration review](references/upstream-integration.md).
 
 Blocky 3D preparation compares the approved script to the concatenated shot dialogue, then checks generated voice words/timings and the requested scene length. Set `voice_tone` and `voice_speed` for each video. Optional Voicemod control is for live microphone recording; it does not alter the renderer's existing TTS audio. See [the voice setup](FRIEND_GUIDE.md#optional-voicemod-live-microphone) and [the shot API](kit/API.md#voice-delivery-and-voicemod).
 

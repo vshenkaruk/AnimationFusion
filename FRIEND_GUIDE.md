@@ -1,12 +1,12 @@
 # Quick start for friends
 
-AnimationFusion researches and scripts vertical animated shorts, then renders approved videos in blocky 3D, monochrome, or original What If vector style. Each video is 30–60 seconds, gets its own fresh research, and ends with a spoken call to action. It exports files; it does not post to social accounts.
+AnimationFusion researches and scripts vertical animated shorts, then renders approved videos in blocky 3D, monochrome, rule-world 3D, world-story 3D, or original What If vector style. Each video is 30–60 seconds, gets fresh research for its topic, and ends with a spoken call to action. It exports files; it does not post to social accounts.
 
 ## Install tools
 
-For `blocky-3d` and `monochrome`, install Python 3.11, Blender 5.2, FFmpeg, and `ffprobe`. Make Blender and FFmpeg available on PATH.
+For `blocky-3d`, `monochrome`, and `rule-world-3d`, install Python 3.11, Blender 5.2, FFmpeg, and `ffprobe`. Make Blender and FFmpeg available on PATH.
 
-For `what-if`, also install Node.js 18+ and npm. No ElevenLabs key or paid search API is needed for the default workflow.
+For `what-if` and `world-story-3d`, also install Node.js 18+ and npm. The `world-story-3d` sample uses Kokoro for narration, so install its optional voice dependencies too. No ElevenLabs key or paid search API is needed for this workflow.
 
 Install Python packages from the project folder:
 
@@ -16,7 +16,15 @@ py -3.11 -m venv .venv
 python -m pip install -r kit\\requirements.txt
 ```
 
-On macOS or Linux, activate with `source .venv/bin/activate`. Install What If's Node packages once:
+For the `world-story-3d` sample's Kokoro voice, also run:
+
+```powershell
+python -m pip install -r kit\\requirements-voice.txt
+```
+
+Kokoro downloads and caches its voice model on first use; that first run needs an internet connection unless the model is already cached. Other Remotion episodes can use the local system voice when configured with `voice_provider: "system-offline"`.
+
+On macOS or Linux, activate with `source .venv/bin/activate`. Install the Remotion themes' Node packages once:
 
 ```powershell
 cd studio
@@ -81,7 +89,7 @@ For each new slot, the workflow asks you to choose the render theme, story forma
 
 In Codex, ask: `Create exactly one AnimationFusion short about [topic]. Follow the short-studio skill and ask me for each choice one step at a time.` In Claude Code, use `/short-studio-one [topic]`.
 
-Before work starts, expect roughly 4–10 minutes of research per video; 2–6 minutes for treatment scoring, beat plan, pitch, and script; and 2–10 minutes for voice and storyboard preparation. Choosing the three options is usually quick. Storyboard review and listening pauses depend on you. Preview and full-render times are machine-dependent: this computer uses comparable saved timings after a video completes; first runs are unbenchmarked. A 30–60 second final contains 1,800–3,600 frames at 60 fps, and your friend's computer has taken close to 50 minutes for a render. These are estimates, not guarantees. The CLI records actual preparation, preview, and final-render time so later estimates improve. For `/short-studio-add` with several videos, the research may run in parallel; scripting, preparation, review, preview, and final rendering still add time per video.
+Before work starts, expect roughly 4–10 minutes of research per video; 2–6 minutes for treatment scoring, beat plan, pitch, and script; and 2–10 minutes for voice and storyboard preparation. Choosing the three options is usually quick. Storyboard review and listening pauses depend on you. Preview and full-render times are machine-dependent: this computer uses comparable saved timings after a video completes; first runs are unbenchmarked. A 30–60 second final contains 1,800–3,600 frames at 60 fps for Blender themes and `what-if`, or 900–1,800 frames at 30 fps for `world-story-3d`. Your friend's computer has taken close to 50 minutes for a render. These are estimates, not guarantees. The CLI records actual preparation, preview, and final-render time so later estimates improve. For `/short-studio-add` with several videos, the research may run in parallel; scripting, preparation, review, preview, and final rendering still add time per video.
 
 For a multi-video batch, Claude Code can research up to three topics in parallel using read-only subagents when its Agent and web-search tools are available. This can cut the serial research wait, but uses additional Claude usage and does not make Blender or Remotion renders run faster. OpenCode and sessions without subagent tools run the same research directly.
 
@@ -93,13 +101,13 @@ Review the idea, sources, and full script before approving. After script approva
 
 ### Manual storyboard review
 
-After `prepare`, the storyboard is saved at `production/batches/<batch-id>/<topic-id>/short-<n>/project/stills_sheet.jpg` for Blender themes or `studio/out/<slug>/storyboard.jpg` for What If. Ask Claude to show it. To approve the current storyboard:
+After `prepare`, the storyboard is saved at `production/batches/<batch-id>/<topic-id>/short-<n>/project/stills_sheet.jpg` for Blender themes or `studio/out/<slug>/storyboard.jpg` for Remotion themes. Ask Claude to show it. To approve the current storyboard:
 
 ```powershell
 python scripts/short_studio.py review-storyboard --batch-id <batch-id> --topic <topic-id> --slot <n> --decision approve
 ```
 
-If changes are needed, use `--decision revise`, edit the scene plan, run `prepare` again, and review the new storyboard. The `preview` command uses the approved storyboard to create a fast 540×960 video with narration and the full 60 fps timing. Listen for missing, quiet, or cut-off voice and check scene timing. The automatic audio report checks source and output signal levels but cannot judge pronunciation or whether the narration sounds natural. If it is good, record your review, then run `render` for the unchanged 1080×1920 final. The render command also checks audio before delivering the file.
+If changes are needed, use `--decision revise`, edit the scene plan, run `prepare` again, and review the new storyboard. The `preview` command uses the approved storyboard to create a fast 540×960 video with narration and the selected renderer's frame rate: 60 fps for Blender themes and `what-if`, or 30 fps for `world-story-3d`. Listen for missing, quiet, or cut-off voice and check scene timing. The automatic audio report checks source and output signal levels but cannot judge pronunciation or whether the narration sounds natural. If it is good, record your review, then run `render` for the unchanged 1080×1920 final. The render command also checks audio before delivering the file.
 
 ```powershell
 python scripts/short_studio.py preview --batch-id <batch-id> --topic <topic-id> --slot <n>
@@ -115,7 +123,7 @@ Each finished folder is under:
 out/short-studio/<batch-id>/<topic-id>/short-01/
 ```
 
-It contains `final.mp4`, `preview.mp4`, `audio-qa.md`, `audio-qa-preview.md`, `script.md`, `research.md`, `visual-plan.md`, `post-caption.txt`, and `storyboard.jpg`. The video is a vertical 1080×1920 H.264 MP4 at 60 fps. Upload it manually to the social platform you choose.
+It contains `final.mp4`, `preview.mp4`, `audio-qa.md`, `audio-qa-preview.md`, `script.md`, `research.md`, `visual-plan.md`, `post-caption.txt`, and `storyboard.jpg`. The video is a vertical 1080×1920 H.264 MP4: Blender themes and `what-if` render at 60 fps; `world-story-3d` renders at 30 fps. Upload it manually to the social platform you choose.
 
 ## Treatment notes
 
@@ -132,10 +140,24 @@ The choice reuses the existing renderers. In Blender styles, graphics-led means 
 | Theme | Renderer | Notes |
 |---|---|---|
 | `blocky-3d` | Blender | Story-specific scenes, slap/knock gestures, quick low-poly effects, action-linked sound cues, and named rigid props |
-| `monochrome` | Blender + FFmpeg | Same blocky renderer with a final black-and-white grade |
-| `what-if` | Remotion | Original vector animation |
+| `monochrome` | Blender + FFmpeg | Same Blender scenes, actions, effects, and checks, then a black-and-white grade |
+| `what-if` | Remotion | Separate 2D vector scenes, animated graphics, overlays, transitions, and audio mix |
+| `rule-world-3d` | Blender | Story-specific blocky 3D locations, world rules, props, actions, and captions |
+| `world-story-3d` | Remotion + Three.js | Block-built 3D characters and changing environments, with camera/lighting changes, story-specific props, optional map/choice graphics, timed VFX, captions, and audio |
 
-Blocky 3D uses original generic human characters and no official Roblox assets. Its screen-proof check catches script-to-shot omissions, while storyboard review checks the actual picture. Actions such as a door hit should show a matching contact pose, impact effect, and sound on the spoken hit word; doorway routes and spawn returns are checked against their visible landmarks. The selected CC0 sounds can be called in `shots.py` as `sfxkit_impact_heavy_hard@0.65`; the number is the visible action time, and the sound's recorded sync point is aligned to it automatically. `whip`, `push`, and `flash` transitions are added to the incoming shot and composited after scene rendering; whip/push add a synced whoosh. Story props can move as rigid objects, but they do not attach to hands or use physics; animal and robot actor rigs are not included. Reference libraries guide the assistant only when their images are supplied or explicitly loaded. They do not train the renderer. New What If episodes need files under `studio/src/episodes/<slug>/` and a registration in `studio/src/episodes/index.ts`. The prepare command checks this.
+The Blender themes use original characters and do not include official Roblox assets. Their screen-proof check catches some script-to-shot omissions; storyboard review still checks the actual picture. Actions should show the matching contact pose, prop response, visible effect, and timed sound. Props in Blender remain rigid unless an interaction is specifically implemented. `world-story-3d` is a different 3D path: it has reusable town, park, school, forest, candy-canyon, clockwork-sea, home, harbor, control-room, and map-table sets, plus 3D block actors, props, camera moves, per-shot lighting, and optional route/map overlays. A story chooses relevant worlds and objects; no door, map, animal, or effect is mandatory in every video. This is an original general-purpose playbook based on broad production patterns, not a copy of any creator's script or shot sequence. The renderer does not train on or retain the supplied reference videos. What If stays a separate 2D vector renderer with its own overlays, transitions, and audio, not Blender geometry or 3D physics. New Remotion episodes need files under `studio/src/episodes/<slug>/` and a registration in `studio/src/episodes/index.ts`; preparation checks registration and includes shared renderer files in the storyboard fingerprint.
+
+### Repeat this quality sequence for every video
+
+1. Choose the theme, story format, and duration; research the topic and current examples again.
+2. Score character-led, graphics-led, and hybrid treatments; make a 5–7 image visual plan before writing narration.
+3. Write the complete script and spoken CTA, then get the pitch/script approved.
+4. Make every spoken line visible in the chosen engine. Show every story-critical prop and both sides of any A/B choice; use only effects the selected renderer supports.
+5. Run `prepare` and fix any script, CTA, timing, or engine checks it reports.
+6. Review the storyboard at phone size and inspect key action frames; revise and prepare again if anything is missing or confusing.
+7. Render a preview, listen to the voice/music/effects, inspect the audio report, then approve the preview before the full render.
+
+This sequence is stored in the repository's `SKILL.md` so Claude Code/OpenCode can repeat it each session. It is a playbook and validation workflow, not model training; it tells the assistant how to handle a new story without assuming every story contains the same props.
 
 ## Cost and research tools
 

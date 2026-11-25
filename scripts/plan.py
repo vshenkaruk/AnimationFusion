@@ -69,6 +69,8 @@ for k, e in enumerate(ep['edit']):
     seg = {'shot': e['shot'], 'a': a, 'b': b, 't0': t0, 't1': t1, 'line': line}
     if e.get('look'):
         seg['look'] = e['look']
+    if e.get('transition'):
+        seg['transition'] = e['transition']
     segments.append(seg)
 
 ids = list(dict.fromkeys(s['shot'] for s in segments))
@@ -86,6 +88,14 @@ for sid in ids:
         'id': sid, 'size': d.get('size', ''), 'key': d.get('key', (first['b'] - first['a']) // 2), 'len': length, 'first': first['a'],
         'line': first['line'], 'note': d.get('note', ''),
     })
+    if d.get('camera'):
+        info[-1]['camera'] = d['camera']
+    if d.get('set'):
+        info[-1]['set'] = d['set']
+    if d.get('sky'):
+        info[-1]['sky'] = d['sky']
+    if d.get('light'):
+        info[-1]['light'] = d['light']
 
 # ---------------------------------------------------------------- fx, audio
 fx = []
@@ -101,6 +111,10 @@ for k in ['voice', 'sfx', 'music']:
         audio[k] = f'{slug}/{f.name}'
 title = ep.get('title', ['', ''])
 tl = {'slug': slug, 'title': ' '.join(title) if isinstance(title, list) else title, 'fps': FPS, 'total': end, 'segments': segments, 'shots': info, 'fx': fx, 'audio': audio}
+if words:
+    tl['words'] = words
+if ep.get('countdown_seconds') is not None:
+    tl['countdownSeconds'] = float(ep['countdown_seconds'])
 if ep.get('hook'):
     tl['hook'] = str(ep['hook'])
     tl['hookHighlights'] = list(ep.get('hook_highlights', []))
@@ -108,6 +122,10 @@ if ep.get('hook'):
 if ep.get('cta'):
     tl['cta'] = str(ep['cta'])
     tl['ctaDurationSeconds'] = float(ep.get('cta_duration_seconds', 3.5))
+if ep.get('choiceCue'):
+    tl['choiceCue'] = ep['choiceCue']
+if ep.get('choiceCues'):
+    tl['choiceCues'] = ep['choiceCues']
 save_json(ep_dir(slug) / 'timeline.json', tl)
 
 # ---------------------------------------------------------------- the pace report and the shot list

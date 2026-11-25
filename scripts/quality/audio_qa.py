@@ -10,10 +10,15 @@ import json
 import re
 import subprocess
 from pathlib import Path
+import sys
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from media_tools import ffmpeg_path, ffprobe_path, media_environment
 
 
 def command(*args: str) -> subprocess.CompletedProcess[str]:
-    result = subprocess.run(args, capture_output=True, text=True, encoding="utf-8", errors="replace")
+    tool = ffmpeg_path() if args[0] == "ffmpeg" else ffprobe_path() if args[0] == "ffprobe" else args[0]
+    result = subprocess.run((tool, *args[1:]), capture_output=True, text=True, encoding="utf-8", errors="replace", env=media_environment())
     if result.returncode:
         raise SystemExit(result.stderr.strip() or f"Command failed: {' '.join(args)}")
     return result

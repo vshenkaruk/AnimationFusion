@@ -17,6 +17,9 @@ const args = process.argv.slice(2);
 const slug = args[0];
 const scaleAt = args.indexOf('--scale');
 const scale = scaleAt >= 0 ? Number(args[scaleAt + 1]) : 0.5;
+// Three.js episodes need a compatible GL backend in headless Chrome. ANGLE is
+// Remotion's recommended backend for desktop rendering; override with REMOTION_GL.
+const chromiumOptions = { gl: process.env.REMOTION_GL || 'angle' };
 const framesAt = args.indexOf('--frames');
 const rest = args.slice(1).filter((a, i, all) => !a.startsWith('--') && all[i - 1] !== '--scale');
 const ep = JSON.parse(fs.readFileSync(path.resolve('src/episodes', slug, 'episode.json'), 'utf8'));
@@ -26,21 +29,21 @@ const serveUrl = await bundle({ entryPoint: path.resolve('src/index.ts'), public
 if (framesAt >= 0) {
   const outDir = path.resolve('out', slug, 'frames');
   fs.mkdirSync(outDir, { recursive: true });
-  const composition = await selectComposition({ serveUrl, id: ep.id });
+  const composition = await selectComposition({ serveUrl, id: ep.id, chromiumOptions });
   for (const fr of rest.map(Number)) {
     const output = path.join(outDir, `f${String(fr).padStart(4, '0')}.png`);
-    await renderStill({ serveUrl, composition, frame: fr, output, overwrite: true, scale });
+    await renderStill({ serveUrl, composition, frame: fr, output, overwrite: true, scale, chromiumOptions });
     process.stdout.write(`${fr} `);
   }
 } else {
   const outDir = path.resolve('out', slug, 'board');
   fs.mkdirSync(outDir, { recursive: true });
-  const composition = await selectComposition({ serveUrl, id: `${ep.id}Board` });
+  const composition = await selectComposition({ serveUrl, id: `${ep.id}Board`, chromiumOptions });
   const want = rest.length ? rest : tl.shots.map((s) => s.id);
   for (const id of want) {
     const i = tl.shots.findIndex((s) => s.id === id);
     if (i < 0) throw new Error(`No shot ${id} in the timeline`);
-    await renderStill({ serveUrl, composition, frame: i, output: path.join(outDir, `${id}.png`), overwrite: true, scale });
+    await renderStill({ serveUrl, composition, frame: i, output: path.join(outDir, `${id}.png`), overwrite: true, scale, chromiumOptions });
     process.stdout.write(`${id} `);
   }
 }

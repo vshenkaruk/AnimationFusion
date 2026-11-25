@@ -22,11 +22,15 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from media_tools import media_environment
+
 ROOT = Path(__file__).resolve().parents[1]
 BATCH_ROOT = ROOT / "production" / "batches"
 OUTPUT_ROOT = ROOT / "out" / "short-studio"
 TEMPLATE = ROOT / "kit" / "templates" / "blocky_short"
-STYLES = ("blocky-3d", "monochrome", "what-if")
+STYLES = ("blocky-3d", "monochrome", "what-if", "rule-world-3d", "world-story-3d")
+BLENDER_STYLES = ("blocky-3d", "monochrome", "rule-world-3d")
+REMOTION_STYLES = ("what-if", "world-story-3d")
 STORY_FORMATS = ("standalone", "choice-story")
 TREATMENTS = ("character-led", "graphics-led", "hybrid")
 TREATMENT_CHOICES = ("auto",) + TREATMENTS
@@ -36,6 +40,21 @@ INITIAL_MAX_PER_TOPIC = 3
 def slugify(value: str) -> str:
     slug = re.sub(r"[^a-z0-9]+", "-", value.lower()).strip("-")
     return slug[:64] or "topic"
+
+
+def theme_fps(theme: str | None) -> int:
+    """Return the delivery frame rate for the selected renderer."""
+    return 30 if theme == "world-story-3d" else 60
+
+
+def save_slot_render_profile(slot: dict[str, Any]) -> None:
+    slot["render_profile"] = {
+        "width": 1080,
+        "height": 1920,
+        "fps": theme_fps(slot.get("theme")),
+        "container": "mp4",
+        "video_codec": "h264",
+    }
 
 
 def write_json(path: Path, obj: Any) -> None:
@@ -199,9 +218,12 @@ def command_pitch(args: argparse.Namespace) -> None:
     if len(hook_highlights) != 2 or any(word.casefold() not in hook_tokens for word in hook_highlights):
         raise SystemExit("Choose exactly two emphasis words that appear in the opening hook.")
     visual_plan = read_text_arg(args.visual_plan, "visual plan", required=True)
-    validate_visual_plan(visual_plan)
+    visual_plan_beats = validate_visual_plan(visual_plan)
     idea = read_text_arg(args.idea, "idea", required=True)
     script = read_text_arg(args.script, "script", required=True)
+    production_cues = validate_script_cues(
+        script, int(slot["target_duration_seconds"]), visual_plan_beats,
+    )
     research = read_text_arg(args.research, "research", required=True)
     caption = read_text_arg(args.caption, "caption")
     call_to_action = read_text_arg(args.call_to_action, "call to action", required=True)
@@ -209,8 +231,6 @@ def command_pitch(args: argparse.Namespace) -> None:
     normalized_cta = " ".join(call_to_action.casefold().split())
     if normalized_cta not in normalized_script:
         raise SystemExit("The exact call-to-action line must appear in the spoken script.")
-    if len(script.split()) < 20:
-        raise SystemExit("The script is unusually short; provide the complete narration before asking for approval.")
     folder = slot_path(batch_dir, topic, slot)
     folder.mkdir(parents=True, exist_ok=True)
     (folder / "pitch.md").write_text(f"# {title}\n\n**Topic:** {topic['title']}\n\n**Theme:** {args.theme}\n\n**Visual treatment:** {args.visual_treatment} ({'auto-selected' if treatment_mode == 'auto' else 'manual override'})\n\n**Format:** {args.story_format}\n\n**Hook:** {hook}\n\n**Call to action:** {call_to_action}\n\n{idea}\n", encoding="utf-8")
@@ -223,7 +243,8 @@ def command_pitch(args: argparse.Namespace) -> None:
     slot.update({"status": "awaiting_approval", "theme": args.theme, "theme_confirmed": theme_confirmed,
                  "title": title, "hook": hook, "hook_highlights": hook_highlights,
                  "story_format": args.story_format, "format_confirmed": True, "visual_treatment": args.visual_treatment, "visual_treatment_mode": treatment_mode, "treatment_confirmed": True, "call_to_action": call_to_action,
-                 "renderer_slug": args.renderer_slug or slugify(title), "research_updated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"), "updated_at": datetime.now(timezone.utc).isoformat(timespec="seconds")})
+                 "renderer_slug": args.renderer_slug or slugify(title), "production_cues": production_cues,
+                 "research_updated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"), "updated_at": datetime.now(timezone.utc).isoformat(timespec="seconds")})
     write_json(batch_dir / "manifest.json", manifest)
     print(f"Pitch saved for {topic['id']} short {args.slot:02d}; status=awaiting_approval")
 
@@ -285,10 +306,63 @@ def validate_treatment_scorecard(scorecard: str, selected: str) -> None:
         raise SystemExit(f"Scorecard recommends {recommended} (character {scores['character-led']}/6, graphics {scores['graphics-led']}/6, hybrid {scores['hybrid']}/6); set --visual-treatment to that choice or use a manual override.")
 
 
-def validate_visual_plan(plan: str) -> None:
+def validate_visual_plan(plan: str) -> int:
     beats = [line for line in plan.splitlines() if re.match(r"^\s*(?:\d+[.)]|[-*])\s+\S", line)]
     if not 5 <= len(beats) <= 7:
         raise SystemExit(f"Visual plan must have 5–7 numbered or bulleted key-image beats; found {len(beats)}.")
+    return len(beats)
+
+
+SCRIPT_CUE_RE = re.compile(
+    r"^\s*\[SHOT\s+(\d{1,2})\s*@\s*(\d+(?:\.\d+)?)-(\d+(?:\.\d+)?)s\s*"
+    r"\|\s*SCREEN:\s*(.*?)\s*\|\s*ACTION:\s*(.*?)\s*\|\s*VFX:\s*(.*?)\s*"
+    r"\|\s*SFX:\s*(.*?)\s*\|\s*TRANSITION:\s*(.*?)\]\s*$",
+    re.IGNORECASE,
+)
+
+
+def validate_script_cues(script: str, target_duration: int, expected_beats: int) -> list[dict[str, Any]]:
+    """Require one timed, engine-readable production cue for each planned key image."""
+    cue_lines = [line for line in script.splitlines() if re.match(r"^\s*\[SHOT\b", line, re.IGNORECASE)]
+    if len(cue_lines) != expected_beats:
+        raise SystemExit(
+            f"The script needs exactly one [SHOT ...] production cue for each of its {expected_beats} visual-plan beats; "
+            f"found {len(cue_lines)}."
+        )
+    rows: list[dict[str, Any]] = []
+    for line_number, line in enumerate(cue_lines, start=1):
+        match = SCRIPT_CUE_RE.match(line)
+        if not match:
+            raise SystemExit(
+                "Each production cue must use: "
+                "[SHOT 01 @ 0.0-5.0s | SCREEN: ... | ACTION: ... | VFX: ... | SFX: ... | TRANSITION: ...]."
+            )
+        number, start, end, screen, action, vfx, sfx, transition = match.groups()
+        if int(number) != line_number:
+            raise SystemExit(f"Production cues must be numbered in order from SHOT 01; found SHOT {number}.")
+        fields = {"screen": screen, "action": action, "vfx": vfx, "sfx": sfx, "transition": transition}
+        empty = [key.upper() for key, value in fields.items() if not value.strip()]
+        if empty:
+            raise SystemExit(f"SHOT {number} has empty production fields: {', '.join(empty)}.")
+        rows.append({"shot": int(number), "start": float(start), "end": float(end), **fields})
+
+    if len(_spoken_tokens(script)) < 20:
+        raise SystemExit("The spoken script is unusually short; add the complete narration before approval.")
+    if rows[0]["start"] > 0.25:
+        raise SystemExit("SHOT 01 must begin at 0.0s so the visual hook starts with the video.")
+    for index, row in enumerate(rows):
+        span = row["end"] - row["start"]
+        if span < 2.0 or span > 10.0:
+            raise SystemExit(f"SHOT {index + 1:02d} spans {span:.1f}s; keep each major beat between 2 and 10 seconds.")
+        if index and abs(row["start"] - rows[index - 1]["end"]) > 0.25:
+            raise SystemExit(f"SHOT {index + 1:02d} timing must start where SHOT {index:02d} ends (within 0.25s).")
+    tolerance = max(1.5, target_duration * 0.04)
+    if abs(rows[-1]["end"] - target_duration) > tolerance:
+        raise SystemExit(
+            f"Production cues end at {rows[-1]['end']:.1f}s, not the saved {target_duration}s target "
+            f"(allowed difference {tolerance:.1f}s)."
+        )
+    return rows
 
 
 def validate_duration(actual: float, target: int, stage: str) -> None:
@@ -338,7 +412,7 @@ def validate_blocky_story_plan(spec: dict[str, Any], topic: dict[str, Any], slot
                     actions.add(str(event[1]))
     if len(actions) < 2:
         raise SystemExit("Give the cast at least two distinct actions across the story shot plan.")
-    if slot.get("theme") == "blocky-3d":
+    if slot.get("theme") in BLENDER_STYLES:
         validate_blocky_screen_proof(spec)
 
 
@@ -381,6 +455,90 @@ def validate_blocky_script_consistency(script_path: Path, spec: dict[str, Any]) 
         f"First difference near word {mismatch + 1}: script='{expected_excerpt}', shots='{actual_excerpt}'. "
         "Update the shot lines before preparing voice or animation."
     )
+
+
+def validate_spoken_cta(script_path: Path, call_to_action: str | None) -> None:
+    """Require the approved engagement CTA to be spoken near the end of the script."""
+    if not script_path.is_file():
+        raise SystemExit(f"Approved script is missing: {script_path}")
+    script_tokens = _spoken_tokens(script_path.read_text(encoding="utf-8"))
+    cta_tokens = _spoken_tokens(call_to_action or "")
+    engagement = {"comment", "follow", "subscribe", "like", "share", "vote", "reply", "save"}
+    expected_actions = engagement.intersection(cta_tokens)
+    if not expected_actions:
+        raise SystemExit(
+            "The approved pitch needs a spoken engagement CTA (for example, comment, follow, subscribe, vote, or share)."
+        )
+    final_tokens = set(script_tokens[-24:])
+    missing = sorted(expected_actions - final_tokens)
+    if missing:
+        raise SystemExit(
+            "The approved script does not speak its configured CTA near the end. "
+            f"Missing CTA action(s): {', '.join(missing)}. Update script.md before preparing the video."
+        )
+
+
+def validate_whatif_script_sync(script_path: Path, episode_dir: Path) -> None:
+    """Keep the approved script, What If episode, timed segments, and word captions aligned."""
+    if not script_path.is_file():
+        raise SystemExit(f"Approved script is missing: {script_path}")
+    episode_path = episode_dir / "episode.json"
+    timeline_path = episode_dir / "timeline.json"
+    words_path = episode_dir / "words.json"
+    for path in (episode_path, timeline_path, words_path):
+        if not path.is_file():
+            raise SystemExit(f"What If script-sync check needs {path.name}; run the episode preparation stages first.")
+
+    approved = _spoken_tokens(script_path.read_text(encoding="utf-8"))
+    episode = read_json(episode_path)
+    timeline = read_json(timeline_path)
+    words = read_json(words_path)
+    episode_lines = episode.get("script", [])
+    if not isinstance(episode_lines, list):
+        raise SystemExit(f"What If episode script must be a list of spoken lines: {episode_path}")
+    episode_tokens = _spoken_tokens(" ".join(str(line.get("text", "")) for line in episode_lines if isinstance(line, dict)))
+    segment_rows = timeline.get("segments", [])
+    if not isinstance(segment_rows, list):
+        raise SystemExit(f"What If timeline segments must be a list: {timeline_path}")
+    segment_tokens = _spoken_tokens(" ".join(str(segment.get("line", "")) for segment in segment_rows if isinstance(segment, dict)))
+    if not isinstance(words, list):
+        raise SystemExit(f"What If words.json must contain a list of timed words: {words_path}")
+    word_tokens = _spoken_tokens(" ".join(str(row.get("w", "")) for row in words if isinstance(row, dict)))
+
+    stages = (("episode.json", episode_tokens), ("timeline.json segments", segment_tokens), ("words.json", word_tokens))
+    for label, actual in stages:
+        if approved == actual:
+            continue
+        mismatch = next((i for i, (a, b) in enumerate(zip(approved, actual)) if a != b), min(len(approved), len(actual)))
+        expected_excerpt = " ".join(approved[mismatch:mismatch + 7]) or "<end of approved script>"
+        actual_excerpt = " ".join(actual[mismatch:mismatch + 7]) or "<end of generated text>"
+        raise SystemExit(
+            f"What If {label} does not match the approved script.md near word {mismatch + 1}: "
+            f"script='{expected_excerpt}', generated='{actual_excerpt}'. Regenerate the episode plan."
+        )
+
+    fps, total = float(timeline.get("fps", 0)), float(timeline.get("total", 0))
+    if fps <= 0 or total <= 0:
+        raise SystemExit(f"What If timeline needs positive fps and total frame count: {timeline_path}")
+    previous_start = -1.0
+    audio_limit = total / fps + 0.15
+    for index, row in enumerate(words, start=1):
+        if not isinstance(row, dict) or "s" not in row or "e" not in row:
+            raise SystemExit(f"What If word timing row {index} must contain start and end seconds.")
+        start, end = float(row["s"]), float(row["e"])
+        if start < 0 or end < start or start < previous_start or end > audio_limit:
+            raise SystemExit(
+                f"What If word timing row {index} is out of order or outside the {audio_limit:.2f}s episode timeline."
+            )
+        previous_start = start
+    previous_frame = 0
+    for index, segment in enumerate(segment_rows, start=1):
+        if not isinstance(segment, dict) or "a" not in segment or "b" not in segment:
+            raise SystemExit(f"What If timeline segment {index} needs start frame a and end frame b.")
+        start, end = int(segment["a"]), int(segment["b"])
+        if start < previous_frame or end < start or end > total:
+            raise SystemExit(f"What If timeline segment {index} is out of order or outside the episode duration.")
+        previous_frame = end
 
 
 def validate_blocky_voice_sync(project: Path, script_path: Path, target_duration: int | None) -> None:
@@ -492,7 +650,7 @@ def _custom_place_prop_names(place: dict[str, Any]) -> set[str]:
 
 
 def validate_blocky_screen_proof(spec: dict[str, Any]) -> None:
-    """Require every Blocky 3D spoken beat to point at supported on-screen evidence."""
+    """Require every Blender 3D spoken beat to point at supported on-screen evidence."""
     contact_pose_peak = {"slap": 0.28, "knock": 0.16, "throw": 0.30, "catch": 0.28}
     supported_animations = set(_literal_assignment(ROOT / "kit" / "blox" / "chars.py", "ANIMS"))
     supported_sfx = set(_literal_assignment(ROOT / "kit" / "blox" / "post.py", "SFX"))
@@ -824,10 +982,10 @@ def validate_blocky_screen_proof(spec: dict[str, Any]) -> None:
 
 
 def _storyboard_review_files(slot: dict[str, Any]) -> tuple[Path, list[Path]]:
-    if slot.get("theme") in ("blocky-3d", "monochrome"):
+    if slot.get("theme") in BLENDER_STYLES:
         project = ROOT / slot.get("renderer_project", "")
         return project / "stills_sheet.jpg", [project / "shots.py", project / "timed.json"]
-    if slot.get("theme") == "what-if":
+    if slot.get("theme") in REMOTION_STYLES:
         slug = slot.get("renderer_slug") or slugify(slot.get("title", ""))
         episode = ROOT / "studio" / "src" / "episodes" / slug
         studio_out = ROOT / "studio" / "out" / slug
@@ -837,6 +995,9 @@ def _storyboard_review_files(slot: dict[str, Any]) -> tuple[Path, list[Path]]:
             episode / "index.tsx",
             episode / "timeline.json",
             ROOT / "studio" / "src" / "episodes" / "index.ts",
+            ROOT / "studio" / "src" / "engine" / "storyworld.tsx",
+            ROOT / "studio" / "src" / "engine" / "index.ts",
+            ROOT / "studio" / "package.json",
         ]
     raise SystemExit(f"Unsupported storyboard theme: {slot.get('theme')}")
 
@@ -865,7 +1026,7 @@ def _current_storyboard_fingerprint(slot: dict[str, Any]) -> tuple[Path, str, st
 def run(command: list[str], cwd: Path, env: dict[str, str] | None = None) -> None:
     print("$", " ".join(command), flush=True)
     started = time.monotonic()
-    subprocess.run(command, cwd=cwd, env=env, check=True)
+    subprocess.run(command, cwd=cwd, env=media_environment(env), check=True)
     print(f"   completed in {time.monotonic() - started:.1f}s", flush=True)
 
 
@@ -883,7 +1044,16 @@ def command_prepare(args: argparse.Namespace) -> None:
         print(f"Estimated voice and storyboard preparation time from comparable local videos: about {eta / 60:.1f} minutes (rough estimate).")
     folder = slot_path(batch_dir, topic, slot)
     py = sys.executable
-    if slot["theme"] in ("blocky-3d", "monochrome"):
+    approved_script = folder / "script.md"
+    validate_spoken_cta(approved_script, slot.get("call_to_action"))
+    save_slot_render_profile(slot)
+    target_duration = slot.get("target_duration_seconds")
+    visual_plan_path = folder / "visual-plan.md"
+    if not visual_plan_path.is_file():
+        raise SystemExit(f"Approved visual plan is missing: {visual_plan_path}")
+    cue_beats = validate_visual_plan(visual_plan_path.read_text(encoding="utf-8"))
+    validate_script_cues(approved_script.read_text(encoding="utf-8"), int(target_duration or 0), cue_beats)
+    if slot["theme"] in BLENDER_STYLES:
         project = folder / "project"
         shots_path = project / "shots.py"
         if not shots_path.is_file():
@@ -900,13 +1070,12 @@ def command_prepare(args: argparse.Namespace) -> None:
         spec_path = project / "timed.json"
         spec = read_json(spec_path)
         validate_blocky_story_plan(spec, topic, slot)
-        validate_blocky_script_consistency(folder / "script.md", spec)
-        target_duration = slot.get("target_duration_seconds")
+        validate_blocky_script_consistency(approved_script, spec)
         if target_duration is not None:
             validate_duration(float(spec.get("dur", 0)), int(target_duration), "Blender scene")
         spec["theme"] = slot["theme"]
         spec["visual_treatment"] = slot.get("visual_treatment", "character-led")
-        spec.setdefault("ui_style", "roblox_cinema")
+        spec.setdefault("ui_style", "town_story" if slot["theme"] == "rule-world-3d" else "roblox_cinema")
         spec["hook"] = slot.get("hook", "")
         spec["hook_highlights"] = slot.get("hook_highlights", [])
         spec["hook_duration_seconds"] = 1.5
@@ -914,9 +1083,9 @@ def command_prepare(args: argparse.Namespace) -> None:
         spec["cta_duration_seconds"] = 3.5
         write_json(spec_path, spec)
         run([py, str(ROOT / "kit" / "run.py"), str(project), "voice", "compile", "stills"], ROOT, env)
-        validate_blocky_voice_sync(project, folder / "script.md", int(target_duration) if target_duration else None)
+        validate_blocky_voice_sync(project, approved_script, int(target_duration) if target_duration else None)
         slot["renderer_project"] = str(project.relative_to(ROOT)).replace("\\", "/")
-    elif slot["theme"] == "what-if":
+    elif slot["theme"] in REMOTION_STYLES:
         slug = slot.get("renderer_slug") or slugify(slot["title"])
         ep = ROOT / "studio" / "src" / "episodes" / slug
         if not (ep / "episode.json").is_file() or not (ep / "shots.tsx").is_file() or not (ep / "index.tsx").is_file():
@@ -945,6 +1114,9 @@ def command_prepare(args: argparse.Namespace) -> None:
         write_json(episode_path, episode)
         run([py, str(ROOT / "scripts" / "local_tts.py"), "--episode", slug], ROOT)
         run([py, str(ROOT / "scripts" / "plan.py"), slug], studio)
+        if slot["theme"] == "world-story-3d":
+            run([py, str(ROOT / "scripts" / "world_story_sfx.py"), slug], studio)
+        validate_whatif_script_sync(approved_script, ep)
         target_duration = slot.get("target_duration_seconds")
         timeline = read_json(ep / "timeline.json")
         if target_duration is not None:
@@ -1041,7 +1213,7 @@ def _approved_render_slot(args: argparse.Namespace) -> tuple[Path, dict[str, Any
 
 
 def _narration_source(slot: dict[str, Any]) -> Path:
-    if slot["theme"] in ("blocky-3d", "monochrome"):
+    if slot["theme"] in BLENDER_STYLES:
         return ROOT / slot["renderer_project"] / "vo.wav"
     slug = slot.get("renderer_slug") or slugify(slot.get("title", ""))
     return ROOT / "studio" / "public" / slug / "voice.wav"
@@ -1056,7 +1228,7 @@ def command_preview(args: argparse.Namespace) -> None:
     else:
         print(f"Estimated preview time from comparable local videos: about {eta / 60:.1f} minutes (rough estimate).")
     py = sys.executable
-    if slot["theme"] in ("blocky-3d", "monochrome"):
+    if slot["theme"] in BLENDER_STYLES:
         project = ROOT / slot["renderer_project"]
         run([py, str(ROOT / "kit" / "run.py"), str(project), "preview"], ROOT)
         source = project / "out" / f"{project.name}-preview.mp4"
@@ -1154,11 +1326,22 @@ def command_render(args: argparse.Namespace) -> None:
     py = sys.executable
     eta = _render_eta(manifest, slot)
     if eta is None:
-        print("No comparable local render timing yet. A 30–60s, 60 fps short contains 1,800–3,600 frames; first blocky 3D renders can take tens of minutes and may approach 50 minutes on some computers.")
+        fps = int(slot.get("render_profile", {}).get("fps", theme_fps(slot.get("theme"))))
+        low, high = 30 * fps, 60 * fps
+        if slot["theme"] in BLENDER_STYLES:
+            renderer = "Blender"
+            detail = "First blocky 3D renders can take tens of minutes and may approach 50 minutes on some computers."
+        elif slot["theme"] == "world-story-3d":
+            renderer = "Remotion/Three.js"
+            detail = "The first render is unbenchmarked; browser startup and WebGL composition affect its time."
+        else:
+            renderer = "Remotion"
+            detail = "The first render is unbenchmarked on this computer."
+        print(f"No comparable local render timing yet. This {renderer} theme renders at {fps} fps ({low:,}–{high:,} frames for 30–60 seconds). {detail}")
     else:
         print(f"Estimated render time from this batch's similar local renders: about {eta / 60:.1f} minutes (rough estimate).")
     render_started = time.monotonic()
-    if slot["theme"] in ("blocky-3d", "monochrome"):
+    if slot["theme"] in BLENDER_STYLES:
         project = ROOT / slot["renderer_project"]
         run([py, str(ROOT / "kit" / "run.py"), str(project), "render", "post"], ROOT)
         source = project / "out" / f"{project.name}.mp4"
@@ -1186,13 +1369,13 @@ def command_render(args: argparse.Namespace) -> None:
     for name in ("pitch.md", "script.md", "research.md", "post-caption.txt", "visual-plan.md", "treatment-scorecard.md", "audio-qa.md"):
         if (folder / name).is_file():
             shutil.copy2(folder / name, destination / name)
-    if slot["theme"] in ("blocky-3d", "monochrome"):
+    if slot["theme"] in BLENDER_STYLES:
         board = ROOT / slot["renderer_project"] / "stills_sheet.jpg"
     else:
         board = ROOT / "studio" / "out" / slot["renderer_slug"] / "storyboard.jpg"
     if board.is_file():
         shutil.copy2(board, destination / "storyboard.jpg")
-    if slot["theme"] == "what-if":
+    if slot["theme"] in REMOTION_STYLES:
         first_frame = ROOT / "studio" / "out" / slot["renderer_slug"] / "frames" / "f0000.png"
         if first_frame.is_file():
             shutil.copy2(first_frame, destination / "frame-one.png")
@@ -1382,6 +1565,7 @@ def command_set_theme(args: argparse.Namespace) -> None:
         "theme_confirmed": True,
         "theme_selected_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
     })
+    save_slot_render_profile(slot)
     write_json(batch_dir / "manifest.json", manifest)
     print(f"Theme for {topic['id']} short {args.slot:02d} set to {args.theme}.")
 

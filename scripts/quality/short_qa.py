@@ -7,6 +7,10 @@ import json, math, os, subprocess, sys
 from fractions import Fraction
 import numpy as np
 from PIL import Image, ImageDraw
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from media_tools import ffmpeg_path, ffprobe_path, media_environment
 
 vid, out = sys.argv[1], sys.argv[2]
 meta = json.load(open(sys.argv[3])) if len(sys.argv) > 3 else {}
@@ -17,7 +21,9 @@ for a, b in meta.get("xfade", []) + meta.get("planned", []) + ([meta["flash"]] i
 for s in shots:
     planned.update((s["a"] - 1, s["a"]))
 os.makedirs(out, exist_ok=True)
-run = lambda *a: subprocess.run(a, capture_output=True, text=True)
+def run(*args):
+    tool = ffmpeg_path() if args[0] == "ffmpeg" else ffprobe_path() if args[0] == "ffprobe" else args[0]
+    return subprocess.run((tool, *args[1:]), capture_output=True, text=True, env=media_environment())
 R = []
 
 pr = json.loads(run("ffprobe", "-v", "error", "-show_entries", "stream=codec_type,codec_name,width,height,r_frame_rate,nb_frames,sample_rate,channels:format=duration", "-of", "json", vid).stdout)
@@ -39,7 +45,7 @@ if au:
     R.append("SILENCES " + ("; ".join(l.split("] ")[-1] for l in e.splitlines() if "silence_" in l) or "none"))
 
 W, H = 180, 320
-raw = subprocess.run(["ffmpeg", "-v", "error", "-i", vid, "-vf", f"scale={W}:{H}:flags=area", "-f", "rawvideo", "-pix_fmt", "rgb24", "-"], capture_output=True).stdout
+raw = subprocess.run([ffmpeg_path(), "-v", "error", "-i", vid, "-vf", f"scale={W}:{H}:flags=area", "-f", "rawvideo", "-pix_fmt", "rgb24", "-"], capture_output=True, env=media_environment()).stdout
 F = np.frombuffer(raw, np.uint8).reshape(-1, H, W, 3)
 n = len(F)
 f32 = F.astype(np.float32) / 255

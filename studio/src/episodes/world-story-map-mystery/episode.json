@@ -1,0 +1,815 @@
+{
+  "id": "WorldStoryMapMystery",
+  "slug": "world-story-map-mystery",
+  "title": "30 Seconds to Find the Missing Kitten",
+  "fps": 30,
+  "countdown_seconds": 30,
+  "voice_provider": "kokoro",
+  "voice": "am_puck",
+  "voice_speed": 0.72,
+  "kokoro_dictionary_only": true,
+  "kokoro_pronunciations": {
+    "Nia": "n\u02c8i\u0259"
+  },
+  "script": [
+    {
+      "beat": "Hook",
+      "text": "Thirty seconds. Find the missing kitten."
+    },
+    {
+      "beat": "Choose a route",
+      "text": "Choose A: Candy Canyon. Or B: the Clockwork Sea."
+    },
+    {
+      "beat": "Choice and consequence",
+      "text": "Nia picks A and sprints across the bridge. A sugar wave snaps it, and the river carries them to the harbor."
+    },
+    {
+      "beat": "Find the clue",
+      "text": "A blue pin blinks beneath the pier."
+    },
+    {
+      "beat": "Dive and grab",
+      "text": "Thomas dives, grabs it, and clips it onto the map."
+    },
+    {
+      "beat": "Payoff",
+      "text": "The map opens a gold tunnel. Their kitten bursts through the golden door and races home. Two new pins appear!"
+    },
+    {
+      "beat": "Choice and CTA",
+      "text": "A or B next? Comment and follow for the next map mystery!"
+    }
+  ],
+  "shots": [
+    {
+      "id": "S1",
+      "size": "wide aerial",
+      "set": "town",
+      "light": "day",
+      "key": 32,
+      "note": "Establish the town, the friends, an oversized ticking clock, and a missing-kitten poster. Keep the clock and poster inside the portrait frame.",
+      "camera": {
+        "from": {
+          "position": [
+            0,
+            8.8,
+            16
+          ],
+          "target": [
+            0,
+            1.6,
+            -1
+          ],
+          "fov": 47
+        },
+        "to": {
+          "position": [
+            0,
+            8.3,
+            15
+          ],
+          "target": [
+            0,
+            1.6,
+            -1
+          ],
+          "fov": 46
+        }
+      }
+    },
+    {
+      "id": "S2",
+      "size": "tight reaction and kitten insert",
+      "set": "town",
+      "light": "day",
+      "key": 22,
+      "note": "Nia points at the kitten portrait while Thomas checks the clock; show both reactions without cropping their bodies.",
+      "camera": {
+        "from": {
+          "position": [
+            0,
+            5.6,
+            14.8
+          ],
+          "target": [
+            0,
+            1.6,
+            0.8
+          ],
+          "fov": 49
+        },
+        "to": {
+          "position": [
+            0,
+            5.0,
+            13
+          ],
+          "target": [
+            0,
+            1.6,
+            1
+          ],
+          "fov": 47
+        }
+      }
+    },
+    {
+      "id": "S3",
+      "size": "high map insert",
+      "set": "map-table",
+      "light": "neon",
+      "key": 24,
+      "note": "Show the tabletop map as a real object with a bright amber A route through the canyon and a cyan B route under the sea.",
+      "camera": {
+        "from": {
+          "position": [
+            0,
+            10.0,
+            -2.6
+          ],
+          "target": [
+            0,
+            1.05,
+            -5
+          ],
+          "fov": 49
+        },
+        "to": {
+          "position": [
+            0,
+            9.2,
+            -2.8
+          ],
+          "target": [
+            0,
+            1.05,
+            -5
+          ],
+          "fov": 47
+        }
+      }
+    },
+    {
+      "id": "S4",
+      "size": "two-choice graphic",
+      "set": "map-table",
+      "light": "neon",
+      "key": 18,
+      "note": "Hold both labeled A/B route cards over the visible map long enough to read; highlight A only when Nia chooses it.",
+      "camera": {
+        "from": {
+          "position": [
+            0,
+            10.0,
+            -2.6
+          ],
+          "target": [
+            0,
+            1.05,
+            -5
+          ],
+          "fov": 49
+        },
+        "to": {
+          "position": [
+            0,
+            9.2,
+            -2.8
+          ],
+          "target": [
+            0,
+            1.05,
+            -5
+          ],
+          "fov": 47
+        }
+      }
+    },
+    {
+      "id": "S5",
+      "size": "low tracking medium",
+      "set": "candy-canyon",
+      "light": "sunset",
+      "key": 40,
+      "note": "Track Nia across the candy canyon path and bridge, with candy cliffs and destination pin clearly visible behind her.",
+      "camera": {
+        "from": {
+          "position": [
+            0,
+            5.2,
+            12
+          ],
+          "target": [
+            0,
+            1.5,
+            -2.5
+          ],
+          "fov": 54
+        },
+        "to": {
+          "position": [
+            0.6,
+            4.8,
+            10.5
+          ],
+          "target": [
+            0.4,
+            1.5,
+            -2.5
+          ],
+          "fov": 52
+        }
+      }
+    },
+    {
+      "id": "S6",
+      "size": "impact close-up",
+      "set": "candy-canyon",
+      "light": "storm",
+      "key": 8,
+      "note": "A sugar wave hits the bridge on \u201csnaps\u201d; show its center planks and side beams break apart, then carry both friends downstream along the visible canyon current toward the harbor.",
+      "camera": {
+        "from": {
+          "position": [
+            0,
+            7.0,
+            11
+          ],
+          "target": [
+            0,
+            1.4,
+            -3.2
+          ],
+          "fov": 56
+        },
+        "to": {
+          "position": [
+            0,
+            6.2,
+            10
+          ],
+          "target": [
+            0,
+            1.2,
+            -3.6
+          ],
+          "fov": 54
+        }
+      }
+    },
+    {
+      "id": "S7",
+      "size": "harbor wide to point",
+      "set": "harbor",
+      "light": "day",
+      "key": 22,
+      "note": "Carry the canyon river into a new harbor set; Thomas points below the pier while Nia follows his eyeline.",
+      "camera": {
+        "from": {
+          "position": [
+            0,
+            7.2,
+            13
+          ],
+          "target": [
+            0,
+            1.6,
+            0.2
+          ],
+          "fov": 55
+        },
+        "to": {
+          "position": [
+            0,
+            6.5,
+            12
+          ],
+          "target": [
+            0,
+            1.5,
+            0
+          ],
+          "fov": 53
+        }
+      }
+    },
+    {
+      "id": "S8",
+      "size": "blue-pin macro insert",
+      "set": "harbor",
+      "light": "neon",
+      "key": 16,
+      "note": "Under the pier, show a clearly shaped blue map pin blinking beneath the waterline, framed by visible pier planks and water ripples.",
+      "camera": {
+        "from": {
+          "position": [
+            0.5,
+            1.8,
+            6.2
+          ],
+          "target": [
+            0.8,
+            0.5,
+            -0.4
+          ],
+          "fov": 42
+        },
+        "to": {
+          "position": [
+            0.5,
+            1.5,
+            5.6
+          ],
+          "target": [
+            0.8,
+            0.4,
+            -0.4
+          ],
+          "fov": 40
+        }
+      }
+    },
+    {
+      "id": "S9",
+      "size": "underwater action low angle",
+      "set": "underwater",
+      "light": "neon",
+      "key": 42,
+      "note": "Thomas swims face-forward to the blue pin, closes both hands around it at chest height, and holds the lit pin visibly in his right hand before the map cut.",
+      "camera": {
+        "from": {
+          "position": [
+            0.4,
+            1.6,
+            7.5
+          ],
+          "target": [
+            0.4,
+            0.55,
+            -1.15
+          ],
+          "fov": 47
+        },
+        "to": {
+          "position": [
+            0.4,
+            1.5,
+            7
+          ],
+          "target": [
+            0.5,
+            0.5,
+            -1.2
+          ],
+          "fov": 45
+        }
+      },
+      "sky": "#0c4565"
+    },
+    {
+      "id": "S10",
+      "size": "map portal reveal",
+      "set": "map-table",
+      "light": "neon",
+      "key": 42,
+      "note": "The one found pin flies onto the glowing A-route node, then a bright gold-rimmed tunnel opens above it with visible depth toward the home shot.",
+      "camera": {
+        "from": {
+          "position": [
+            0,
+            10.0,
+            -2.6
+          ],
+          "target": [
+            0,
+            1.05,
+            -5
+          ],
+          "fov": 49
+        },
+        "to": {
+          "position": [
+            0,
+            9.2,
+            -2.8
+          ],
+          "target": [
+            0,
+            1.05,
+            -5
+          ],
+          "fov": 47
+        }
+      }
+    },
+    {
+      "id": "S11",
+      "size": "home payoff wide",
+      "set": "home",
+      "light": "sunset",
+      "key": 60,
+      "note": "Start with the gold door closed; swing it open before the kitten starts, then show the kitten run through the doorway and reach the friends.",
+      "camera": {
+        "from": {
+          "position": [
+            0,
+            5.8,
+            12.5
+          ],
+          "target": [
+            0,
+            1.5,
+            -2.4
+          ],
+          "fov": 52
+        },
+        "to": {
+          "position": [
+            0,
+            5.3,
+            11.5
+          ],
+          "target": [
+            0,
+            1.5,
+            -2.4
+          ],
+          "fov": 50
+        }
+      }
+    },
+    {
+      "id": "S12",
+      "size": "two-pin route reveal",
+      "set": "map-table",
+      "light": "neon",
+      "key": 25,
+      "note": "On \u201cTwo new pins appear,\u201d reveal a bright pin on each distinct route, with both colors and destinations readable in the portrait map.",
+      "camera": {
+        "from": {
+          "position": [
+            0,
+            10.0,
+            -2.6
+          ],
+          "target": [
+            0,
+            1.05,
+            -5
+          ],
+          "fov": 49
+        },
+        "to": {
+          "position": [
+            0,
+            9.2,
+            -2.8
+          ],
+          "target": [
+            0,
+            1.05,
+            -5
+          ],
+          "fov": 47
+        }
+      }
+    },
+    {
+      "id": "S13",
+      "size": "reunion choice two-shot",
+      "set": "town",
+      "light": "day",
+      "key": 18,
+      "note": "On \u201cA or B next,\u201d return to town for a clear reunion: both friends lean in, the kitten jumps between them, and the route choices stay above their faces.",
+      "camera": {
+        "from": {
+          "position": [
+            0,
+            6.2,
+            12
+          ],
+          "target": [
+            0,
+            1.5,
+            -1
+          ],
+          "fov": 53
+        },
+        "to": {
+          "position": [
+            0,
+            5.8,
+            11
+          ],
+          "target": [
+            0,
+            1.5,
+            -0.7
+          ],
+          "fov": 51
+        }
+      }
+    },
+    {
+      "id": "S14",
+      "size": "tight reunion CTA close-up",
+      "set": "town",
+      "light": "day",
+      "key": 70,
+      "note": "Push closer as the friends keep the kitten between them; hold the A/B options high and the comment/follow CTA low in portrait-safe areas through the final frame.",
+      "camera": {
+        "from": {
+          "position": [
+            0,
+            5.55,
+            10.7
+          ],
+          "target": [
+            0,
+            1.4,
+            0.8
+          ],
+          "fov": 50
+        },
+        "to": {
+          "position": [
+            0,
+            4.95,
+            9.7
+          ],
+          "target": [
+            0,
+            1.35,
+            1.0
+          ],
+          "fov": 47
+        }
+      }
+    }
+  ],
+  "edit": [
+    {
+      "shot": "S1",
+      "at": "f:0"
+    },
+    {
+      "shot": "S2",
+      "at": "missing",
+      "transition": {
+        "kind": "push",
+        "frames": 8
+      }
+    },
+    {
+      "shot": "S3",
+      "at": "Choose",
+      "transition": {
+        "kind": "portal",
+        "frames": 10,
+        "color": "#dfc17d"
+      }
+    },
+    {
+      "shot": "S4",
+      "at": "Clockwork",
+      "transition": {
+        "kind": "flash",
+        "frames": 6,
+        "color": "#fff1b5"
+      }
+    },
+    {
+      "shot": "S5",
+      "at": "Nia",
+      "transition": {
+        "kind": "whip",
+        "frames": 8,
+        "direction": "left"
+      }
+    },
+    {
+      "shot": "S6",
+      "at": "snaps",
+      "transition": {
+        "kind": "whip",
+        "frames": 8,
+        "direction": "left"
+      }
+    },
+    {
+      "shot": "S7",
+      "at": "harbor",
+      "transition": {
+        "kind": "whip",
+        "frames": 10,
+        "direction": "down"
+      }
+    },
+    {
+      "shot": "S8",
+      "at": "blinks",
+      "transition": {
+        "kind": "flash",
+        "frames": 6,
+        "color": "#80eaff"
+      }
+    },
+    {
+      "shot": "S9",
+      "at": "dives",
+      "transition": {
+        "kind": "whip",
+        "frames": 8,
+        "direction": "down"
+      }
+    },
+    {
+      "shot": "S10",
+      "at": "map",
+      "transition": {
+        "kind": "map-fold",
+        "frames": 10,
+        "color": "#e8c879"
+      }
+    },
+    {
+      "shot": "S11",
+      "at": "kitten",
+      "transition": {
+        "kind": "portal",
+        "frames": 12,
+        "color": "#ffd15c"
+      }
+    },
+    {
+      "shot": "S12",
+      "at": "Two",
+      "transition": {
+        "kind": "map-fold",
+        "frames": 10,
+        "color": "#e8c879"
+      }
+    },
+    {
+      "shot": "S13",
+      "at": "A",
+      "transition": {
+        "kind": "portal",
+        "frames": 10,
+        "color": "#ffd15c"
+      }
+    },
+    {
+      "shot": "S14",
+      "at": "Comment",
+      "transition": {
+        "kind": "push",
+        "frames": 8
+      }
+    }
+  ],
+  "end": "s:30",
+  "tail": 0.4,
+  "hook": "Thirty seconds. Find the missing kitten.",
+  "hook_highlights": [
+    "THIRTY",
+    "KITTEN"
+  ],
+  "hook_duration_seconds": 1.5,
+  "cta": "Comment and follow for the next map mystery!",
+  "cta_duration_seconds": 4.5,
+  "choiceCues": [
+    {
+      "a": "Candy Canyon",
+      "b": "Clockwork Sea",
+      "startSeconds": 2.9,
+      "endSeconds": 6.3,
+      "title": "PICK A ROUTE"
+    },
+    {
+      "a": "Candy Canyon",
+      "b": "Clockwork Sea",
+      "startSeconds": 6.3,
+      "endSeconds": 7.05,
+      "selected": "A",
+      "title": "NIA PICKS A"
+    },
+    {
+      "a": "Candy Canyon",
+      "b": "Clockwork Sea",
+      "startSeconds": 24.48,
+      "endSeconds": 30,
+      "title": "WHICH ROUTE NEXT?",
+      "topPercent": 12
+    }
+  ],
+  "fx": [
+    {
+      "at": "snaps",
+      "kind": "impact",
+      "x": 50,
+      "y": 48,
+      "color": "#fff1a8",
+      "duration": 0.65
+    },
+    {
+      "at": "blinks",
+      "kind": "pin-pulse",
+      "x": 52,
+      "y": 49,
+      "color": "#55dfff",
+      "duration": 0.9
+    },
+    {
+      "at": "dives",
+      "kind": "speed-lines",
+      "strength": 0.45,
+      "duration": 0.3
+    },
+    {
+      "at": "grabs",
+      "kind": "spark",
+      "x": 62,
+      "y": 51,
+      "color": "#61e7ff",
+      "duration": 0.55
+    },
+    {
+      "at": "tunnel",
+      "kind": "portal",
+      "x": 50,
+      "y": 45,
+      "color": "#ffd15c",
+      "duration": 1.2
+    },
+    {
+      "at": "two",
+      "kind": "spark",
+      "x": 50,
+      "y": 45,
+      "color": "#ffe16e",
+      "duration": 0.8
+    }
+  ],
+  "world_sfx": {
+    "volume": 0.4,
+    "events": [
+      {
+        "at": "Choose",
+        "clip": "move-spin",
+        "gain": 0.22
+      },
+      {
+        "at": "snaps",
+        "clip": "impact-heavy-hard",
+        "gain": 0.42
+      },
+      {
+        "at": "pin",
+        "clip": "shimmer-short-sparkle",
+        "gain": 0.28
+      },
+      {
+        "at": "grabs",
+        "clip": "whoosh-fast-hard",
+        "gain": 0.3
+      },
+      {
+        "at": "tunnel",
+        "clip": "riser-1s-strong",
+        "gain": 0.22
+      },
+      {
+        "at": "opens",
+        "clip": "move-spin",
+        "gain": 0.26
+      },
+      {
+        "at": "kitten",
+        "clip": "mechanical-latch-heavy",
+        "gain": 0.22
+      },
+      {
+        "at": "bursts",
+        "clip": "shimmer-short-sparkle",
+        "gain": 0.26
+      },
+      {
+        "at": "bursts",
+        "clip": "whoosh-fast-hard",
+        "gain": 0.18
+      },
+      {
+        "at": "Two",
+        "clip": "shimmer-short-sparkle",
+        "gain": 0.24
+      },
+      {
+        "at": "f:870",
+        "clip": "shimmer-short-sparkle",
+        "gain": 0.16
+      }
+    ]
+  }
+}
