@@ -58,7 +58,7 @@ For speed, the Blender preview renders at half resolution with reduced preview-o
 
 | Theme | Rendering path | What it produces |
 |---|---|---|
-| `blocky-3d` | Blender | Original blocky 3D scenes with story-specific sets, timed gestures and low-poly hit, sound, sparkle, and speed effects; Blocky 3D plans get a script-to-screen proof check |
+| `blocky-3d` | Blender | Original blocky 3D scenes with story-specific sets, outlined Roblox-style captions, timed character/prop motion, travelling VFX, and script-to-screen/voice sync checks |
 | `monochrome` | Blender + FFmpeg | Blocky 3D scenes with a black-and-white grade |
 | `what-if` | Remotion | Original vector animation |
 
@@ -70,7 +70,9 @@ The visual treatment is an episode-level choice independent of the theme and A/B
 | graphics-led | Props, diagrams, counters, and visual proof lead; characters are optional. |
 | hybrid | Characters and graphics share the storytelling. |
 
-These treatments reuse the three existing render paths. Graphics-led Blender videos use the kit's current physical props, camera moves, captions, and cards; they do not promise an unimplemented 2D HUD. The What If engine uses its existing vector shots and overlays. The blocky style uses original human characters when chosen; it does not include official Roblox characters or assets. Named story props can move as rigid objects, without physics or hand attachment. Animal and robot character rigs are not included. The monochrome grade is applied to the final MP4. Each new What If episode must be registered in `studio/src/episodes/index.ts`; preparation checks the registration.
+These treatments reuse the three existing render paths. Graphics-led Blender videos use the kit's current physical props, camera moves, captions, and cards; they do not promise an unimplemented 2D HUD. Blocky 3D now includes a layered `NightCourt` set, bold outlined captions, eased prop arcs/spins, a low-cost layered energy trail, directional sound rings, synced licensed CC0 sound effects, and short post-composited `whip`/`push`/`flash` transitions. Named props still move rigidly without physics or hand attachment. The What If engine uses its existing vector shots and overlays. All themes share script-to-storyboard checks for purposeful action, readable cause/action/result, and useful sound/effects; renderer-specific actions still have to use that renderer's capabilities. The blocky style uses original human characters; it does not include official Roblox characters or assets. Animal and robot character rigs are not included. The monochrome grade is applied to the final MP4. Each new What If episode must be registered in `studio/src/episodes/index.ts`; preparation checks the registration. See [the upstream integration review](references/upstream-integration.md) for source compatibility and license decisions.
+
+Blocky 3D preparation compares the approved script to the concatenated shot dialogue, then checks generated voice words/timings and the requested scene length. Set `voice_tone` and `voice_speed` for each video. Optional Voicemod control is for live microphone recording; it does not alter the renderer's existing TTS audio. See [the voice setup](FRIEND_GUIDE.md#optional-voicemod-live-microphone) and [the shot API](kit/API.md#voice-delivery-and-voicemod).
 
 Visual references and upstream demos are in [FRIEND_GUIDE.md](FRIEND_GUIDE.md). See the [blocky 3D art-direction guide](references/blocky-3d.md) for the visual reference workflow and clean set, light, material, action, and framing checks. Reference repositories do not train the assistant or renderer: the assistant can inspect images attached or explicitly loaded in a session, and the renderer uses only project code and assets.
 

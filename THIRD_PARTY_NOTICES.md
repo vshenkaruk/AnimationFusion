@@ -23,3 +23,13 @@ The user-provided Brave URL is a search query, not a repository: `https://search
 [isaiahagi/roblox-ai](https://github.com/isaiahagi/roblox-ai) was reviewed as a mixed-rights visual reference gallery. Its `sfx/cc0-audio/impact-hit/slap-2-clean-3fe3c7ff.mp3` sample is included as `kit/blox/assets/sfx/cc0/slap-2-clean.mp3`; the upstream repository identifies the `cc0-audio` collection as CC0 in its [README](https://github.com/isaiahagi/roblox-ai#sound-effects). No gallery images or videos are redistributed here.
 
 [KanzeroG/roblox-vfx-animation](https://github.com/KanzeroG/roblox-vfx-animation) was used as a design reference for effect layering, key poses, and timing. No code or `.rbxm` assets were copied. Its MIT-licensed Blender helpers primarily support Roblox model/animation export, and its prefab pack is designed for Roblox Studio with assets that may require separate Creator Store permissions; neither is bundled in this Blender video renderer. See the upstream [license](https://github.com/KanzeroG/roblox-vfx-animation/blob/main/LICENSE) and [asset notes](https://github.com/KanzeroG/roblox-vfx-animation#download-the-vfx-pack).
+
+## CC0 sound samples
+
+Six WAV effects selected from [wyzowl/sfx-kit](https://github.com/wyzowl/sfx-kit) are included at `kit/blox/assets/sfx/cc0/sfx-kit/`: `whoosh-fast-hard`, `impact-heavy-hard`, `mechanical-latch-heavy`, `shimmer-short-sparkle`, `move-spin`, and `riser-1s-strong`. They are CC0. The source commit, per-file SHA-256, sync point, target loudness, and intended event are recorded in `manifest.json`; the source CC0 dedication is preserved in `licenses/upstream/SFX-Kit-CC0.txt`. These are individual effect samples, not a soundtrack.
+
+The original `energy_trail`, directional sound rings, and `whip`/`push`/`flash` post transitions use no copied third-party code or graphics. Other reviewed repositories are documented in [`references/upstream-integration.md`](references/upstream-integration.md); their unlicensed, GPL-only, or Roblox Studio-only content is not bundled.
+
+## Optional Voicemod controller
+
+`scripts/voicemod_control.py` is an original, optional WebSocket client for Voicemod's documented local Control API. It does not bundle Voicemod Desktop, filters, voices, or sound assets. The application, account, filters, API terms, and free/pro availability remain subject to Voicemod's terms and current product features.

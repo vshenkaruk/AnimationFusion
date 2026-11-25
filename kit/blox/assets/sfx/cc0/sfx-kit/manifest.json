@@ -1,0 +1,109 @@
+{
+  "name": "SFX Kit selected samples",
+  "source": "https://github.com/wyzowl/sfx-kit",
+  "commit": "92780e7ab0cdfb557497a988089c47f46e8c7412",
+  "version": "1.0.0",
+  "license": "CC0-1.0",
+  "assets": [
+    {
+      "id": "whoosh-fast-hard",
+      "engine_name": "sfxkit_whoosh_fast_hard",
+      "filename": "whoosh-fast-hard.wav",
+      "duration": 0.252,
+      "sync": {
+        "at": 0.092,
+        "meets": "move-peak"
+      },
+      "level_lufs": -17,
+      "under_voiceover_db": -4,
+      "sha256": "c215bf14e1a09401f07869ed20f38f272681fbfbf176f1eaeba5a039d25006cd",
+      "use_for": [
+        "whip pans",
+        "fast cuts",
+        "quick zooms",
+        "objects flying across frame"
+      ]
+    },
+    {
+      "id": "impact-heavy-hard",
+      "engine_name": "sfxkit_impact_heavy_hard",
+      "filename": "impact-heavy-hard.wav",
+      "duration": 0.3,
+      "sync": {
+        "at": 0.01,
+        "meets": "instant"
+      },
+      "level_lufs": -19,
+      "under_voiceover_db": -4,
+      "sha256": "94fd8e05f4f2dc85ce474925800474a1882bd7eeef29ffa09805a0d13ebdc61d",
+      "use_for": [
+        "heavier hits on hard surfaces",
+        "door or prop impacts"
+      ]
+    },
+    {
+      "id": "mechanical-latch-heavy",
+      "engine_name": "sfxkit_mechanical_latch_heavy",
+      "filename": "mechanical-latch-heavy.wav",
+      "duration": 0.191,
+      "sync": {
+        "at": 0.078,
+        "meets": "instant"
+      },
+      "level_lufs": -22.5,
+      "under_voiceover_db": -3,
+      "sha256": "11e11c062b5cb8be8079000faeac50934eb56547868c5c9c89130ec63b5ecd53",
+      "use_for": [
+        "heavy latch and lock action"
+      ]
+    },
+    {
+      "id": "shimmer-short-sparkle",
+      "engine_name": "sfxkit_shimmer_short_sparkle",
+      "filename": "shimmer-short-sparkle.wav",
+      "duration": 0.53,
+      "sync": {
+        "at": 0.012,
+        "meets": "instant"
+      },
+      "level_lufs": -22.5,
+      "under_voiceover_db": -3,
+      "sha256": "e0a5e97ece9d4787bb6bd50fd88546d673f96c4b46938de0fb82b43b24b28af5",
+      "use_for": [
+        "brief sparkle or polished reveal"
+      ]
+    },
+    {
+      "id": "move-spin",
+      "engine_name": "sfxkit_move_spin",
+      "filename": "move-spin.wav",
+      "duration": 1.138,
+      "sync": {
+        "at": 0.007,
+        "meets": "action-start"
+      },
+      "level_lufs": -24,
+      "under_voiceover_db": -3,
+      "sha256": "c90e45abcbd143b0742d03b45bce9f47f4e14a40928a108c69a3896d8ba1e2f2",
+      "use_for": [
+        "visible spin or turn animation"
+      ]
+    },
+    {
+      "id": "riser-1s-strong",
+      "engine_name": "sfxkit_riser_1s_strong",
+      "filename": "riser-1s-strong.wav",
+      "duration": 1.216,
+      "sync": {
+        "at": 0.984,
+        "meets": "arrival"
+      },
+      "level_lufs": -20,
+      "under_voiceover_db": -5,
+      "sha256": "fc8bcec731b4f0bc0bfa7f7d82c96efdaf3d1f807dbd02bb2b87ef27a8adebc3",
+      "use_for": [
+        "build into a reveal, cut, or landing"
+      ]
+    }
+  ]
+}

@@ -63,12 +63,15 @@ def line_audio(pipes, text, voice, speed, cache):
 
 def main(d):
     tp = os.path.join(d, 'timed.json'); sp = json.load(open(tp, encoding='utf8'))
-    base_voice = sp.get('voice', 'af_heart'); speed = float(sp.get('voice_speed', 1.0))
+    base_voice = sp.get('voice', 'af_heart'); base_speed = float(sp.get('voice_speed', 1.0))
     cache = os.path.join(d, 'voice'); os.makedirs(cache, exist_ok=True)
     pipes, lines = {}, []
     for i, s in enumerate(sp['shots']):
         txt = spoken(s['text'])
         if not txt: lines.append(None); continue
+        speed = float(s.get('voice_speed', base_speed))
+        if not 0.65 <= speed <= 1.35:
+            raise SystemExit(f"Shot {i + 1} voice_speed must be between 0.65 and 1.35.")
         a, w = line_audio(pipes, txt, s.get('voice', base_voice), speed, cache)
         lines.append((a, w)); print(f'  {i:3d} {len(a) / SR:5.2f} s  {txt[:50]}', flush=True)
     # re-time: each shot at least as long as its line + pauses; later shots move along

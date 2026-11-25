@@ -5,7 +5,7 @@ import math
 
 import bpy
 
-KINDS = ("burst", "sparkle", "ring", "sound_rings", "dash")
+KINDS = ("burst", "sparkle", "ring", "ground_ring", "sound_rings", "signal_arrows", "dash", "comet", "energy_trail")
 
 
 def _mesh(name: str, vertices: list[tuple[float, float, float]], faces: list[tuple[int, ...]]):
@@ -51,9 +51,42 @@ def mesh(kind: str, name: str):
         faces = [(0, i, i + 1) for i in range(1, 8)] + [(0, 8, 1)]
     elif kind == "ring":
         _ring(vertices, faces, 1.0, 0.13)
+    elif kind == "ground_ring":
+        # Floor-plane arrival/impact pulse; unlike a camera-facing ring it stays
+        # around feet and pads instead of turning into a floating arch.
+        _ring(vertices, faces, 1.0, 0.12, segments=32)
     elif kind == "sound_rings":
-        for radius in (0.35, 0.68, 1.0):
-            _ring(vertices, faces, radius, 0.075)
+        # Perspective wave markers: three separate rings shrink toward a shared
+        # forward point, with an arrow tip on each. This reads as a signal
+        # travelling down the scene instead of a decorative halo around a prop.
+        for radius, cy in ((0.47, -1.16), (0.34, 0.0), (0.23, 1.12)):
+            base = len(vertices)
+            _ring(vertices, faces, radius, 0.065, segments=24)
+            for i in range(base, len(vertices)):
+                x, y, z = vertices[i]
+                vertices[i] = (x, y + cy, z)
+            tip = len(vertices)
+            vertices.extend(((-0.15, cy + radius * 0.73, 0.0),
+                             (0.0, cy + radius + 0.13, 0.0),
+                             (0.15, cy + radius * 0.73, 0.0),
+                             (0.07, cy + radius * 0.71, 0.0),
+                             (0.0, cy + radius * 0.83, 0.0),
+                             (-0.07, cy + radius * 0.71, 0.0)))
+            faces.extend(((tip, tip + 1, tip + 4, tip + 5),
+                          (tip + 4, tip + 1, tip + 2, tip + 3)))
+    elif kind == "signal_arrows":
+        # Three separated, filled chevrons point away from the sound source.
+        # The gap keeps the cue from collapsing into a floating loop/halo.
+        for cy, scale in ((-1.0, 1.0), (0.0, 0.78), (0.95, 0.58)):
+            base = len(vertices)
+            vertices.extend(((-0.12 * scale, cy - 0.40 * scale, 0.0),
+                             (0.12 * scale, cy - 0.40 * scale, 0.0),
+                             (0.12 * scale, cy + 0.02 * scale, 0.0),
+                             (0.34 * scale, cy + 0.02 * scale, 0.0),
+                             (0.0, cy + 0.42 * scale, 0.0),
+                             (-0.34 * scale, cy + 0.02 * scale, 0.0),
+                             (-0.12 * scale, cy + 0.02 * scale, 0.0)))
+            faces.append(tuple(base + i for i in range(7)))
     elif kind == "dash":
         # Five asymmetric tapered speed marks; the short/long rhythm keeps them from reading
         # like a flat barcode when seen on a phone.
@@ -66,6 +99,31 @@ def mesh(kind: str, name: str):
             vertices.extend(((x - half, y - tilt - thickness, 0.0), (x + half, y + tilt - thickness, 0.0),
                              (x + half * 0.75, y + tilt + thickness, 0.0), (x - half * 0.75, y - tilt + thickness, 0.0)))
             faces.append((base, base + 1, base + 2, base + 3))
+    elif kind == "comet":
+        # A clean, tapered travel mark with a bright head and staggered wake.
+        for y, length, width in ((0.42, 1.45, 0.035), (0.08, 2.0, 0.055), (-0.34, 1.25, 0.04)):
+            base = len(vertices)
+            vertices.extend(((-length, y - width, 0.0), (-0.22, y - width * 0.55, 0.0),
+                             (-0.12, y + width * 0.55, 0.0), (-length * 0.76, y + width, 0.0)))
+            faces.append((base, base + 1, base + 2, base + 3))
+        base = len(vertices)
+        vertices.extend(((0.0, 0.0, 0.0), (0.47, 0.16, 0.0), (0.97, 0.0, 0.0),
+                         (0.47, -0.16, 0.0), (0.57, 0.0, 0.0)))
+        faces.extend(((base, base + 1, base + 4), (base + 1, base + 2, base + 4),
+                      (base + 2, base + 3, base + 4), (base + 3, base, base + 4)))
+    elif kind == "energy_trail":
+        # Lightweight, original layered streaks: three tapered ribbons plus a
+        # bright leading wedge. Fixed geometry stays cheap in the 60 fps bake.
+        for y, width, length in ((0.34, 0.045, 1.55), (0.06, 0.075, 2.15), (-0.27, 0.05, 1.72)):
+            base = len(vertices)
+            vertices.extend(((-length, y - width, 0.0), (-0.24, y - width * 0.55, 0.0),
+                             (-0.10, y + width * 0.55, 0.0), (-length * 0.76, y + width, 0.0)))
+            faces.append((base, base + 1, base + 2, base + 3))
+        base = len(vertices)
+        vertices.extend(((0.0, 0.0, 0.0), (0.34, 0.18, 0.0), (0.88, 0.0, 0.0),
+                         (0.34, -0.18, 0.0), (0.51, 0.0, 0.0)))
+        faces.extend(((base, base + 1, base + 4), (base + 1, base + 2, base + 4),
+                      (base + 2, base + 3, base + 4), (base + 3, base, base + 4)))
     else:
         raise ValueError(f"Unknown Blocky 3D visual effect {kind!r}")
     return _mesh(name, vertices, faces)

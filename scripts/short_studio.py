@@ -11,6 +11,7 @@ import argparse
 import ast
 import hashlib
 import json
+import math
 import re
 import shutil
 import subprocess
@@ -358,23 +359,146 @@ def _proof_text(value: str) -> str:
     return re.sub(r"\s+", " ", re.sub(r"[^a-z0-9\s]", " ", value.casefold())).strip()
 
 
-def _custom_place_prop_names(place: dict[str, Any]) -> set[str]:
+def _spoken_tokens(value: str) -> list[str]:
+    """Use the same bracket/parenthesis skip rule as the narration renderers."""
+    value = re.sub(r"\([^)]*\)|\[[^\]]*\]", " ", value)
+    return [token.casefold().replace("’", "'") for token in re.findall(r"[\w]+(?:['’][\w]+)*", value, re.UNICODE)]
+
+
+def validate_blocky_script_consistency(script_path: Path, spec: dict[str, Any]) -> None:
+    """Block preparation when the shot narration drifts from the approved script."""
+    if not script_path.is_file():
+        raise SystemExit(f"Approved script is missing: {script_path}")
+    expected = _spoken_tokens(script_path.read_text(encoding="utf-8"))
+    actual = _spoken_tokens(" ".join(str(shot.get("text", "")) for shot in spec.get("shots", [])))
+    if expected == actual:
+        return
+    mismatch = next((i for i, (a, b) in enumerate(zip(expected, actual)) if a != b), min(len(expected), len(actual)))
+    expected_excerpt = " ".join(expected[mismatch:mismatch + 8]) or "<end of script>"
+    actual_excerpt = " ".join(actual[mismatch:mismatch + 8]) or "<end of shot narration>"
+    raise SystemExit(
+        "Blocky 3D voice/caption text does not match the approved script.md. "
+        f"First difference near word {mismatch + 1}: script='{expected_excerpt}', shots='{actual_excerpt}'. "
+        "Update the shot lines before preparing voice or animation."
+    )
+
+
+def validate_blocky_voice_sync(project: Path, script_path: Path, target_duration: int | None) -> None:
+    """Check that generated narration, captions, word timing, and target length agree."""
+    import wave
+
+    expected = _spoken_tokens(script_path.read_text(encoding="utf-8"))
+    voice_path, words_path, spec_path = project / "vo.wav", project / "words.json", project / "timed.json"
+    if not voice_path.is_file() or not words_path.is_file():
+        raise SystemExit("Narration sync check needs vo.wav and words.json; voice generation did not finish.")
+    spec = read_json(spec_path)
+    rows = read_json(words_path)
+    voiced = _spoken_tokens(" ".join(str(row[0]) for row in rows if isinstance(row, (list, tuple)) and row))
+    if expected != voiced:
+        mismatch = next((i for i, (a, b) in enumerate(zip(expected, voiced)) if a != b), min(len(expected), len(voiced)))
+        raise SystemExit(
+            "Narration timing words do not match the approved script at word "
+            f"{mismatch + 1}; the captions could disagree with the spoken line. Regenerate the voice stage."
+        )
+    with wave.open(str(voice_path), "rb") as audio:
+        duration = audio.getnframes() / max(1, audio.getframerate())
+    previous_start = -1.0
+    timed_tokens: list[tuple[str, float]] = []
+    for index, row in enumerate(rows, start=1):
+        if not isinstance(row, (list, tuple)) or len(row) < 3:
+            raise SystemExit(f"Narration word timing row {index} must contain a word, start, and end.")
+        start, end = float(row[1]), float(row[2])
+        if start < 0 or end <= start or end > duration + 0.1 or start < previous_start:
+            raise SystemExit(f"Narration word timing row {index} is outside the generated voice or out of order.")
+        previous_start = start
+        timed_tokens.extend((token, start) for token in _spoken_tokens(str(row[0])))
+
+    def token_time(shot: dict[str, Any], words: set[str]) -> float | None:
+        start, end = float(shot["t0"]), float(shot["t1"])
+        return next((at for token, at in timed_tokens if start - 0.05 <= at < end and token in words), None)
+
+    def cue_time(shot: dict[str, Any], cue_name: str) -> float | None:
+        for cue in shot.get("sfx", []) or []:
+            name, sep, at = str(cue).partition("@")
+            if sep and name == cue_name:
+                return float(at)
+        return None
+
+    # Validate the story's physical beats against the actual spoken word timings,
+    # so authored events cannot quietly drift earlier/later than the narration.
+    for index, shot in enumerate(spec.get("shots", []), start=1):
+        line = str(shot.get("text", "")).casefold()
+        interactions = [interaction for proof_row in shot.get("screen_proof", []) if isinstance(proof_row, dict)
+                        for interaction in (proof_row.get("interactions", []) or []) if isinstance(interaction, dict)]
+        for interaction in interactions:
+            kind = str(interaction.get("kind", ""))
+            if kind == "contact":
+                action_at = token_time(shot, {"whap", "clang"}) or token_time(
+                    shot, {"slap", "slaps", "smack", "smacks", "knock", "knocks", "hit", "hits",
+                           "kick", "kicks", "punch", "punches", "strike", "strikes"}
+                )
+                if action_at is not None and abs(float(interaction.get("at", -100)) - (action_at - float(shot["t0"]))) > 0.4:
+                    raise SystemExit(f"Blocky 3D shot {index} contact pose misses the spoken action by more than 0.4 seconds.")
+            elif kind == "pass_through":
+                action_at = token_time(shot, {"through", "inside", "across", "enters", "enter", "exits", "exit", "passes", "pass"})
+                if action_at is not None and abs(float(interaction.get("at", -100)) - (action_at - float(shot["t0"]))) > 0.65:
+                    raise SystemExit(f"Blocky 3D shot {index} doorway crossing does not land near the spoken crossing word.")
+            elif kind == "landmark":
+                action_at = token_time(shot, {"appears", "appear", "reappears", "reappear", "pops", "pop", "returns", "return", "spawns", "spawn"})
+                if action_at is not None and abs(float(interaction.get("at", -100)) - (action_at - float(shot["t0"]))) > 0.5:
+                    raise SystemExit(f"Blocky 3D shot {index} spawn/return arrival does not match its spoken action.")
+            elif kind == "launch":
+                action_at = token_time(shot, {"rockets", "rocket", "launches", "launch", "flies", "fly", "rises", "rise", "rising"})
+                if action_at is not None:
+                    move = next((item for item in shot.get("propMoves", []) if str(item.get("name")) == interaction.get("prop")), None)
+                    if move is None or abs(float(move.get("start", -100)) - (action_at - float(shot["t0"]))) > 0.65:
+                        raise SystemExit(f"Blocky 3D shot {index} prop launch does not begin near its spoken action.")
+        for word, cue_names, tolerance in (
+            ("whap", ("slap", "sfxkit_impact_heavy_hard"), 0.4),
+            ("clang", ("door_hit", "sfxkit_impact_heavy_hard"), 0.4),
+        ):
+            spoken_at = token_time(shot, {word})
+            sound_at = next((at for cue in cue_names if (at := cue_time(shot, cue)) is not None), None)
+            if spoken_at is not None and sound_at is None:
+                raise SystemExit(f"Blocky 3D shot {index} says {word.upper()} but has no matching impact sound cue.")
+            if spoken_at is not None and abs(sound_at - (spoken_at - float(shot["t0"]))) > tolerance:
+                raise SystemExit(f"Blocky 3D shot {index} impact sound is not synced to the spoken {word.upper()} cue.")
+    if target_duration is not None:
+        validate_duration(float(spec.get("dur", 0)), int(target_duration), "Voice-timed Blender scene")
+
+
+def _custom_place_prop_specs(place: dict[str, Any]) -> dict[str, dict[str, Any]]:
     counts: dict[str, int] = {}
-    names: set[str] = set()
+    props: dict[str, dict[str, Any]] = {}
     for item in place.get("props", []) or []:
         if not isinstance(item, (list, tuple)) or not item:
             continue
         kind = str(item[0])
         counts[kind] = counts.get(kind, 0) + 1
         options = item[4] if len(item) > 4 and isinstance(item[4], dict) else {}
-        names.add(str(options.get("name") or (kind if counts[kind] == 1 else f"{kind}{counts[kind]}")))
-    return names
+        name = str(options.get("name") or (kind if counts[kind] == 1 else f"{kind}{counts[kind]}"))
+        props[name] = {
+            "kind": kind,
+            "x": float(item[1]) if len(item) > 1 else 0.0,
+            "y": float(item[2]) if len(item) > 2 else 0.0,
+            "yaw": float(item[3]) if len(item) > 3 else 0.0,
+            "options": dict(options),
+        }
+    return props
+
+
+def _custom_place_prop_names(place: dict[str, Any]) -> set[str]:
+    return set(_custom_place_prop_specs(place))
 
 
 def validate_blocky_screen_proof(spec: dict[str, Any]) -> None:
     """Require every Blocky 3D spoken beat to point at supported on-screen evidence."""
+    contact_pose_peak = {"slap": 0.28, "knock": 0.16, "throw": 0.30, "catch": 0.28}
     supported_animations = set(_literal_assignment(ROOT / "kit" / "blox" / "chars.py", "ANIMS"))
     supported_sfx = set(_literal_assignment(ROOT / "kit" / "blox" / "post.py", "SFX"))
+    sfx_manifest = ROOT / "kit" / "blox" / "assets" / "sfx" / "cc0" / "sfx-kit" / "manifest.json"
+    if sfx_manifest.is_file():
+        supported_sfx.update(str(item.get("engine_name")) for item in read_json(sfx_manifest).get("assets", []))
     supported_vfx = set(_literal_assignment(ROOT / "kit" / "blox" / "vfx3d.py", "KINDS"))
     custom_places = spec.get("places", {}) or {}
     things = set((spec.get("things", {}) or {}).keys())
@@ -391,11 +515,13 @@ def validate_blocky_screen_proof(spec: dict[str, Any]) -> None:
             raise SystemExit(f"Blocky 3D shot {index} screen_proof must include its complete spoken line as a claim.")
 
         place = custom_places.get(str(shot.get("set", "")))
+        place_prop_specs = _custom_place_prop_specs(place) if isinstance(place, dict) else {}
         known_props = _custom_place_prop_names(place) if isinstance(place, dict) else set()
         all_props: set[str] = set()
         all_events: list[dict[str, Any]] = []
         all_cues: set[str] = set()
         all_vfx: list[dict[str, Any]] = []
+        all_interactions: list[dict[str, Any]] = []
         actual_cues = {str(cue).strip() for cue in (shot.get("sfx", []) or [])}
         actual_vfx = shot.get("vfx", []) or []
         actors = {str(actor.get("who")): actor for actor in (shot.get("actors", []) or []) if isinstance(actor, dict)}
@@ -457,6 +583,8 @@ def validate_blocky_screen_proof(spec: dict[str, Any]) -> None:
                     raise SystemExit(f"Blocky 3D shot {index} screen_proof cue {cue!r} is not scheduled in the shot.")
                 if name not in supported_sfx:
                     raise SystemExit(f"Blocky 3D shot {index} uses unsupported sound effect {name!r}.")
+                if name.startswith("sfxkit_") and "@" not in cue:
+                    raise SystemExit(f"Blocky 3D shot {index} must give {name} an action time such as {name}@0.65.")
                 all_cues.add(cue)
 
             vfx = row.get("vfx", []) or []
@@ -476,10 +604,187 @@ def validate_blocky_screen_proof(spec: dict[str, Any]) -> None:
                     raise SystemExit(f"Blocky 3D shot {index} screen_proof effect {kind!r} at {at:.2f}s is not scheduled in the shot.")
                 all_vfx.append(effect)
 
+            interactions = row.get("interactions", []) or []
+            if not isinstance(interactions, list):
+                raise SystemExit(f"Blocky 3D shot {index} screen_proof interactions must be a list.")
+            for interaction in interactions:
+                if not isinstance(interaction, dict):
+                    raise SystemExit(f"Blocky 3D shot {index} screen_proof interactions must be objects.")
+                kind = str(interaction.get("kind", ""))
+                if kind not in {"pass_through", "contact", "launch", "landmark"}:
+                    raise SystemExit(f"Blocky 3D shot {index} has unsupported interaction proof {kind!r}.")
+                if not str(interaction.get("prop", "")).strip():
+                    raise SystemExit(f"Blocky 3D shot {index} interaction proof needs a named prop.")
+                all_interactions.append(interaction)
+
         text_l = text.casefold()
         animations = {str(event.get("anim")) for event in all_events}
         cue_names = {cue.partition("@")[0] for cue in all_cues}
         effect_names = {str(effect.get("kind")) for effect in all_vfx}
+        interaction_kinds = {str(item.get("kind")) for item in all_interactions}
+
+        def actor_pose_at(actor: dict[str, Any], at: float) -> str:
+            pose = str(actor.get("anim", "idle"))
+            for event_time, event_anim in actor.get("animAt", []) or []:
+                if float(event_time) <= at:
+                    pose = str(event_anim)
+            return pose
+
+        def actor_xy_at(actor: dict[str, Any], at: float) -> tuple[float, float]:
+            start = actor.get("at", [0.0, 0.0])
+            end = actor.get("walkTo", start)
+            fraction = max(0.0, min(1.0, at / max(shot_duration, 0.01)))
+            return (float(start[0]) + (float(end[0]) - float(start[0])) * fraction,
+                    float(start[1]) + (float(end[1]) - float(start[1])) * fraction)
+
+        for interaction in all_interactions:
+            kind = str(interaction["kind"])
+            prop_name = str(interaction["prop"])
+            prop = place_prop_specs.get(prop_name)
+            if prop is None:
+                raise SystemExit(f"Blocky 3D shot {index} interaction references {prop_name!r}, which is not a named prop in its set.")
+            if prop_name not in all_props:
+                raise SystemExit(f"Blocky 3D shot {index} interaction prop {prop_name!r} is not listed in screen_proof.props.")
+
+            if kind == "pass_through":
+                who = str(interaction.get("who", ""))
+                actor = actors.get(who)
+                if actor is None:
+                    raise SystemExit(f"Blocky 3D shot {index} pass-through proof references missing actor {who!r}.")
+                if prop["kind"] != "door" or prop["options"].get("open") is not True:
+                    raise SystemExit(f"Blocky 3D shot {index}: {who} cannot pass through {prop_name}; the named doorway must be visibly open.")
+                if "from" not in interaction or "to" not in interaction:
+                    raise SystemExit(f"Blocky 3D shot {index} pass-through proof needs from/to path coordinates.")
+                path_from, path_to = interaction["from"], interaction["to"]
+                if (len(path_from) != 2 or len(path_to) != 2 or len(actor.get("at", [])) != 2
+                        or len(actor.get("walkTo", [])) != 2):
+                    raise SystemExit(f"Blocky 3D shot {index} pass-through proof needs two-dimensional actor and path positions.")
+                if any(abs(float(a) - float(b)) > 0.05 for a, b in zip(path_from, actor["at"])) or any(
+                    abs(float(a) - float(b)) > 0.05 for a, b in zip(path_to, actor["walkTo"])
+                ):
+                    raise SystemExit(f"Blocky 3D shot {index} pass-through proof path must match {who}'s authored at/walkTo route.")
+                angle = math.radians(float(prop["yaw"]))
+
+                def door_local(point: list[float]) -> tuple[float, float]:
+                    dx, dy = float(point[0]) - prop["x"], float(point[1]) - prop["y"]
+                    return (math.cos(angle) * dx + math.sin(angle) * dy,
+                            -math.sin(angle) * dx + math.cos(angle) * dy)
+
+                start_x, start_y = door_local(path_from)
+                end_x, end_y = door_local(path_to)
+                # A route must carry the whole character through the doorway depth, not
+                # merely cross the door's center plane while still intersecting its frame.
+                doorway_clearance = 0.85
+                if not (start_y <= -doorway_clearance and end_y >= doorway_clearance):
+                    raise SystemExit(
+                        f"Blocky 3D shot {index} route for {who} must start in front of and finish fully behind the open door."
+                    )
+                fraction = -start_y / (end_y - start_y)
+                cross_x = start_x + (end_x - start_x) * fraction
+                # The built doorway opening is 3.8 studs wide and the blocky R6
+                # character is about 3 studs wide. Keep the character centered so
+                # neither shoulder clips a jamb while it crosses.
+                if abs(cross_x) > 0.35:
+                    raise SystemExit(
+                        f"Blocky 3D shot {index} route for {who} clips the doorway frame; center the actor in the clear opening."
+                    )
+                cross_time = fraction * shot_duration
+                if abs(float(interaction.get("at", -100)) - cross_time) > 0.15:
+                    raise SystemExit(f"Blocky 3D shot {index} pass-through time does not match the route crossing.")
+                if actor_pose_at(actor, cross_time) not in {"run", "walk"}:
+                    raise SystemExit(f"Blocky 3D shot {index} needs a walk/run pose while {who} crosses the doorway.")
+                if not any(str(event.get("who")) == who and str(event.get("anim")) in {"run", "walk"} for event in all_events):
+                    raise SystemExit(f"Blocky 3D shot {index} needs screen proof for {who}'s movement through the doorway.")
+                if not re.search(r"\b(?:cross|passes|runs|walks|moves|goes|rushes|sprints)\b",
+                                 str(interaction.get("visual", "")).casefold()):
+                    raise SystemExit(f"Blocky 3D shot {index} pass-through proof must describe crossing the open frame.")
+
+            elif kind == "contact":
+                who = str(interaction.get("who", ""))
+                actor = actors.get(who)
+                at = float(interaction.get("at", -100))
+                pose = str(interaction.get("pose", ""))
+                if actor is None or not 0 <= at <= shot_duration:
+                    raise SystemExit(f"Blocky 3D shot {index} contact proof needs a shot actor and in-range time.")
+                if pose not in {"slap", "knock", "throw", "catch"} or actor_pose_at(actor, at) != pose:
+                    raise SystemExit(f"Blocky 3D shot {index} contact time needs the matching slap/knock/throw/catch pose.")
+                if not any(str(event.get("who")) == who and str(event.get("anim")) == pose
+                           and abs(float(event.get("at", -100)) - at) <= 0.15 for event in all_events):
+                    raise SystemExit(f"Blocky 3D shot {index} contact proof needs the matching timed actor action.")
+                starts = [float(event_time) for event_time, event_anim in actor.get("animAt", []) or []
+                          if str(event_anim) == pose and float(event_time) <= at]
+                expected_phase = contact_pose_peak[pose]
+                if not starts or abs((at - max(starts)) - expected_phase) > 0.09:
+                    start_at = at - expected_phase
+                    raise SystemExit(
+                        f"Blocky 3D shot {index} must start {pose} about {expected_phase:.2f}s before contact; "
+                        f"set {who} animAt near {start_at:.2f}s and keep the contact/VFX/SFX at {at:.2f}s."
+                    )
+                actor_x, actor_y = actor_xy_at(actor, at)
+                if prop["kind"] == "door":
+                    angle = math.radians(float(prop["yaw"]))
+                    dx, dy = actor_x - prop["x"], actor_y - prop["y"]
+                    local_x = math.cos(angle) * dx + math.sin(angle) * dy
+                    local_y = -math.sin(angle) * dx + math.cos(angle) * dy
+                    if abs(local_x) > 2.3 or abs(local_y) > 1.6:
+                        raise SystemExit(
+                            f"Blocky 3D shot {index} {who} is outside contact reach of {prop_name}; move the character up to the door."
+                        )
+                    if re.search(r"\b(?:locked|closed|shut)\b", text_l) and prop["options"].get("open") is True:
+                        raise SystemExit(
+                            f"Blocky 3D shot {index} calls {prop_name} locked/closed, but the set builds it visibly open."
+                        )
+                else:
+                    distance = math.hypot(actor_x - prop["x"], actor_y - prop["y"])
+                    if distance > 1.6:
+                        raise SystemExit(f"Blocky 3D shot {index} {who} is {distance:.1f} studs from {prop_name}; the action would miss the prop.")
+                if not re.search(r"\b(?:contacts?|strikes?|slaps?|hits?|knocks?|meets?)\b",
+                                 str(interaction.get("visual", "")).casefold()):
+                    raise SystemExit(f"Blocky 3D shot {index} contact proof must describe the actor touching the named prop.")
+
+            elif kind == "landmark":
+                who = str(interaction.get("who", ""))
+                actor = actors.get(who)
+                at = float(interaction.get("at", -100))
+                if actor is None or prop_name != "spawn_pad" or prop["kind"] != "spawn_pad":
+                    raise SystemExit(f"Blocky 3D shot {index} landmark proof must place a named actor on the built spawn_pad.")
+                if not 0 <= at <= shot_duration:
+                    raise SystemExit(f"Blocky 3D shot {index} landmark time must fall inside the shot.")
+                actor_x, actor_y = actor_xy_at(actor, at)
+                if math.hypot(actor_x - prop["x"], actor_y - prop["y"]) > 1.6:
+                    raise SystemExit(f"Blocky 3D shot {index} places {who} away from the spawn pad it is narrated to appear on.")
+                if not re.search(r"\b(?:appears?|reappears?|pops? back|returns?|spawns?)\b",
+                                 str(interaction.get("visual", "")).casefold()):
+                    raise SystemExit(f"Blocky 3D shot {index} landmark proof must describe the character arriving on the spawn pad.")
+
+            elif kind == "launch":
+                move = next((item for item in shot.get("propMoves", []) if str(item.get("name")) == prop_name), None)
+                if move is None or float(move.get("arc_height", 0.0)) <= 0 or max(
+                    abs(float(value)) for value in move.get("spin", [0, 0, 0])
+                ) < 360:
+                    raise SystemExit(f"Blocky 3D shot {index} launch proof needs named prop motion with an arc and a full spin.")
+                if not any(isinstance(effect, dict) and effect.get("kind") in {"comet", "energy_trail"} for effect in actual_vfx) or not any(
+                    str(cue).partition("@")[0] in {"whoosh_up", "sfxkit_whoosh_fast_hard"} for cue in actual_cues
+                ):
+                    raise SystemExit(f"Blocky 3D shot {index} launch proof needs a travelling comet/energy trail and timed rising whoosh.")
+
+        doorway_crossing_claim = re.search(
+            r"\b(?:through|into|inside|across)\b.{0,40}\b(?:door|doorway|portal|gate)\b"
+            r"|\b(?:door|doorway|portal|gate)\b.{0,40}\b(?:through|inside|across)\b"
+            r"|\b(?:enters?|exits?|passes?)\b.{0,24}\b(?:door|doorway|portal|gate)\b",
+            text_l,
+        )
+        if doorway_crossing_claim and "pass_through" not in interaction_kinds:
+            raise SystemExit(f"Blocky 3D shot {index} says a character passes through a doorway but lacks open-door/path interaction proof.")
+        physical_contact_claim = re.search(
+            r"\b(?:slaps?|smacks?|knocks?|kicks?|punch(?:es|ed)?|strikes?|bumps?|collides?)\b"
+            r"|\b(?:hits?)\s+(?:the|a|an)\s+(?:locked\s+)?(?:door|exit|wall|frame|crate|box|button|prop|object)\b",
+            text_l,
+        )
+        if physical_contact_claim and "contact" not in interaction_kinds:
+            raise SystemExit(f"Blocky 3D shot {index} narrates physical contact but lacks actor-to-prop contact proof.")
+        if re.search(r"\b(?:rockets?|launches?|flies|fly|rises|rising)\b", text_l) and "launch" not in interaction_kinds:
+            raise SystemExit(f"Blocky 3D shot {index} describes a flying prop but lacks launch/arc/spin proof.")
         if re.search(r"\b(?:gold|yellow)\s+(?:door|portal|a)\b", text_l) and "door_a" not in all_props:
             raise SystemExit(f"Blocky 3D shot {index} mentions gold but does not show door_a.")
         if re.search(r"\bgreen\s+(?:door|portal|b)\b", text_l) and "door_b" not in all_props:
@@ -488,20 +793,32 @@ def validate_blocky_screen_proof(spec: dict[str, Any]) -> None:
             raise SystemExit(f"Blocky 3D shot {index} asks viewers to choose A/B without showing both doors in the shot.")
         if re.search(r"\bspawn\b", text_l) and "spawn_pad" not in all_props:
             raise SystemExit(f"Blocky 3D shot {index} says spawn but does not show the spawn_pad landmark.")
+        if re.search(r"\b(?:appears?|reappears?|pops? back|returns?|spawns?)\b.{0,45}\bspawn\b", text_l) and not any(
+            item.get("kind") == "landmark" and item.get("prop") == "spawn_pad" for item in all_interactions
+        ):
+            raise SystemExit(f"Blocky 3D shot {index} narrates a spawn/return but does not prove the actor lands on the spawn pad.")
         if re.search(r"\b(?:whistle|chirp)\w*\b", text_l):
             if (not any("whistle" in prop.casefold() for prop in all_props) or "whistle" not in cue_names
-                    or "sound_rings" not in effect_names):
-                raise SystemExit(f"Blocky 3D shot {index} mentions a whistle without its visible prop, timed whistle sound, and sound-ring cue.")
+                    or not effect_names.intersection({"sound_rings", "signal_arrows"})):
+                raise SystemExit(f"Blocky 3D shot {index} mentions a whistle without its visible prop, timed whistle sound, and directional cue.")
         if re.search(r"\bslaps?\b", text_l) and ("slap" not in animations or "slap" not in cue_names or "burst" not in effect_names):
             raise SystemExit(f"Blocky 3D shot {index} says slap but needs the slap pose, impact burst, and timed slap sound.")
-        if re.search(r"\b(?:smacks?|hits?)\s+(?:the|a|an)\s+(?:locked\s+)?(?:door|exit|wall)\b", text_l):
-            if "knock" not in animations or not ({"door_hit", "impact"} & cue_names) or not ({"burst", "ring"} & effect_names):
+        if re.search(r"\b(?:smacks?|hits?)\s+(?:the|a|an)\s+(?:locked\s+)?(?:(?:gold|green|red|blue)\s+)?(?:door|exit|wall)\b", text_l):
+            if "knock" not in animations or not ({"door_hit", "impact", "sfxkit_impact_heavy_hard"} & cue_names) or not ({"burst", "ring"} & effect_names):
                 raise SystemExit(f"Blocky 3D shot {index} says a character hits a door but needs the knock pose, impact sound, and impact effect.")
         if re.search(r"\b(?:runs?|sprints?|chases?|races?)\b", text_l) and not any(
             str(actor.get("anim", "")) == "run" or any(str(item[1]) == "run" for item in (actor.get("animAt", []) or []) if len(item) > 1)
             for actor in actors.values()
         ):
             raise SystemExit(f"Blocky 3D shot {index} narrates a chase/run without a scheduled run animation.")
+        if re.search(r"\b(?:runs?|sprints?|chases?|races?)\b", text_l) and not any(
+            isinstance(actor.get("walkTo"), (list, tuple))
+            and len(actor.get("walkTo")) == 2
+            and len(actor.get("at", [])) == 2
+            and math.dist(tuple(map(float, actor["at"])), tuple(map(float, actor["walkTo"]))) >= 1.0
+            for actor in actors.values()
+        ):
+            raise SystemExit(f"Blocky 3D shot {index} says the character runs/chases but has no meaningful travel path.")
         if re.search(r"\b(?:runs?|sprints?|chases?|races?)\b", text_l) and "dash" not in effect_names:
             raise SystemExit(f"Blocky 3D shot {index} narrates a chase/run without a timed dash effect.")
 
@@ -583,11 +900,13 @@ def command_prepare(args: argparse.Namespace) -> None:
         spec_path = project / "timed.json"
         spec = read_json(spec_path)
         validate_blocky_story_plan(spec, topic, slot)
+        validate_blocky_script_consistency(folder / "script.md", spec)
         target_duration = slot.get("target_duration_seconds")
         if target_duration is not None:
             validate_duration(float(spec.get("dur", 0)), int(target_duration), "Blender scene")
         spec["theme"] = slot["theme"]
         spec["visual_treatment"] = slot.get("visual_treatment", "character-led")
+        spec.setdefault("ui_style", "roblox_cinema")
         spec["hook"] = slot.get("hook", "")
         spec["hook_highlights"] = slot.get("hook_highlights", [])
         spec["hook_duration_seconds"] = 1.5
@@ -595,6 +914,7 @@ def command_prepare(args: argparse.Namespace) -> None:
         spec["cta_duration_seconds"] = 3.5
         write_json(spec_path, spec)
         run([py, str(ROOT / "kit" / "run.py"), str(project), "voice", "compile", "stills"], ROOT, env)
+        validate_blocky_voice_sync(project, folder / "script.md", int(target_duration) if target_duration else None)
         slot["renderer_project"] = str(project.relative_to(ROOT)).replace("\\", "/")
     elif slot["theme"] == "what-if":
         slug = slot.get("renderer_slug") or slugify(slot["title"])

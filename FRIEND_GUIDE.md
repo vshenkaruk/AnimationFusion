@@ -24,6 +24,19 @@ npm ci
 cd ..
 ```
 
+## Optional Voicemod live microphone
+
+The renderer creates local narration and adjusts its rate using each video's `voice_tone` and `voice_speed`. Voicemod is a separate optional path for a creator recording narration through a microphone. Install Voicemod Desktop from its official site, open it, and set up a developer client key. Keep that key local, then run:
+
+```powershell
+python -m pip install -r kit\\requirements-voicemod.txt
+$env:VOICEMOD_CLIENT_KEY = "your-local-client-key"
+python scripts\\voicemod_control.py --project <episode-project> --list
+python scripts\\voicemod_control.py --project <episode-project>
+```
+
+The helper reads `voice_tone` from the episode and selects a matching filter currently enabled on that account. After recording, provide `vo.wav` and matching `words.json` for the microphone audio before rendering. The live-mic Control API cannot transform the renderer's existing TTS file. Voicemod's free tier has a limited set of filters that rotates; see its current [Free vs PRO feature list](https://support.voicemod.net/hc/en-us/articles/360014300760-Voicemod-Features-Free-vs-PRO). Voicemod Desktop is not installed on the current computer, so this optional connection has not been activated here.
+
 ## Get the current repo commands
 
 If you already cloned AnimationFusion, go into its folder and run:
@@ -122,7 +135,7 @@ The choice reuses the existing renderers. In Blender styles, graphics-led means 
 | `monochrome` | Blender + FFmpeg | Same blocky renderer with a final black-and-white grade |
 | `what-if` | Remotion | Original vector animation |
 
-Blocky 3D uses original generic human characters and no official Roblox assets. Its screen-proof check catches script-to-shot omissions, while storyboard review checks the actual picture. Story props can move as rigid objects, but they do not attach to hands or use physics; animal and robot actor rigs are not included. Reference libraries guide the assistant only when their images are supplied or explicitly loaded. They do not train the renderer. New What If episodes need files under `studio/src/episodes/<slug>/` and a registration in `studio/src/episodes/index.ts`. The prepare command checks this.
+Blocky 3D uses original generic human characters and no official Roblox assets. Its screen-proof check catches script-to-shot omissions, while storyboard review checks the actual picture. Actions such as a door hit should show a matching contact pose, impact effect, and sound on the spoken hit word; doorway routes and spawn returns are checked against their visible landmarks. The selected CC0 sounds can be called in `shots.py` as `sfxkit_impact_heavy_hard@0.65`; the number is the visible action time, and the sound's recorded sync point is aligned to it automatically. `whip`, `push`, and `flash` transitions are added to the incoming shot and composited after scene rendering; whip/push add a synced whoosh. Story props can move as rigid objects, but they do not attach to hands or use physics; animal and robot actor rigs are not included. Reference libraries guide the assistant only when their images are supplied or explicitly loaded. They do not train the renderer. New What If episodes need files under `studio/src/episodes/<slug>/` and a registration in `studio/src/episodes/index.ts`. The prepare command checks this.
 
 ## Cost and research tools
 

@@ -126,6 +126,22 @@ class Project:
             span = max(1, b - a)
             local = None
             if spec.get('theme') == 'blocky-3d':
+                interaction_events = []
+                for proof_row in (shot.get('screen_proof', []) or []):
+                    for event in (proof_row.get('interactions', []) or []) if isinstance(proof_row, dict) else []:
+                        if not isinstance(event, dict):
+                            continue
+                        event_at = event.get('at')
+                        if event.get('kind') == 'launch':
+                            move = next((item for item in (shot.get('propMoves', []) or [])
+                                         if str(item.get('name')) == str(event.get('prop'))), None)
+                            if move:
+                                travel = float(move.get('end', 0.0)) - float(move.get('start', 0.0))
+                                event_at = float(move.get('start', 0.0)) + min(0.20, max(0.06, travel * 0.08))
+                        if isinstance(event_at, (int, float)):
+                            interaction_events.append(float(event_at) + 0.06)
+                if interaction_events:
+                    local = min(interaction_events)
                 visual_events = [
                     (float(item.get('at', 0.0)), min(0.12, float(item.get('duration', 0.45)) * 0.35))
                     for item in (shot.get('vfx', []) or []) if isinstance(item, dict)
@@ -136,7 +152,7 @@ class Project:
                     if isinstance(item, (list, tuple)) and len(item) > 1
                 ]
                 candidates = sorted(visual_events + action_events)
-                if candidates:
+                if local is None and candidates:
                     local = candidates[0][0] + candidates[0][1]
             sample = min(a + max(1, round((local if local is not None else (b - a) / FPS * 0.4) * FPS)), b - 1)
             fr.append(sample)

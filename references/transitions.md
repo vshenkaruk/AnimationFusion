@@ -11,17 +11,20 @@ AnimationFusion keeps its three current render themes. These are authoring and e
 
 ## Existing Blender path
 
-A shot can use its existing move field (creep, push, reveal_push, crash_in, drift, or lock) to shape camera motion within that shot. A crash_in already cues a short whoosh in the post mix. Existing flash, impact, and sfx cues can accent a story beat. Use the camera move or flash on the new shot that receives the cut; don't animate a transition just to cover a weak scene change.
+A shot can use its existing move field (creep, push, reveal_push, crash_in, drift, or lock) to shape camera motion within that shot. A crash_in already cues a short whoosh in the post mix. Existing flash, impact, and sfx cues can accent a story beat. For a brief transition at the incoming cut, use:
 
 ```python
 {
     "t0": 12, "t1": 18, "set": "Rooftop", "cam": "low",
     "move": "crash_in", "sfx": ["impact@1.2"],
+    "transition": {"kind": "whip", "frames": 8, "direction": "left"},
     "text": "The signal lights up."
 }
 ```
 
-The exact shot API is in kit/API.md. Named props and rigid motion can bridge a cut through a repeated shape or action.
+`kind` may be `whip`, `push`, or `flash`; duration is clamped to 6–12 frames at 60 fps. `direction` is `left` or `right` for `whip`; `color` is an optional RGB triplet for `flash`. The transition is composited after Blender frames render, so it adds no scene-render cost. `whip` and `push` automatically use the selected CC0 hard-whoosh sample when present. `flash` remains silent unless the shot also requests a matching sound.
+
+The exact shot API is in kit/API.md. Named props and rigid motion can bridge a cut through a repeated shape or action. A transition does not replace a clear new angle, readable action, or story-specific background.
 
 ## Existing What If path
 

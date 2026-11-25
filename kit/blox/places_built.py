@@ -12,7 +12,7 @@ from mathutils import Vector
 import props
 import sets as S
 from places import CATALOG, _FOOT, _m, fence, house, tree
-from props import Prop
+from props import Prop, lamp_post
 
 
 def bleachers(coll, name, loc, rotz=0.0, w=20.0, rows=5):
@@ -113,6 +113,43 @@ def gym(b, coll, O):
                    wins=[((sx * 42.5, wy, 22.0), (0, wy, 2.0), 7.0, 7.0) for sx in (-1, 1) for wy in (-18.0, 0.0, 18.0)],
                    ceil_lights=[((x, y, 24.0), 'AREA', 1400) for x in (-24.0, 0.0, 24.0) for y in (-14.0, 10.0)])
     return {'bleachers': (0.0, 17.0, 3.0), 'hoop': (40.0, 0.0, 12.0), 'court': (0.0, 0.0, 0.0)}
+
+
+def night_court(b, coll, O):
+    """Cinematic outdoor Roblox-style court with neighborhood depth and visible practical lights."""
+    name = 'NightCourt'; P = S.P; W = Vector(O)
+    asphalt = S.pbr('nightcourt_asphalt', 'asphalt_02', 4.0, tint='#284276', sat=0.75, val=0.9,
+                    grime=0.08, floor=True)
+    line = _m('nightcourt_line', '#dbe9ff', rough=0.72)
+    b.boxr('ground', P['grass'], -150, 150, -150, 150, -1.3, -0.65, bev=False)
+    b.boxr('court', asphalt, -28, 28, -28, 22, -0.6, 0.0, bev=False)
+    # Broad regulation-style lines give the frame a readable foreground and perspective grid.
+    for y in (-23.5, 17.5):
+        b.boxr('court_line', line, -23.5, 23.5, y - 0.11, y + 0.11, 0.015, 0.05, bev=False)
+    for x in (-23.5, 23.5):
+        b.boxr('court_line', line, x - 0.11, x + 0.11, -23.5, 17.5, 0.015, 0.05, bev=False)
+    b.boxr('court_line', line, -0.10, 0.10, -23.5, 17.5, 0.015, 0.05, bev=False)
+    for a in range(48):
+        r = a / 48 * 2 * math.pi
+        b.box('court_line', line, (0.78, 0.14, 0.035), (math.cos(r) * 6.0, math.sin(r) * 6.0, 0.033),
+              bev=False, rot=r + math.pi / 2)
+    # A fence, two hoops, and staggered houses/trees make the set read as a place, not a blank wall.
+    for x in range(-36, 37, 12):
+        fence(coll, f'{name}.fence{x}', W + Vector((x, 23.0, 0.0)), 0, w=12.0, color='#62718f')
+    hoop(coll, f'{name}.hero_hoop', W + Vector((-15.0, 15.0, 0.0)), 0)
+    hoop(coll, f'{name}.far_hoop', W + Vector((15.0, 18.0, 0.0)), 0)
+    lamp_post(coll, f'{name}.lamp_left', W + Vector((-23.0, 8.0, 0.0)))
+    lamp_post(coll, f'{name}.lamp_right', W + Vector((23.0, 10.0, 0.0)))
+    house_cols = ['#8295b1', '#b5a99a', '#789098', '#a77f75', '#999a79']
+    roof_cols = ['#34435e', '#514654', '#3c5c67']
+    for i, x in enumerate((-46.0, -31.0, -16.0, 1.0, 18.0, 34.0, 49.0)):
+        house(coll, f'{name}.house{i}', W + Vector((x, 43.0 + (i % 2) * 4.0, 0.0)), 0,
+              color=house_cols[i % len(house_cols)], roof=roof_cols[i % len(roof_cols)])
+    for i, x in enumerate((-27.0, -9.0, 11.0, 29.0)):
+        tree(coll, f'{name}.tree{i}', W + Vector((x, 27.0 + (i % 2) * 3.0, 0.0)), 0,
+             s=(0.9, 1.1, 1.25, 1.0)[i])
+    _ext_lights(coll, name, O)
+    return {'hoop': (-15.0, 15.0, 12.0), 'court': (0.0, 0.0, 0.0), 'houses': (0.0, 43.0, 10.0)}
 
 
 def musicrow(b, coll, O):
@@ -259,4 +296,4 @@ def townpool(b, coll, O):
     return {'pool': (0.0, dy, -0.8), 'ladder': (lx, ly, 0.0), 'board': (30.0, dy, 2.75), 'lifeguard': (cx, cy, 7.4)}
 
 
-BUILT = {'Gym': gym, 'MusicRow': musicrow, 'TownPool': townpool}
+BUILT = {'Gym': gym, 'NightCourt': night_court, 'MusicRow': musicrow, 'TownPool': townpool}

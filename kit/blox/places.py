@@ -242,8 +242,7 @@ def picture(coll, name, loc, rotz=0.0, color='#a88f6a', w=3.0, z=7.5):
 
 
 def door(coll, name, loc, rotz=0.0, color='#8a6a4c', open=False, beyond='#2a2422', sign=None):
-    """A standing door in a frame (put it against a wall). open=True: the door is swung in and you see `beyond`
-    (a glow colour, e.g. a bedroom's warm light '#ffcf8a', a dark void '#0a0a10', a sky '#9cc8f0')."""
+    """A standing door in a frame (put it against a wall); open doors leave a real, clear passage."""
     P = S.P
     p = Prop(coll, name, loc, rotz, bev=0.04)
     leaf = _m('door' + color, color, rough=0.55, var=0.1)
@@ -251,8 +250,10 @@ def door(coll, name, loc, rotz=0.0, color='#8a6a4c', open=False, beyond='#2a2422
     p.boxr(P['trim'], 1.9, 2.3, -0.3, 0.3, 0, 8.0)
     p.boxr(P['trim'], -2.3, 2.3, -0.3, 0.3, 7.6, 8.3)
     if open:
-        p.boxr(_m('beyond' + beyond, beyond, rough=1.0, emit_col=beyond, drv=('1.2', [])), -1.9, 1.9, 0.25, 0.3,
-               0, 7.6)
+        # Keep the aperture physically clear. A luminous opaque "beyond" card
+        # looked like a portal, but hid characters on the far side and made a
+        # valid crossing read as clipping. Use the set and its glowing arch for
+        # the view through; retain `beyond` as a compatible input for old shots.
         p.box(leaf, (0.18, 3.7, 7.5), (-1.85, 1.8, 3.8))
     else:
         p.boxr(leaf, -1.9, 1.9, -0.12, 0.12, 0.02, 7.58)

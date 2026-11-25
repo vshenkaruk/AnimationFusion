@@ -9,13 +9,15 @@ Every SFX is synthesized here in numpy, so the kit ships no third-party audio.
 import os, sys, json, re, math, shutil, subprocess, time
 from multiprocessing import Pool
 import numpy as np
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageFont, ImageFilter
 from scipy.io import wavfile
 from scipy.signal import resample_poly, lfilter, butter, sosfilt
 from scipy.ndimage import minimum_filter1d, maximum_filter1d, uniform_filter1d
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-FONT_CANDIDATES = [r'C:\Windows\Fonts\arialbd.ttf', '/System/Library/Fonts/Supplemental/Arial Bold.ttf', '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf']
+FONT_CANDIDATES = [os.path.join(HERE, 'assets', 'brand', 'fonts', 'LilitaOne-Regular.ttf'),
+                   r'C:\Windows\Fonts\arialbd.ttf', '/System/Library/Fonts/Supplemental/Arial Bold.ttf',
+                   '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf']
 FFMPEG = os.environ.get('FFMPEG') or shutil.which('ffmpeg') or 'ffmpeg'
 FPS, SR = 60, 48000
 TAG_S = 0.0          # no branded end card
@@ -355,18 +357,29 @@ SFX = {'whoosh', 'whoosh_up', 'whoosh_down', 'pop', 'boing', 'ding', 'impact', '
 SFX_GAIN = {'boom': -2, 'impact': -2, 'thunder': -4, 'scratch': -3, 'rain': -14, 'riser': -8,
             'slap': -4, 'whistle': -3, 'door_hit': -3}
 SFX_FILES = {'slap': os.path.join(HERE, 'assets', 'sfx', 'cc0', 'slap-2-clean.mp3')}
+_SFX_KIT_DIR = os.path.join(HERE, 'assets', 'sfx', 'cc0', 'sfx-kit')
+_SFX_KIT_MANIFEST = os.path.join(_SFX_KIT_DIR, 'manifest.json')
+SFX_KIT = {}
+if os.path.isfile(_SFX_KIT_MANIFEST):
+    for _asset in json.load(open(_SFX_KIT_MANIFEST, encoding='utf8')).get('assets', []):
+        SFX_KIT[str(_asset['engine_name'])] = _asset
+SFX.update(SFX_KIT)
 _C = {}
 def sfx_asset(nm, rng):
     if nm == 'step': return trim_on(_make('step', rng), -24) * (0.85 + 0.3 * rng.random())
     if nm not in _C:
-        if nm in SFX_FILES:
+        if nm in SFX_KIT:
+            path = os.path.join(_SFX_KIT_DIR, SFX_KIT[nm]['filename'])
+        elif nm in SFX_FILES:
             path = SFX_FILES[nm]
+        else:
+            _C[nm] = trim_on(as2(_make(nm, np.random.default_rng(len(_C) + 21))))
+        if nm in SFX_KIT or nm in SFX_FILES:
             if not os.path.isfile(path):
                 raise FileNotFoundError(f"Licensed sound effect is missing: {path}")
-            a = as2(trim_on(read_audio(path)))
-        else:
-            a = as2(_make(nm, np.random.default_rng(len(_C) + 21)))
-        _C[nm] = a if nm in ('rain', 'drizzle') else trim_on(a)
+            # Kit sync points are measured against the original file, so preserve its leading silence.
+            a = as2(read_audio(path))
+            _C[nm] = a if nm in SFX_KIT else as2(trim_on(a))
     return _C[nm]
 
 def loop_to(a, d, fade_in=0.008, fade_out=0.04):
@@ -389,6 +402,12 @@ def build_cues(spec):
     cues = []; pan_of = lambda a: float(np.clip((a.get('at') or [0])[0] / 12.0, -0.25, 0.25))
     for x in spec['shots']:
         t0, t1 = x['t0'], x['t1']; bolts = []
+        transition = x.get('transition')
+        transition_kind = str(transition.get('kind', '')) if isinstance(transition, dict) else str(transition or '')
+        if transition_kind in ('whip', 'push') and 'sfxkit_whoosh_fast_hard' in SFX_KIT:
+            sync = float(SFX_KIT['sfxkit_whoosh_fast_hard']['sync']['at'])
+            cues.append(dict(nm='sfxkit_whoosh_fast_hard', t=t0 - sync, sync_event=t0,
+                             kind='shot', pri=8, pan=0, rel=-4))
         for a in x.get('actors', []):
             p = pan_of(a)
             for nm, off in fx_items(a):
@@ -420,7 +439,14 @@ def build_cues(spec):
             nm, _, dt = str(c).partition('@')
             if nm in SFX:
                 big = nm in ('impact', 'boom', 'thunder')
-                cues.append(dict(nm=nm, t=t0 + float(dt or 0), kind='impact' if big else 'shot', pri=7, pan=0, rel=TGT['impact'] if big else SFX_GAIN.get(nm, -8) + 6))
+                event_t = t0 + float(dt or 0)
+                if nm in SFX_KIT:
+                    event_at = float(SFX_KIT[nm]['sync']['at'])
+                    cues.append(dict(nm=nm, t=event_t - event_at, sync_event=event_t, kind='impact' if big else 'shot',
+                                     pri=7, pan=0, rel=TGT['impact'] if big else SFX_GAIN.get(nm, -8) + 6))
+                else:
+                    cues.append(dict(nm=nm, t=event_t, kind='impact' if big else 'shot', pri=7, pan=0,
+                                     rel=TGT['impact'] if big else SFX_GAIN.get(nm, -8) + 6))
     loops = []  # merge a loop with its continuation in the next shot
     for c in sorted([c for c in cues if c['kind'] == 'loop'], key=lambda c: c['t']):
         if loops and loops[-1]['nm'] == c['nm'] and abs(loops[-1]['t'] + loops[-1]['dur'] - c['t']) < 0.03: loops[-1]['dur'] += c['dur']
@@ -455,6 +481,16 @@ def mix(d, spec, words):
     for c in cues:
         a = sfx_asset(c['nm'], rng)
         if c['kind'] == 'loop': a = loop_to(trim_on(a, -9), c['dur']); a = a * 10 ** ((c['lufs'] - lufs(a)) / 20)
+        elif c['nm'] in SFX_KIT:
+            meta = SFX_KIT[c['nm']]
+            target = float(meta['level_lufs'])
+            if has_vo:
+                center = float(c.get('sync_event', c['t'] + float(meta['sync']['at'])))
+                vi, vj = max(0, int((center - 0.20) * SR)), min(N, int((center + 0.35) * SR))
+                local_voice = lufs(vo[vi:vj]) if vj > vi else -99.0
+                if local_voice > -70:
+                    target = min(target, local_voice + float(meta['under_voiceover_db']))
+            a = a * 10 ** ((target - lufs(a)) / 20)
         else: a = a * 10 ** ((bed_at(c['t']) + c['rel'] - rms100(a).max()) / 20)
         if c.get('pan'): a = a * np.array([np.sqrt(1 - c['pan']) if c['pan'] > 0 else 1, np.sqrt(1 + c['pan']) if c['pan'] < 0 else 1])
         c['a'] = a; c['span'] = (c['t'], c['t'] + (c['dur'] if c['kind'] == 'loop' else active_span(a)))
@@ -490,12 +526,12 @@ def mix(d, spec, words):
 # ================================================================== picture: word-timed captions
 G = {}
 def draw_hook_card(im, text, highlights=None, style='clean'):
-    """Draw an opening hook or CTA card; the blocky game treatment stays inside Blocky 3D."""
+    """Draw an opening hook or CTA using the selected renderer-safe caption style."""
     words = str(text or "").split()
     if not words:
         return im
     scale = im.width / 1080
-    size = max(32, int((72 if style == 'blocky_game' else 76) * scale))
+    size = max(32, int((74 if style in ('blocky_game', 'roblox_cinema') else 76) * scale))
     font = _font(size)
     if font.getlength(" ".join(words)) <= 930 * scale:
         lines = [words]
@@ -509,6 +545,23 @@ def draw_hook_card(im, text, highlights=None, style='clean'):
     card_h = int(line_h * len(lines) + (48 if style == 'blocky_game' else 44) * scale)
     left, top = int(40 * scale), int((116 if style == 'blocky_game' else 300) * scale)
     right = im.width - left
+    if style == 'roblox_cinema':
+        draw = ImageDraw.Draw(im)
+        highlights = {norm(word) for word in (highlights or [])}
+        for line_index, line in enumerate(lines):
+            rendered = " ".join(line)
+            y = top + int(22 * scale + line_h * (line_index + 0.5))
+            x = (im.width - font.getlength(rendered)) / 2
+            for word in line:
+                token = norm(word)
+                color = (255, 211, 78) if token in ('a', 'gold') else (73, 244, 164) if token in ('b', 'green') else (
+                    (89, 227, 255) if token in highlights else (255, 255, 255))
+                draw.text((x + 2 * scale, y + 5 * scale), word, font=font, anchor="lm", fill=(0, 0, 0),
+                          stroke_width=max(2, int(9 * scale)), stroke_fill=(0, 0, 0))
+                draw.text((x, y), word, font=font, anchor="lm", fill=color,
+                          stroke_width=max(2, int(7 * scale)), stroke_fill=(9, 15, 31))
+                x += font.getlength(word + " ")
+        return im
     overlay = Image.new("RGBA", im.size, (0, 0, 0, 0))
     plate = ImageDraw.Draw(overlay)
     if style == 'blocky_game':
@@ -554,6 +607,18 @@ def _init(d):
     G['hook_highlights'] = set(norm(k) for k in sp.get('hook_highlights', []))
     G['cta'] = str(sp.get('cta', '')).strip()
     G['cta_duration'] = float(sp.get('cta_duration_seconds', 3.5))
+    G['transitions'] = []
+    for shot in (sp.get('shots', []) or [])[1:]:
+        transition = shot.get('transition')
+        if not transition:
+            continue
+        item = dict(transition) if isinstance(transition, dict) else {'kind': str(transition)}
+        kind = str(item.get('kind', ''))
+        if kind not in ('whip', 'flash', 'push'):
+            raise ValueError(f"Unsupported picture transition {kind!r}; use whip, flash, or push.")
+        item['cut'] = int(round(float(shot['t0']) * FPS))
+        item['frames'] = max(6, min(12, int(item.get('frames', 8))))
+        G['transitions'].append(item)
     words = load_words(d); cap = []
     for k, (w, s0, e) in enumerate(words):
         nxt = words[k + 1][1] if k + 1 < len(words) else e + 0.5
@@ -573,6 +638,7 @@ def comp_frame(i, n):
         k = next((k for k in list(range(i, -1, -1)) + list(range(i + 1, n)) if os.path.exists(os.path.join(d, 'frames', f'{k:05d}.jpg'))), None)
         src = os.path.join(d, 'frames', f'{k:05d}.jpg')
     im = Image.open(src).convert('RGB'); W, H = im.size; s = W / 1080; t = i / FPS
+    im = transition_frame(im, i)
     cur = [c for c in G['cap'] if c[1] <= t < c[2]]
     if cur:
         w, s0, e = cur[-1]; k = (t - s0) * FPS
@@ -580,7 +646,15 @@ def comp_frame(i, n):
         size = int((118 if key else 96) * sc * s); f = _font(size)
         while f.getlength(w) > 980 * s and size > 50 * s: size -= int(6 * s) or 1; f = _font(size)
         cx, cy = W / 2, 1290 / 1920 * H; dr = ImageDraw.Draw(im)
-        if G.get('ui_style') == 'blocky_game':
+        if G.get('ui_style') == 'roblox_cinema':
+            fill = (255, 208, 73) if key and norm(w) in ('a', 'gold', 'door') else (
+                (68, 243, 162) if key and norm(w) in ('b', 'green') else
+                (88, 226, 255) if key else (255, 255, 255))
+            dr.text((cx + 2 * s, cy + 6 * s), w, font=f, anchor='mm', fill=(0, 0, 0),
+                    stroke_width=max(2, int(15 * s)), stroke_fill=(0, 0, 0))
+            dr.text((cx, cy), w, font=f, anchor='mm', fill=fill,
+                    stroke_width=max(2, int(11 * s)), stroke_fill=(7, 13, 29))
+        elif G.get('ui_style') == 'blocky_game':
             text_w = f.getlength(w); pad_x, pad_y = 36 * s, 18 * s
             x0, y0, x1, y1 = cx - text_w / 2 - pad_x, cy - size / 2 - pad_y, cx + text_w / 2 + pad_x, cy + size / 2 + pad_y
             overlay = Image.new('RGBA', im.size, (0, 0, 0, 0)); od = ImageDraw.Draw(overlay)
@@ -599,6 +673,42 @@ def comp_frame(i, n):
     if G.get('cta') and n / FPS - t <= G['cta_duration']:
         im = draw_hook_card(im, G['cta'], style=G.get('ui_style', 'clean'))
     im.convert('RGB').save(os.path.join(d, 'comp', f'{i:05d}.jpg'), quality=94)
+
+def transition_frame(im, i):
+    """Apply short, cut-anchored transitions before the timed captions are drawn."""
+    d = G['d']
+    for item in G.get('transitions', []):
+        rel = i - int(item['cut'])
+        frames = int(item['frames'])
+        if not 0 <= rel < frames:
+            continue
+        progress = (rel + 1) / frames
+        kind = item['kind']
+        if kind == 'flash':
+            tint = tuple(item.get('color', (255, 247, 220)))
+            overlay = Image.new('RGB', im.size, tint)
+            return Image.blend(im, overlay, 0.72 * (1.0 - progress) ** 1.8)
+        old_path = os.path.join(d, 'frames', f'{max(0, int(item["cut"]) - 1):05d}.jpg')
+        if not os.path.exists(old_path):
+            return im
+        old = Image.open(old_path).convert('RGB')
+        if kind == 'whip':
+            direction = -1 if str(item.get('direction', 'left')) == 'left' else 1
+            offset = int(direction * (1.0 - progress) * im.width * 0.9)
+            moved = im.filter(ImageFilter.GaussianBlur(radius=(1.0 - progress) * 11))
+            canvas = old.copy()
+            canvas.paste(moved, (offset, 0))
+            edge = max(0, min(im.width - 1, offset if direction > 0 else im.width + offset))
+            draw = ImageDraw.Draw(canvas)
+            for k in range(5):
+                x = edge + (k - 2) * max(1, int(4 * im.width / 1080))
+                draw.line((x, 0, x, im.height), fill=(186, 245, 255), width=max(1, int(2 * im.width / 1080)))
+            return canvas
+        offset = int((1.0 - progress) * im.height * 0.85)
+        canvas = old.copy()
+        canvas.paste(im.filter(ImageFilter.GaussianBlur(radius=(1.0 - progress) * 9)), (0, offset))
+        return canvas
+    return im
 
 def tag_frame(i, n, W, H):
     """Neutral fallback if a caller explicitly requests an end frame."""

@@ -12,7 +12,9 @@
 | `keys` | words that get a stronger caption pop |
 | `places` | `{name: spec}`: your own places, built from the story (see **Places**) |
 | `things` | `{name: parts}`: objects the story needs that the catalogue lacks (see **Things**) |
-| `ui_style` | optional Blocky 3D caption cards: `blocky_game`; other themes keep their existing style |
+| `ui_style` | Blocky 3D caption treatment: `blocky_game` or `roblox_cinema` (bold outlined words, gold/green choice accents, no generic card behind each word) |
+| `voice_tone` | optional delivery intent for local speech pacing and the Voicemod live-mic helper: `playful`, `suspense`, `hype`, or `calm` |
+| `voice_speed` | local speech rate multiplier (0.65–1.35); shot-level `voice_speed` overrides it |
 
 ## Cast look
 `skin`, `shirt`, `pants`, `shoes`, `hair_color`, `cap_color`, `tie_color`, `apron_color`: RGB 0-1.
@@ -34,8 +36,10 @@
 | `flash`, `impact` | lightning flash and camera kick at `impact` s into the shot |
 | `focus` | an anchor or prop name; with `cam='ins'` the shot is on that object (a story thing is framed whole) |
 | `aim` | optional `[x, y, z]` set-local camera target; useful to hold a clear composition around multiple props |
-| `sfx` | timed sound cues such as `slap@0.28`, `whistle@0.10`, or `door_hit@0.30`; sound names must be supported in `kit/blox/post.py` |
-| `vfx` | timed, flat low-poly meshes at set-local positions; kinds: `burst`, `sparkle`, `ring`, `sound_rings`, `dash` |
+| `camSide` | optional numeric side-angle override in degrees for a story-specific perspective |
+| `transition` | optional transition on the incoming cut: `{'kind': 'whip'|'push'|'flash', 'frames': 6..12}`; whip direction is left/right; flash may set an RGB `color` |
+| `sfx` | timed sound cues such as `slap@0.28`, `whistle@0.10`, or `sfxkit_impact_heavy_hard@0.30`; bundled CC0 names and cue metadata are in `kit/blox/assets/sfx/cc0/sfx-kit/manifest.json` |
+| `vfx` | timed, low-poly meshes at set-local positions; kinds: `burst`, `sparkle`, camera-facing `ring`/`sound_rings`, floor-facing `ground_ring`, directional `signal_arrows`, `dash`, `comet`, `energy_trail`. Optional `to`, `arc_height`, `spin`, and `easing` animate a travelling cue |
 | `screen_proof` | Blocky 3D-only CLI check mapping a full spoken line to visible props, actor poses, timed sounds, and visual effects |
 
 ## Actor (inside `actors`)
@@ -44,9 +48,10 @@
 | `who` | a cast name |
 | `at` | `[x, y]` on the set floor; the camera side is -y. Keep people 2.5+ apart |
 | `walkTo` | `[x, y]`: walks there during the shot (feet locked to the floor, no sliding) |
-| `yaw` | facing in degrees: 0 faces the camera side (-y), 90 faces +x, -90 faces -x |
+| `yaw` | facing in degrees: 0 faces the camera side (-y), 90 faces +x, -90 faces -x; used when the actor is stationary |
+| `faceYaw` | optional facing angle while `walkTo` moves the actor; use sparingly to turn toward the camera or a reacting character without changing the route |
 | `anim` | idle, talk, walk, run, point, shrug, shock, scared, cheer, eat, cross_arms, think, sad, angry, wave, sit, facepalm, clap, surrender, nod, headshake, flinch, slump, jump_joy, head_tilt, what, throw, catch, thumbs_up, slap, knock |
-| `animAt` | `[[t, anim], ...]` switch the animation at shot time t |
+| `animAt` | `[[t, anim], ...]` start/switch an animation at shot time t. For contact poses, start the gesture before the impact: `slap` about 0.28 s and `knock` about 0.16 s before the proof/contact time |
 | `face` | neutral, smile, grin, laugh, shock, scared, sad, worried, angry, smug, think, blink |
 | `faceAt` | `[[t, face], ...]` |
 | `talk` | `[t_start, t_end]` mouth moves (follows the words in `words.json`) |
@@ -56,7 +61,7 @@
 
 ## Timed Blocky 3D cues and screen proof
 
-`vfx` positions are `[x, y, z]` in the shot's set-local studs. Each cue has an `at` time and positive `duration` that must stay within the shot, plus optional `size`, `color` (`#RRGGBB`), `emission`, and `rotation`. These are lightweight geometry meshes that animate by scale. They do not attach to a character or prop, collide, or use physics. Use a brief burst/ring at contact, expanding rings at a visible sound source, and dash marks behind a runner; sync `at` with the pose and sound.
+`vfx` positions are `[x, y, z]` in the shot's set-local studs. Each cue has an `at` time and positive `duration` that must stay within the shot, plus optional `size`, `color` (`#RRGGBB`), `emission`, and `rotation`. These are lightweight geometry meshes; optional `to`, `arc_height`, `spin`, and `easing` animate a travelling cue. They do not attach to a character or prop, collide, or use physics. Use a brief burst/ring at contact, expanding rings at a visible sound source, and dash marks behind a runner; sync `at` with the pose and sound.
 
 Blocky 3D plans include a proof row for each spoken shot:
 
@@ -71,11 +76,11 @@ Blocky 3D plans include a proof row for each spoken shot:
 }
 ```
 
-The CLI verifies that claims, props, actors, poses, sounds, and timed effects exist in the shot plan. It also checks A/B choice framing, spawn-pad returns, whistle cues, and specific slap, door-hit, and run cues. This is a plan consistency check; it cannot judge whether an effect looks good in the rendered image. Review the storyboard at phone size and listen to the quick preview. If using reference images, attach or explicitly load them for the session, then compare the storyboard against selected design cues. References do not train the renderer or model.
+The CLI verifies that claims, props, actors, poses, sounds, and timed effects exist in the shot plan. It also checks A/B choice framing, spawn-pad returns, whistle cues, and specific slap, door-hit, and run cues. Door crossing proof requires an open door, a route through the clear aperture, enough travel to get fully past the frame, a run/walk pose at the crossing, and crossing time near the spoken word. Contact checks actor reach to the named prop and confirm the one-shot gesture started early enough to reach its contact pose on the impact word (slap 0.28 s, knock 0.16 s). Voice QA compares key contact, crossing, and return actions plus WHAP/CLANG sounds against spoken word timestamps. These are plan and geometry checks; they cannot judge the rendered image. Review the storyboard at phone size, inspect action frames, and listen to the quick preview. If using reference images, attach or explicitly load them for the session, then compare the storyboard against selected design cues. References do not train the renderer or model.
 
 ## Places (the world comes from the story)
 Every location in the script gets its own place. A shot's `set` names one of:
-- **Ready places** (full sets): `Street`, `Kitchen`, `Gym` (basketball court, bleachers, hoops), `MusicRow`
+- **Ready places** (full sets): `Street`, `Kitchen`, `Gym` (basketball court, bleachers, hoops), `NightCourt` (lit outdoor court, fence, hoops, lamps, and houses), `MusicRow`
   (music shop on a street, houses across the road), `TownPool` (pool, diving board, lifeguard chair, pool house).
 - **Presets** (built from the spec below, good starting points): `Bedroom`, `Hallway`, `Classroom`, `LivingRoom`,
   `Store`, `Office`, `Bathroom`, `Park`, `Backyard`, `Playground`.
@@ -85,8 +90,8 @@ A spec is a small dict:
 ```python
 PLACES = {
   'DoorHall': dict(wall='#6a4a7a', lower='#2f2a3a', floor='carpet', floor_color='#8a2f3a', light='warm', props=[
-      ['door', -9, 7.7, 0, {'open': True, 'beyond': '#ffcf8a'}],
-      ['door',  3, 7.7, 0, {'open': True, 'beyond': '#9cc8f0', 'name': 'blue_door'}],
+      ['door', -9, 7.7, 0, {'open': True}],
+      ['door',  3, 7.7, 0, {'open': True, 'name': 'blue_door'}],
       ['bed', 11, -8, -90, {'color': '#c84a6a'}]]),
   'Beach': dict(kind='outdoor', ground='sand', backdrop='none', props=[['umbrella', 9, 4, 0], ['rock', -10, 6, 0]]),
 }
@@ -113,13 +118,13 @@ Props and options (`name` on any prop sets its anchor, else the type, `type2`, .
 `bed` (color, bunk), `bunk_bed`, `nightstand` (lamp), `desk` (computer, color), `office_chair`, `chair`, `wardrobe` (color),
 `bookshelf` (w, h), `shelves`, `sofa` (color, w), `armchair` (color), `coffee_table`, `table` (w, d, color), `tv` (w),
 `floor_lamp`, `lamp`, `rug` (color, w, d), `poster` (color or brand `P1`/`P2`/`P3`/`AD`, w, z), `picture` (color, w, z),
-`clock` (z), `mirror` (w, z), `door` (color, open, beyond = glow colour seen through an open door, sign),
+`clock` (z), `mirror` (w, z), `door` (color, open, sign; open doors have a clear passage so characters remain visible as they cross),
 `school_desk`, `whiteboard` / `chalkboard` (w, board, z), `lockers` (n, color), `counter` (w, register, color),
 `store_shelf` (w, h), `cooler` (w), `fridge`, `stove`, `sink_unit`, `toilet`, `bathtub`, `plant` (h), `tree` (s),
 `bush` (s), `rock` (s), `fence` (w, color), `swing`, `slide`, `house` (color, roof, w), `bench`, `car`, `lamp_post`,
 `trash_can`, `wheelie_bin`, `hydrant`, `box`, `crate`, `bleachers` (w, rows), `hoop`, `umbrella` (color).
 
-Anchors for a shot's `focus`: every prop's name; `Gym`: bleachers, hoop, court; `MusicRow`: shop, door, window;
+Anchors for a shot's `focus`: every prop's name; `Gym`: bleachers, hoop, court; `NightCourt`: hoop, court, houses; `MusicRow`: shop, door, window;
 `TownPool`: pool, ladder, board, lifeguard.
 
 ## Things (anything the story names)
@@ -157,6 +162,22 @@ Add a custom or catalogue prop under the active place's `props` list and give it
 inside a shot's `propMoves` list. Positions are `[x, y, z]` in that set's local studs; `start` and `end` are seconds
 relative to the shot. `to` is required. `from` defaults to the prop's authored placement (or its previous motion's end).
 `spin` is an optional three-axis rotation delta in degrees.
+
+`arc_height` adds a smooth launch arc in studs. `easing` can be `linear`, `ease_in`, `ease_out`, or `ease_in_out`. This is authored motion: props remain rigid and are not attached to hands or simulated with physics.
+
+## Voice delivery and Voicemod
+
+Set `voice_tone` per video and choose an overall or shot-level `voice_speed` to keep the line readable inside its shot. Local TTS applies the selected rate and checks that the resulting word timings still match the approved script. Tone labels guide pacing; the system TTS voice itself may not provide expressive acting.
+
+Voicemod is an optional live-microphone filter, selected after the video’s tone is known:
+
+```sh
+python -m pip install -r kit/requirements-voicemod.txt
+python scripts/voicemod_control.py --project path/to/project --list
+python scripts/voicemod_control.py --project path/to/project
+```
+
+The helper requires Voicemod Desktop to be open and `VOICEMOD_CLIENT_KEY` from Voicemod’s developer portal. It selects a currently available filter matching `voice_tone`; free-tier filters can rotate and are limited. The Control API changes live microphone input. It does not change an existing `vo.wav`, so recorded mic narration must be saved as `vo.wav` with matching `words.json` before rendering. See the [Voicemod Control API](https://control-api.voicemod.net/getting-started/) and [Free vs PRO feature list](https://support.voicemod.net/hc/en-us/articles/360014300760-Voicemod-Features-Free-vs-PRO).
 
 ```python
 PLACES = {

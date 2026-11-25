@@ -52,7 +52,13 @@ def _engine():
     return engine
 
 
-def _speak(engine, text: str, path: Path) -> None:
+def _speak(engine, text: str, path: Path, speed: float = 1.0) -> None:
+    if not 0.65 <= float(speed) <= 1.35:
+        raise SystemExit("Per-shot voice_speed must be between 0.65 and 1.35.")
+    try:
+        rate = round(int(os.environ.get("SHORT_STUDIO_SPEECH_RATE", "178")) * float(speed))
+    except ValueError as exc:
+        raise SystemExit("SHORT_STUDIO_SPEECH_RATE must be an integer") from exc
     if not text.strip():
         wavfile.write(path, SAMPLE_RATE, np.zeros(1, dtype=np.int16))
         return
@@ -61,15 +67,10 @@ def _speak(engine, text: str, path: Path) -> None:
         # with audio for only the first queued line. Use macOS's `say` command
         # once per shot so every narration segment is actually present.
         say = shutil.which("say") or "/usr/bin/say"
-        rate = os.environ.get("SHORT_STUDIO_SPEECH_RATE", "178")
-        try:
-            int(rate)
-        except ValueError as exc:
-            raise SystemExit("SHORT_STUDIO_SPEECH_RATE must be an integer") from exc
         wanted = os.environ.get("SHORT_STUDIO_SYSTEM_VOICE", "").strip()
         with tempfile.TemporaryDirectory(prefix="short-studio-say-") as td:
             aiff_path = Path(td) / "line.aiff"
-            command = [say, "-o", str(aiff_path), "-r", rate]
+            command = [say, "-o", str(aiff_path), "-r", str(rate)]
             if wanted:
                 command.extend(["-v", wanted])
             command.append(text)
@@ -83,6 +84,7 @@ def _speak(engine, text: str, path: Path) -> None:
                 check=True,
             )
         return
+    engine.setProperty("rate", rate)
     engine.save_to_file(text, str(path))
     engine.runAndWait()
     if not path.exists() or path.stat().st_size < 64:
@@ -164,7 +166,14 @@ def make_project_voice(project: Path) -> None:
     spec = json.loads(spec_path.read_text(encoding="utf-8"))
     shots = spec.get("shots", [])
     texts = [str(shot.get("text", "")).strip() for shot in shots]
-    signature = _sig("\n".join(texts))
+    tone_speed = {"playful": 1.05, "suspense": 0.96, "hype": 1.10, "calm": 0.96}
+    tone = str(spec.get("voice_tone", "")).strip().lower()
+    if tone and tone not in tone_speed:
+        raise SystemExit("voice_tone must be playful, suspense, hype, or calm.")
+    base_speed = float(spec.get("voice_speed", tone_speed.get(tone, 1.0)))
+    shot_speeds = [float(shot.get("voice_speed", base_speed)) for shot in shots]
+    signature = _sig("\n".join(f"{speed:.3f}|{text}"
+                                 for speed, text in zip(shot_speeds, texts)))
     meta_path = project / ".voice_system.json"
     voice_path = project / "vo.wav"
     words_path = project / "words.json"
@@ -184,9 +193,9 @@ def make_project_voice(project: Path) -> None:
     clock = 0.0
     with tempfile.TemporaryDirectory(prefix="short-studio-tts-") as td:
         temp_dir = Path(td)
-        for index, (shot, text) in enumerate(zip(shots, texts)):
+        for index, (shot, text, speed) in enumerate(zip(shots, texts, shot_speeds)):
             tmp = temp_dir / f"line-{index:03d}.wav"
-            _speak(engine, text, tmp)
+            _speak(engine, text, tmp, speed)
             samples = _read_mono_48k(tmp)
             peak = float(np.max(np.abs(samples))) if samples.size else 0.0
             if text and peak < 1e-3:

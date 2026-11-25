@@ -27,6 +27,15 @@ H = chars.HEAD_C[2] if hasattr(chars, 'HEAD_C') else 4.5  # real R6 head centre 
 
 def ease(x): x = max(0.0, min(1.0, x)); return x * x * (3 - 2 * x)
 def lerp(a, b, x): return a + (b - a) * x
+def motion_progress(value, mode):
+    """Bounded timing curves used by story props and traveling 3D effects."""
+    x = max(0.0, min(1.0, float(value)))
+    if mode == 'linear': return x
+    if mode == 'ease_in': return x * x * x
+    if mode == 'ease_out': return 1.0 - (1.0 - x) ** 3
+    if mode == 'ease_in_out': return x * x * (3.0 - 2.0 * x)
+    raise ValueError("easing must be linear, ease_in, ease_out, or ease_in_out")
+
 def yawdir(yaw):  # yaw 0 = facing -Y, + = counter-clockwise
     r = math.radians(yaw); return Vector((math.sin(r), -math.cos(r), 0))
 
@@ -113,7 +122,7 @@ def _rgb(value):
     return tuple(int(value[i:i + 2], 16) / 255 for i in (0, 2, 4))
 
 def make_story_vfx():
-    """Build short camera-facing meshes for story cues and keyframe their scale."""
+    """Build lightweight camera-facing effects, with optional timed travel for trails."""
     valid = set(vfx3d.KINDS)
     for si, shot in enumerate(SPEC['shots']):
         for ei, event in enumerate(shot.get('vfx', []) or []):
@@ -135,18 +144,42 @@ def make_story_vfx():
             obj.data.materials.append(mat(name + '_material', _rgb(event.get('color', '#fff2a1')),
                                           emit=float(event.get('emission', 2.4)), rough=0.38))
             # The flat mesh faces the camera from the open side of the set.
-            obj.rotation_euler = (math.pi / 2, 0, math.radians(float(event.get('rotation', 0))))
+            flat_angle = math.radians(float(event.get('rotation', 0)))
+            obj.rotation_euler = ((0, 0, flat_angle) if kind == 'ground_ring'
+                                  else (math.pi / 2, 0, flat_angle))
             obj.location = ORIG[shot['set']] + Vector(tuple(float(v) for v in local))
             start = int(round((float(shot['t0']) + at) * FPS))
             peak = min(start + max(1, int(round(0.07 * FPS))),
                        int(round((float(shot['t0']) + at + duration * 0.35) * FPS)))
             end = int(round((float(shot['t0']) + at + duration) * FPS))
+            travel_to = event.get('to')
+            if travel_to is not None and (not isinstance(travel_to, (list, tuple)) or len(travel_to) != 3):
+                raise ValueError(f"shot {si + 1} vfx travel destination must be [x, y, z]")
             if start > 0:
                 obj.scale = (0.001, 0.001, 0.001); obj.keyframe_insert('scale', frame=start - 1)
             obj.scale = (0.08 * size, 0.08 * size, 0.08 * size); obj.keyframe_insert('scale', frame=start)
+            if travel_to is not None:
+                easing = str(event.get('easing', 'linear'))
+                spin = event.get('spin', [0, 0, 0])
+                if len(spin) != 3:
+                    raise ValueError(f"shot {si + 1} vfx spin must have three degree values")
+                from_local = Vector(tuple(float(v) for v in local))
+                to_local = Vector(tuple(float(v) for v in travel_to))
+                arc_height = float(event.get('arc_height', 0.0))
+                for frame in range(start, end + 1):
+                    raw = (frame - start) / max(1, end - start)
+                    progress = motion_progress(raw, easing)
+                    pos = from_local.lerp(to_local, progress)
+                    pos.z += arc_height * 4.0 * raw * (1.0 - raw)
+                    obj.location = ORIG[shot['set']] + pos
+                    obj.rotation_euler = (math.pi / 2,
+                                          math.radians(float(event.get('rotation_x', 0)) + float(spin[0]) * progress),
+                                          math.radians(float(event.get('rotation', 0)) + float(spin[2]) * progress))
+                    obj.keyframe_insert('location', frame=frame)
+                    obj.keyframe_insert('rotation_euler', frame=frame)
             if kind == 'sparkle':
                 obj.keyframe_insert('rotation_euler', frame=start)
-            peak_scale = 1.35 if kind in ('ring', 'sound_rings', 'dash') else 1.0
+            peak_scale = 1.35 if kind in ('ring', 'ground_ring', 'sound_rings', 'dash') else 1.0
             obj.scale = (peak_scale * size, peak_scale * size, peak_scale * size); obj.keyframe_insert('scale', frame=peak)
             if kind == 'sparkle':
                 obj.rotation_euler.z = math.radians(float(event.get('rotation', 0)) + 18)
@@ -204,7 +237,12 @@ def actor_pos(s, a, tl):
     if a.get('walkTo'):
         p1 = Vector((a['walkTo'][0], a['walkTo'][1], 0)); x = tl / max(s['t1'] - s['t0'], 0.1)
         p = p0.lerp(p1, x); d = p1 - p0
-        if d.length > 0.05: yaw = math.degrees(math.atan2(d.x, -d.y))
+        if d.length > 0.05:
+            path_yaw = math.degrees(math.atan2(d.x, -d.y))
+            # Most actors face their movement. `faceYaw` lets an actor turn
+            # toward the camera or another character while still following the
+            # same path, so contact and reaction poses remain readable.
+            yaw = float(a.get('faceYaw', path_yaw))
         return o + p, yaw, d.length / max(s['t1'] - s['t0'], 0.1)
     return o + p0, yaw, 0
 
@@ -227,6 +265,8 @@ def solve_cam(s, tl, heads):
     """returns eye, target, lens, focus point, fstop"""
     dur = s['t1'] - s['t0']; kind = s.get('cam', 'ms'); kind = kind if kind in CAMS else 'ms'
     fw, sdeg, edz, eyy, lens, fst, mv0 = CAMS[kind]; side = s.get('side', 1); o = ORIG[s['set']]
+    if s.get('camSide') is not None:
+        sdeg = float(s['camSide'])
     if s.get('aim') is not None:
         aim = s['aim']
         if not isinstance(aim, (list, tuple)) or len(aim) != 3:
@@ -311,7 +351,7 @@ SHOTS = SPEC['shots']; CUTF = [int(round(s_['t0'] * FPS)) for s_ in SHOTS] + [N]
 
 
 def animate_story_props():
-    """Keyframe named place props as rigid story objects, with no physics or hand attachment."""
+    """Keyframe rigid story props, with optional eased travel, launch arcs, and full spins."""
     starts = {}
     ends = {}
     rotations = {}
@@ -347,6 +387,10 @@ def animate_story_props():
             spin = move.get("spin", [0, 0, 0])
             if len(spin) != 3:
                 raise ValueError(f"propMoves 'spin' for {obj_name} must contain three degree values.")
+            arc_height = float(move.get("arc_height", 0.0))
+            easing = str(move.get("easing", "linear"))
+            if easing not in ("linear", "ease_in", "ease_out", "ease_in_out"):
+                raise ValueError(f"Invalid propMoves easing for {obj_name}: {easing!r}.")
             rot0 = base_rot.copy()
             rot1 = rot0.copy()
             for axis in range(3):
@@ -363,14 +407,20 @@ def animate_story_props():
                 obj.keyframe_insert("location", frame=0)
                 obj.keyframe_insert("rotation_euler", frame=0)
                 initialized.add(key)
-            obj.location = from_world
-            obj.rotation_euler = rot0
-            obj.keyframe_insert("location", frame=start_frame)
-            obj.keyframe_insert("rotation_euler", frame=start_frame)
-            obj.location = to_world
-            obj.rotation_euler = rot1
-            obj.keyframe_insert("location", frame=end_frame)
-            obj.keyframe_insert("rotation_euler", frame=end_frame)
+            # Sample the authored path at the final frame rate. This keeps the arc and
+            # full multi-turn spin smooth after the scene's per-frame animation bake.
+            span = end_frame - start_frame
+            for frame in range(start_frame, end_frame + 1):
+                raw = (frame - start_frame) / span
+                progress = motion_progress(raw, easing)
+                pos = from_local.lerp(to_local, progress)
+                pos.z += arc_height * 4.0 * raw * (1.0 - raw)
+                obj.location = origin + pos
+                obj.rotation_euler = rot0.copy()
+                for axis in range(3):
+                    obj.rotation_euler[axis] += math.radians(float(spin[axis]) * progress)
+                obj.keyframe_insert("location", frame=frame)
+                obj.keyframe_insert("rotation_euler", frame=frame)
             ends[key] = to_local
             rotations[key] = rot1
 
