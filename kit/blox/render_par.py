@@ -12,6 +12,7 @@ scale = int(option('--resolution-percentage', '100'))
 if not 1 <= scale <= 100: sys.exit('--resolution-percentage must be between 1 and 100')
 threads = int(option('--threads', str(max(1, (os.cpu_count() or 1) // max(1, K)))))
 if threads < 1: sys.exit('--threads must be positive')
+started = time.time()
 blend = os.path.join(ep, 'scene.blend'); t = time.time()
 def blender_prefix():
     cmd = [BL, '-b', blend, '-t', str(threads)]
@@ -29,12 +30,16 @@ if '--frames' in sys.argv:
     for x in sys.argv[sys.argv.index('--frames') + 1].split(','):
         a, _, b = x.partition('..'); fr += [str(i) for i in range(int(a), int(b or a) + 1)]
     sub = sys.argv[sys.argv.index('--out') + 1] if '--out' in sys.argv else 'stills'
-    out = os.path.join(ep, sub, '#####'); groups = [fr[i::K] for i in range(K)]
+    output_dir = os.path.abspath(os.path.join(ep, sub))
+    os.makedirs(output_dir, exist_ok=True)
+    out = os.path.join(output_dir, '#####'); groups = [fr[i::K] for i in range(K)]
     cmds = [blender_prefix() + ['-o', out, '-F', 'JPEG', '-f', ','.join(g)] for g in groups if g]
+    expected_frames = sorted(set(int(frame) for frame in fr))
 else:
     import json, math
     n = int(math.ceil(json.load(open(os.path.join(ep, 'timed.json')))['dur'] * 60))
-    os.makedirs(os.path.join(ep, 'frames'), exist_ok=True)
+    output_dir = os.path.join(ep, 'frames')
+    os.makedirs(output_dir, exist_ok=True)
     CH = -(-n // K); chunks = [(a, min(a + CH, n) - 1) for a in range(0, n, CH)]
     groups = [chunks[i::K] for i in range(K)]
     cmds = []
@@ -42,6 +47,17 @@ else:
         args = blender_prefix()
         for a, b in g: args += ['-s', str(a), '-e', str(b), '-a']
         cmds.append(args)
+    expected_frames = list(range(n))
 ps = [subprocess.Popen(c, stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT) for c in cmds]
-for p in ps: p.wait()
-print('rendered with', len(ps), 'procs in', round(time.time() - t, 1), 's; frames on disk', len(glob.glob(os.path.join(ep, 'frames', '*.jpg'))))
+failures = [(p.pid, p.wait()) for p in ps]
+failures = [(pid, code) for pid, code in failures if code != 0]
+if failures:
+    sys.exit(f'Blender render failed (pid/status: {failures}); see Blender crash report and verify the selected Blender build/backend.')
+missing = [frame for frame in expected_frames
+           if not os.path.isfile(os.path.join(output_dir, f'{frame:05d}.jpg'))
+           or os.path.getmtime(os.path.join(output_dir, f'{frame:05d}.jpg')) < started - 1]
+if missing:
+    preview = ', '.join(f'{frame:05d}.jpg' for frame in missing[:8])
+    sys.exit(f'Blender exited without writing {len(missing)} expected frame(s) to {output_dir}: {preview}')
+print('rendered with', len(ps), 'procs in', round(time.time() - t, 1), 's; output frames',
+      len(glob.glob(os.path.join(output_dir, '*.jpg'))))

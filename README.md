@@ -59,8 +59,8 @@ For speed, the Blender preview renders at half resolution with reduced preview-o
 | Theme | Rendering path | What it produces |
 |---|---|---|
 | `blocky-3d` | Blender | Original blocky 3D scenes with story-specific sets, outlined Roblox-style captions, timed character/prop motion, travelling VFX, and script-to-screen/voice sync checks |
-| `monochrome` | Blender + FFmpeg | Blocky 3D scenes with a black-and-white grade |
-| `what-if` | Remotion | Original vector animation |
+| `monochrome` | Blender + FFmpeg | The same Blender actions and quality checks, with a black-and-white grade on the final video |
+| `what-if` | Remotion | Original 2D vector scenes, animated graphics, overlays, transitions, and its own audio mix |
 
 The visual treatment is an episode-level choice independent of the theme and A/B format:
 
@@ -70,42 +70,6 @@ The visual treatment is an episode-level choice independent of the theme and A/B
 | graphics-led | Props, diagrams, counters, and visual proof lead; characters are optional. |
 | hybrid | Characters and graphics share the storytelling. |
 
-These treatments reuse the three existing render paths. Graphics-led Blender videos use the kit's current physical props, camera moves, captions, and cards; they do not promise an unimplemented 2D HUD. Blocky 3D now includes a layered `NightCourt` set, bold outlined captions, eased prop arcs/spins, a low-cost layered energy trail, directional sound rings, synced licensed CC0 sound effects, and short post-composited `whip`/`push`/`flash` transitions. Named props still move rigidly without physics or hand attachment. The What If engine uses its existing vector shots and overlays. All themes share script-to-storyboard checks for purposeful action, readable cause/action/result, and useful sound/effects; renderer-specific actions still have to use that renderer's capabilities. The blocky style uses original human characters; it does not include official Roblox characters or assets. Animal and robot character rigs are not included. The monochrome grade is applied to the final MP4. Each new What If episode must be registered in `studio/src/episodes/index.ts`; preparation checks the registration. See [the upstream integration review](references/upstream-integration.md) for source compatibility and license decisions.
+These treatments reuse the three existing render paths. Graphics-led Blender videos use the kit's current physical props, camera moves, captions, and cards; they do not promise an unimplemented 2D HUD. Blocky 3D now includes a layered `NightCourt` set, bold outlined captions, eased prop arcs/spins, a low-cost layered energy trail, directional sound rings, synced licensed CC0 sound effects, and short post-composited `whip`/`push`/`flash` transitions. Named props still move rigidly without physics or hand attachment. The What If engine uses its existing vector shots, overlays, `flash`/`shake` effects, and audio pipeline; it does not use Blender geometry or inherit 3D physics. All themes share an ordered creative workflow: research and treatment choice, 5–7 image plan, full approved script with spoken CTA, script-matched shots, engine-specific preparation checks, storyboard review, and audio preview before full render. The CLI checks Blender narration against the approved script and timed voice, and checks What If `script.md`, `episode.json`, timeline segment lines, and timed words against each other. It also checks the configured CTA is spoken near the ending. Those checks catch measurable omissions; review the actual storyboard to confirm that a story's required object/action is visible and clear (for example, both options in an A/B choice). The agent does not learn or train on prior scenes: each new story uses the saved playbook and renderer features, choosing story-specific props rather than reusing irrelevant props. The blocky style uses original human characters; it does not include official Roblox characters or assets. Animal and robot character rigs are not included. The monochrome grade is applied to the final MP4. Each new What If episode must be registered in `studio/src/episodes/index.ts`; preparation checks the registration. See [the upstream integration review](references/upstream-integration.md) for source compatibility and license decisions.
 
-Blocky 3D preparation compares the approved script to the concatenated shot dialogue, then checks generated voice words/timings and the requested scene length. Set `voice_tone` and `voice_speed` for each video. Optional Voicemod control is for live microphone recording; it does not alter the renderer's existing TTS audio. See [the voice setup](FRIEND_GUIDE.md#optional-voicemod-live-microphone) and [the shot API](kit/API.md#voice-delivery-and-voicemod).
-
-Visual references and upstream demos are in [FRIEND_GUIDE.md](FRIEND_GUIDE.md). See the [blocky 3D art-direction guide](references/blocky-3d.md) for the visual reference workflow and clean set, light, material, action, and framing checks. Reference repositories do not train the assistant or renderer: the assistant can inspect images attached or explicitly loaded in a session, and the renderer uses only project code and assets.
-
-## Manual CLI
-
-Run `python scripts/short_studio.py <command>` from the project folder.
-
-| CLI command | Purpose |
-|---|---|
-| `init` | Create a batch with up to three initial slots per topic. |
-| `add` | Add slots to one topic or all topics in an existing batch. |
-| `set-theme` | Save the chosen render theme before research. |
-| `set-treatment` | Save automatic treatment selection (default) or a manual override. |
-| `set-format` | Save `standalone` or `choice-story` before research. |
-| `set-duration` | Save the 30–60 second target before research. |
-| `pitch` | Save the researched pitch, visual plan, complete script, spoken CTA, and caption. |
-| `decide` | Record `approve`, `revise`, or `skip`. |
-| `prepare` | Build voice, storyboard, and a story-specific scene. |
-| `review-storyboard` | Approve the current storyboard or request changes; rendering stays blocked until approval. |
-| `preview` | Render a half-resolution review video with narration and run audio QA. |
-| `review-preview` | Record that you listened to the passing preview, or request revision. |
-| `render` | Render only after storyboard and preview approval; run audio QA before delivery. |
-| `status` / `list` | Inspect one queue or all saved batches. |
-| `rename` | Rename a saved batch and move its files and outputs in place. |
-
-The CLI manages files, stage timings, audio-preview approval, and render gates; the slash command performs research and writes the creative materials. Claude Code can run up to three independent topic-research subagents in parallel for a multi-video batch when its Agent and web-search tools are available. The read-only worker is in `.claude/agents/shorts-topic-researcher.md`. This can shorten research wait time but uses additional Claude usage and does not speed local rendering. OpenCode or sessions without those tools continue in one agent. See [Claude Code subagents](https://code.claude.com/docs/en/sub-agents) for tool and usage details. See [SKILL.md](SKILL.md), the [blocky 3D art-direction guide](references/blocky-3d.md), [visual treatment guide](references/visual-treatment.md), [niche playbooks](references/niches.md), and [transition guide](references/transitions.md).
-
-## Updating an existing copy
-
-For an existing clone, run `git pull` in the AnimationFusion folder. If you use a ZIP, download and extract a fresh copy. Start Claude Code, OpenCode, or Codex from that updated folder. Claude Code and OpenCode read the project commands in `.claude/commands/` and `.opencode/commands/`; Codex discovers the repo-local skill in `.agents/skills/short-studio/`. Start a new Codex session after updating so it can discover the skill.
-
-## Cost, files, and licenses
-
-The project makes no paid API calls by default. Research requires browser or search access. Voice and rendering run locally; ElevenLabs is opt-in. Batch state and rendered files stay in `production/` and `out/`, which are ignored by Git.
-
-This package includes code from multiple projects. Preserve its notices when redistributing it. See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) and [licenses/upstream/](licenses/upstream/).
+Blocky 3D preparation compares the approved script to the concatenated shot dialogue, then checks generated voice words/timings and the requested scene length. Set `voice_tone` and `voice_speed` for each video. Optional Voicemod control is for live microphone recording; it does not alter the renderer's existing TTS audio. See [the voice setup](FRIE
