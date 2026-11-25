@@ -135,4 +135,20 @@ The choice reuses the existing renderers. In Blender styles, graphics-led means 
 | `monochrome` | Blender + FFmpeg | Same Blender scenes, actions, effects, and checks, then a black-and-white grade |
 | `what-if` | Remotion | Separate 2D vector scenes, graphics, overlays, transitions, and audio mix |
 
-Blocky 3D uses original generic human characters and no official Roblox assets. Both Blender themes use the screen-proof check to catch script-to-shot omissions; storyboard review checks the actual picture. Actions such as a door hit should show a matching contact
+Blocky 3D uses original generic human characters and no official Roblox assets. Both Blender themes use the screen-proof check to catch script-to-shot omissions; storyboard review checks the actual picture. Actions such as a door hit should show a matching contact pose, impact effect, and sound on the spoken hit word; doorway routes and spawn returns are checked against their visible landmarks. The selected CC0 sounds can be called in `shots.py` as `sfxkit_impact_heavy_hard@0.65`; the number is the visible action time, and the sound's recorded sync point is aligned to it automatically. `whip`, `push`, and `flash` transitions are added to the incoming shot and composited after scene rendering; whip/push add a synced whoosh. Story props can move as rigid objects, but they do not attach to hands or use physics; animal and robot actor rigs are not included. The monochrome theme shares the same Blender checks and then gets its grayscale grade. What If is a separate 2D vector renderer; `prepare` checks that its approved `script.md`, `episode.json`, timed `timeline.json` segment lines, and caption words in `words.json` match, that the spoken CTA is near the end, and that timing fits. It uses vector graphics and its own overlays, transitions, and audio—not Blender geometry or 3D physics. In every theme, design and check the story's actual objects/actions; there is no universal door requirement. A choice story must visually show both choices. Reference libraries guide the assistant only when their images are supplied or explicitly loaded. They do not train the renderer. New What If episodes need files under `studio/src/episodes/<slug>/` and a registration in `studio/src/episodes/index.ts`. The prepare command checks this.
+
+### Repeat this quality sequence for every video
+
+1. Choose the theme, story format, and duration; research the topic and current examples again.
+2. Score character-led, graphics-led, and hybrid treatments; make a 5–7 image visual plan before writing narration.
+3. Write the complete script and spoken CTA, then get the pitch/script approved.
+4. Make every spoken line visible in the chosen engine. Show every story-critical prop and both sides of any A/B choice; use only effects the selected renderer supports.
+5. Run `prepare` and fix any script, CTA, timing, or engine checks it reports.
+6. Review the storyboard at phone size and inspect key action frames; revise and prepare again if anything is missing or confusing.
+7. Render a preview, listen to the voice/music/effects, inspect the audio report, then approve the preview before the full render.
+
+This sequence is stored in the repository's `SKILL.md` so Claude Code/OpenCode can repeat it each session. It is a playbook and validation workflow, not model training; it tells the assistant how to handle a new story without assuming every story contains the same props.
+
+## Cost and research tools
+
+Voice and rendering are local. Trend research uses the browser/search access available in Claude Code or OpenCode; if access is unavailable, the assistant should say it cannot verify current signals. Public starting points include Google Trends, TikTok Creative Center, and YouTube Culture & Trends. The repository does not read a creator's post analytics, generate a Part 2 automatically from views, or post to a social account.

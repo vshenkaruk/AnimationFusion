@@ -213,4 +213,1413 @@ def command_pitch(args: argparse.Namespace) -> None:
         raise SystemExit("The script is unusually short; provide the complete narration before asking for approval.")
     folder = slot_path(batch_dir, topic, slot)
     folder.mkdir(parents=True, exist_ok=True)
-    (folder / "pitch.md").write_text(f"# {title}\n\n**Topic:** {topic['title']}\n\n**Theme:** {args.theme}\n\n**Visual treatment:** {args.visual_treatment} ({'auto-selected' if treatment_mode == 'auto' else 'manual override'})\n\n**Format:** {args.story_
+    (folder / "pitch.md").write_text(f"# {title}\n\n**Topic:** {topic['title']}\n\n**Theme:** {args.theme}\n\n**Visual treatment:** {args.visual_treatment} ({'auto-selected' if treatment_mode == 'auto' else 'manual override'})\n\n**Format:** {args.story_format}\n\n**Hook:** {hook}\n\n**Call to action:** {call_to_action}\n\n{idea}\n", encoding="utf-8")
+    (folder / "visual-plan.md").write_text(visual_plan + "\n", encoding="utf-8")
+    if treatment_scorecard:
+        (folder / "treatment-scorecard.md").write_text(treatment_scorecard + "\n", encoding="utf-8")
+    (folder / "script.md").write_text(script + "\n", encoding="utf-8")
+    (folder / "research.md").write_text((research or "No research notes attached.\n") + "\n", encoding="utf-8")
+    (folder / "post-caption.txt").write_text((caption or f"{hook}\n\n{call_to_action}") + "\n", encoding="utf-8")
+    slot.update({"status": "awaiting_approval", "theme": args.theme, "theme_confirmed": theme_confirmed,
+                 "title": title, "hook": hook, "hook_highlights": hook_highlights,
+                 "story_format": args.story_format, "format_confirmed": True, "visual_treatment": args.visual_treatment, "visual_treatment_mode": treatment_mode, "treatment_confirmed": True, "call_to_action": call_to_action,
+                 "renderer_slug": args.renderer_slug or slugify(title), "research_updated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"), "updated_at": datetime.now(timezone.utc).isoformat(timespec="seconds")})
+    write_json(batch_dir / "manifest.json", manifest)
+    print(f"Pitch saved for {topic['id']} short {args.slot:02d}; status=awaiting_approval")
+
+
+def command_decide(args: argparse.Namespace) -> None:
+    batch_dir, manifest = load_batch(args.batch_id)
+    topic = locate_topic(manifest, args.topic)
+    slot = locate_slot(topic, args.slot)
+    folder = slot_path(batch_dir, topic, slot)
+    if slot["status"] != "awaiting_approval":
+        raise SystemExit(f"Slot status is '{slot['status']}', expected awaiting_approval.")
+    if args.decision == "approve" and not slot.get("theme_confirmed", False):
+        raise SystemExit("Choose and save a theme with the set-theme command before approval.")
+    if args.decision == "approve" and not slot.get("target_duration_seconds"):
+        raise SystemExit("Choose and save a target length with the set-duration command before approval.")
+    if args.decision == "approve" and not slot.get("format_confirmed"):
+        raise SystemExit("Choose and save a story format with the set-format command before approval.")
+    if args.decision == "approve" and not slot.get("treatment_confirmed"):
+        raise SystemExit("Set the visual treatment to auto or choose an override before approval.")
+    if args.decision == "approve" and not slot.get("call_to_action"):
+        raise SystemExit("Add a spoken call to action before approval.")
+    if args.decision == "approve":
+        required = ["pitch.md", "script.md", "research.md", "visual-plan.md"]
+        if slot.get("visual_treatment_mode", "auto") == "auto":
+            required.append("treatment-scorecard.md")
+        for name in required:
+            if not (folder / name).is_file() or not (folder / name).read_text(encoding="utf-8").strip():
+                raise SystemExit(f"Cannot approve without {folder / name}")
+        slot["status"] = "approved"
+    elif args.decision == "revise":
+        slot["status"] = "revise"
+    else:
+        slot["status"] = "skipped"
+    slot["decision_at"] = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    slot["decision"] = args.decision
+    write_json(batch_dir / "manifest.json", manifest)
+    print(f"{topic['id']} short {args.slot:02d}: {slot['status']}")
+
+
+
+def validate_treatment_scorecard(scorecard: str, selected: str) -> None:
+    scores: dict[str, int] = {}
+    for treatment in TREATMENTS:
+        match = re.search(rf"(?m)^\s*{re.escape(treatment)}\s*:\s*topic=(\d),\s*story=(\d),\s*reference=(\d)\s*$", scorecard)
+        if not match:
+            raise SystemExit(f"Treatment scorecard needs a '{treatment}: topic=0, story=0, reference=0' row.")
+        parts = [int(value) for value in match.groups()]
+        if any(value > 2 for value in parts):
+            raise SystemExit("Each treatment-fit score must be between 0 and 2.")
+        scores[treatment] = sum(parts)
+    if "evidence:" not in scorecard.casefold() or "why:" not in scorecard.casefold():
+        raise SystemExit("Treatment scorecard must include evidence and why sections grounded in this video's research.")
+    highest = max(scores.values())
+    if scores["hybrid"] >= highest - 1 or scores["character-led"] == scores["graphics-led"]:
+        recommended = "hybrid"
+    else:
+        recommended = max(("character-led", "graphics-led"), key=lambda name: scores[name])
+    if selected != recommended:
+        raise SystemExit(f"Scorecard recommends {recommended} (character {scores['character-led']}/6, graphics {scores['graphics-led']}/6, hybrid {scores['hybrid']}/6); set --visual-treatment to that choice or use a manual override.")
+
+
+def validate_visual_plan(plan: str) -> None:
+    beats = [line for line in plan.splitlines() if re.match(r"^\s*(?:\d+[.)]|[-*])\s+\S", line)]
+    if not 5 <= len(beats) <= 7:
+        raise SystemExit(f"Visual plan must have 5–7 numbered or bulleted key-image beats; found {len(beats)}.")
+
+
+def validate_duration(actual: float, target: int, stage: str) -> None:
+    tolerance = max(3.0, target * 0.08)
+    if abs(actual - target) > tolerance:
+        raise SystemExit(
+            f"{stage} is {actual:.1f}s; target is {target}s (allowed difference {tolerance:.1f}s). "
+            "Revise the script or scene timing before continuing."
+        )
+
+
+def validate_blocky_story_plan(spec: dict[str, Any], topic: dict[str, Any], slot: dict[str, Any]) -> None:
+    if spec.get("_starter_template") is True:
+        raise SystemExit(
+            "This is still the generic starter scene. Replace the starter shot plan with original scenes "
+            "for the approved story, then prepare again."
+        )
+    if slugify(spec.get("story_title", "")) != slugify(slot.get("title", "")):
+        raise SystemExit("Set story_title in shots.py to the approved pitch title before preparation.")
+    if slugify(spec.get("story_topic", "")) != slugify(topic.get("title", "")):
+        raise SystemExit("Set story_topic in shots.py to this batch topic before preparation.")
+
+    shots = spec.get("shots")
+    if not isinstance(shots, list) or not shots:
+        raise SystemExit("The story-specific shot plan must contain shots.")
+    target = int(slot.get("target_duration_seconds") or spec.get("dur", 0))
+    minimum = max(4, (target + 7) // 8)
+    if len(shots) < minimum:
+        raise SystemExit(
+            f"The {target}s plan has {len(shots)} shots; use at least {minimum} story beats "
+            "(about one visual change every 6–8 seconds)."
+        )
+    cameras = {str(shot.get("cam", "ms")) for shot in shots if isinstance(shot, dict)}
+    if len(cameras) < 2:
+        raise SystemExit("Vary the camera framing across at least two shots before preparation.")
+    actions = set()
+    for shot in shots:
+        if not isinstance(shot, dict):
+            continue
+        for actor in shot.get("actors", []):
+            if not isinstance(actor, dict):
+                continue
+            if actor.get("anim"):
+                actions.add(str(actor["anim"]))
+            for event in actor.get("animAt", []):
+                if isinstance(event, (list, tuple)) and len(event) > 1:
+                    actions.add(str(event[1]))
+    if len(actions) < 2:
+        raise SystemExit("Give the cast at least two distinct actions across the story shot plan.")
+    if slot.get("theme") in ("blocky-3d", "monochrome"):
+        validate_blocky_screen_proof(spec)
+
+
+def _literal_assignment(path: Path, variable: str) -> Any:
+    try:
+        module = ast.parse(path.read_text(encoding="utf-8"))
+        for node in module.body:
+            if isinstance(node, ast.Assign) and any(
+                isinstance(target, ast.Name) and target.id == variable for target in node.targets
+            ):
+                return ast.literal_eval(node.value)
+    except (OSError, SyntaxError, ValueError) as exc:
+        raise SystemExit(f"Cannot read Blocky 3D capability list {variable} from {path}: {exc}") from exc
+    raise SystemExit(f"Blocky 3D capability list {variable} is missing from {path}.")
+
+
+def _proof_text(value: str) -> str:
+    return re.sub(r"\s+", " ", re.sub(r"[^a-z0-9\s]", " ", value.casefold())).strip()
+
+
+def _spoken_tokens(value: str) -> list[str]:
+    """Use the same bracket/parenthesis skip rule as the narration renderers."""
+    value = re.sub(r"\([^)]*\)|\[[^\]]*\]", " ", value)
+    return [token.casefold().replace("’", "'") for token in re.findall(r"[\w]+(?:['’][\w]+)*", value, re.UNICODE)]
+
+
+def validate_blocky_script_consistency(script_path: Path, spec: dict[str, Any]) -> None:
+    """Block preparation when the shot narration drifts from the approved script."""
+    if not script_path.is_file():
+        raise SystemExit(f"Approved script is missing: {script_path}")
+    expected = _spoken_tokens(script_path.read_text(encoding="utf-8"))
+    actual = _spoken_tokens(" ".join(str(shot.get("text", "")) for shot in spec.get("shots", [])))
+    if expected == actual:
+        return
+    mismatch = next((i for i, (a, b) in enumerate(zip(expected, actual)) if a != b), min(len(expected), len(actual)))
+    expected_excerpt = " ".join(expected[mismatch:mismatch + 8]) or "<end of script>"
+    actual_excerpt = " ".join(actual[mismatch:mismatch + 8]) or "<end of shot narration>"
+    raise SystemExit(
+        "Blocky 3D voice/caption text does not match the approved script.md. "
+        f"First difference near word {mismatch + 1}: script='{expected_excerpt}', shots='{actual_excerpt}'. "
+        "Update the shot lines before preparing voice or animation."
+    )
+
+
+def validate_spoken_cta(script_path: Path, call_to_action: str | None) -> None:
+    """Require the approved engagement CTA to be spoken near the end of the script."""
+    if not script_path.is_file():
+        raise SystemExit(f"Approved script is missing: {script_path}")
+    script_tokens = _spoken_tokens(script_path.read_text(encoding="utf-8"))
+    cta_tokens = _spoken_tokens(call_to_action or "")
+    engagement = {"comment", "follow", "subscribe", "like", "share", "vote", "reply", "save"}
+    expected_actions = engagement.intersection(cta_tokens)
+    if not expected_actions:
+        raise SystemExit(
+            "The approved pitch needs a spoken engagement CTA (for example, comment, follow, subscribe, vote, or share)."
+        )
+    final_tokens = set(script_tokens[-24:])
+    missing = sorted(expected_actions - final_tokens)
+    if missing:
+        raise SystemExit(
+            "The approved script does not speak its configured CTA near the end. "
+            f"Missing CTA action(s): {', '.join(missing)}. Update script.md before preparing the video."
+        )
+
+
+def validate_whatif_script_sync(script_path: Path, episode_dir: Path) -> None:
+    """Keep the approved script, What If episode, timed segments, and word captions aligned."""
+    if not script_path.is_file():
+        raise SystemExit(f"Approved script is missing: {script_path}")
+    episode_path = episode_dir / "episode.json"
+    timeline_path = episode_dir / "timeline.json"
+    words_path = episode_dir / "words.json"
+    for path in (episode_path, timeline_path, words_path):
+        if not path.is_file():
+            raise SystemExit(f"What If script-sync check needs {path.name}; run the episode preparation stages first.")
+
+    approved = _spoken_tokens(script_path.read_text(encoding="utf-8"))
+    episode = read_json(episode_path)
+    timeline = read_json(timeline_path)
+    words = read_json(words_path)
+    episode_lines = episode.get("script", [])
+    if not isinstance(episode_lines, list):
+        raise SystemExit(f"What If episode script must be a list of spoken lines: {episode_path}")
+    episode_tokens = _spoken_tokens(" ".join(str(line.get("text", "")) for line in episode_lines if isinstance(line, dict)))
+    segment_rows = timeline.get("segments", [])
+    if not isinstance(segment_rows, list):
+        raise SystemExit(f"What If timeline segments must be a list: {timeline_path}")
+    segment_tokens = _spoken_tokens(" ".join(str(segment.get("line", "")) for segment in segment_rows if isinstance(segment, dict)))
+    if not isinstance(words, list):
+        raise SystemExit(f"What If words.json must contain a list of timed words: {words_path}")
+    word_tokens = _spoken_tokens(" ".join(str(row.get("w", "")) for row in words if isinstance(row, dict)))
+
+    stages = (("episode.json", episode_tokens), ("timeline.json segments", segment_tokens), ("words.json", word_tokens))
+    for label, actual in stages:
+        if approved == actual:
+            continue
+        mismatch = next((i for i, (a, b) in enumerate(zip(approved, actual)) if a != b), min(len(approved), len(actual)))
+        expected_excerpt = " ".join(approved[mismatch:mismatch + 7]) or "<end of approved script>"
+        actual_excerpt = " ".join(actual[mismatch:mismatch + 7]) or "<end of generated text>"
+        raise SystemExit(
+            f"What If {label} does not match the approved script.md near word {mismatch + 1}: "
+            f"script='{expected_excerpt}', generated='{actual_excerpt}'. Regenerate the episode plan."
+        )
+
+    fps, total = float(timeline.get("fps", 0)), float(timeline.get("total", 0))
+    if fps <= 0 or total <= 0:
+        raise SystemExit(f"What If timeline needs positive fps and total frame count: {timeline_path}")
+    previous_start = -1.0
+    audio_limit = total / fps + 0.15
+    for index, row in enumerate(words, start=1):
+        if not isinstance(row, dict) or "s" not in row or "e" not in row:
+            raise SystemExit(f"What If word timing row {index} must contain start and end seconds.")
+        start, end = float(row["s"]), float(row["e"])
+        if start < 0 or end < start or start < previous_start or end > audio_limit:
+            raise SystemExit(
+                f"What If word timing row {index} is out of order or outside the {audio_limit:.2f}s episode timeline."
+            )
+        previous_start = start
+    previous_frame = 0
+    for index, segment in enumerate(segment_rows, start=1):
+        if not isinstance(segment, dict) or "a" not in segment or "b" not in segment:
+            raise SystemExit(f"What If timeline segment {index} needs start frame a and end frame b.")
+        start, end = int(segment["a"]), int(segment["b"])
+        if start < previous_frame or end < start or end > total:
+            raise SystemExit(f"What If timeline segment {index} is out of order or outside the episode duration.")
+        previous_frame = end
+
+
+def validate_blocky_voice_sync(project: Path, script_path: Path, target_duration: int | None) -> None:
+    """Check that generated narration, captions, word timing, and target length agree."""
+    import wave
+
+    expected = _spoken_tokens(script_path.read_text(encoding="utf-8"))
+    voice_path, words_path, spec_path = project / "vo.wav", project / "words.json", project / "timed.json"
+    if not voice_path.is_file() or not words_path.is_file():
+        raise SystemExit("Narration sync check needs vo.wav and words.json; voice generation did not finish.")
+    spec = read_json(spec_path)
+    rows = read_json(words_path)
+    voiced = _spoken_tokens(" ".join(str(row[0]) for row in rows if isinstance(row, (list, tuple)) and row))
+    if expected != voiced:
+        mismatch = next((i for i, (a, b) in enumerate(zip(expected, voiced)) if a != b), min(len(expected), len(voiced)))
+        raise SystemExit(
+            "Narration timing words do not match the approved script at word "
+            f"{mismatch + 1}; the captions could disagree with the spoken line. Regenerate the voice stage."
+        )
+    with wave.open(str(voice_path), "rb") as audio:
+        duration = audio.getnframes() / max(1, audio.getframerate())
+    previous_start = -1.0
+    timed_tokens: list[tuple[str, float]] = []
+    for index, row in enumerate(rows, start=1):
+        if not isinstance(row, (list, tuple)) or len(row) < 3:
+            raise SystemExit(f"Narration word timing row {index} must contain a word, start, and end.")
+        start, end = float(row[1]), float(row[2])
+        if start < 0 or end <= start or end > duration + 0.1 or start < previous_start:
+            raise SystemExit(f"Narration word timing row {index} is outside the generated voice or out of order.")
+        previous_start = start
+        timed_tokens.extend((token, start) for token in _spoken_tokens(str(row[0])))
+
+    def token_time(shot: dict[str, Any], words: set[str]) -> float | None:
+        start, end = float(shot["t0"]), float(shot["t1"])
+        return next((at for token, at in timed_tokens if start - 0.05 <= at < end and token in words), None)
+
+    def cue_time(shot: dict[str, Any], cue_name: str) -> float | None:
+        for cue in shot.get("sfx", []) or []:
+            name, sep, at = str(cue).partition("@")
+            if sep and name == cue_name:
+                return float(at)
+        return None
+
+    # Validate the story's physical beats against the actual spoken word timings,
+    # so authored events cannot quietly drift earlier/later than the narration.
+    for index, shot in enumerate(spec.get("shots", []), start=1):
+        line = str(shot.get("text", "")).casefold()
+        interactions = [interaction for proof_row in shot.get("screen_proof", []) if isinstance(proof_row, dict)
+                        for interaction in (proof_row.get("interactions", []) or []) if isinstance(interaction, dict)]
+        for interaction in interactions:
+            kind = str(interaction.get("kind", ""))
+            if kind == "contact":
+                action_at = token_time(shot, {"whap", "clang"}) or token_time(
+                    shot, {"slap", "slaps", "smack", "smacks", "knock", "knocks", "hit", "hits",
+                           "kick", "kicks", "punch", "punches", "strike", "strikes"}
+                )
+                if action_at is not None and abs(float(interaction.get("at", -100)) - (action_at - float(shot["t0"]))) > 0.4:
+                    raise SystemExit(f"Blocky 3D shot {index} contact pose misses the spoken action by more than 0.4 seconds.")
+            elif kind == "pass_through":
+                action_at = token_time(shot, {"through", "inside", "across", "enters", "enter", "exits", "exit", "passes", "pass"})
+                if action_at is not None and abs(float(interaction.get("at", -100)) - (action_at - float(shot["t0"]))) > 0.65:
+                    raise SystemExit(f"Blocky 3D shot {index} doorway crossing does not land near the spoken crossing word.")
+            elif kind == "landmark":
+                action_at = token_time(shot, {"appears", "appear", "reappears", "reappear", "pops", "pop", "returns", "return", "spawns", "spawn"})
+                if action_at is not None and abs(float(interaction.get("at", -100)) - (action_at - float(shot["t0"]))) > 0.5:
+                    raise SystemExit(f"Blocky 3D shot {index} spawn/return arrival does not match its spoken action.")
+            elif kind == "launch":
+                action_at = token_time(shot, {"rockets", "rocket", "launches", "launch", "flies", "fly", "rises", "rise", "rising"})
+                if action_at is not None:
+                    move = next((item for item in shot.get("propMoves", []) if str(item.get("name")) == interaction.get("prop")), None)
+                    if move is None or abs(float(move.get("start", -100)) - (action_at - float(shot["t0"]))) > 0.65:
+                        raise SystemExit(f"Blocky 3D shot {index} prop launch does not begin near its spoken action.")
+        for word, cue_names, tolerance in (
+            ("whap", ("slap", "sfxkit_impact_heavy_hard"), 0.4),
+            ("clang", ("door_hit", "sfxkit_impact_heavy_hard"), 0.4),
+        ):
+            spoken_at = token_time(shot, {word})
+            sound_at = next((at for cue in cue_names if (at := cue_time(shot, cue)) is not None), None)
+            if spoken_at is not None and sound_at is None:
+                raise SystemExit(f"Blocky 3D shot {index} says {word.upper()} but has no matching impact sound cue.")
+            if spoken_at is not None and abs(sound_at - (spoken_at - float(shot["t0"]))) > tolerance:
+                raise SystemExit(f"Blocky 3D shot {index} impact sound is not synced to the spoken {word.upper()} cue.")
+    if target_duration is not None:
+        validate_duration(float(spec.get("dur", 0)), int(target_duration), "Voice-timed Blender scene")
+
+
+def _custom_place_prop_specs(place: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    counts: dict[str, int] = {}
+    props: dict[str, dict[str, Any]] = {}
+    for item in place.get("props", []) or []:
+        if not isinstance(item, (list, tuple)) or not item:
+            continue
+        kind = str(item[0])
+        counts[kind] = counts.get(kind, 0) + 1
+        options = item[4] if len(item) > 4 and isinstance(item[4], dict) else {}
+        name = str(options.get("name") or (kind if counts[kind] == 1 else f"{kind}{counts[kind]}"))
+        props[name] = {
+            "kind": kind,
+            "x": float(item[1]) if len(item) > 1 else 0.0,
+            "y": float(item[2]) if len(item) > 2 else 0.0,
+            "yaw": float(item[3]) if len(item) > 3 else 0.0,
+            "options": dict(options),
+        }
+    return props
+
+
+def _custom_place_prop_names(place: dict[str, Any]) -> set[str]:
+    return set(_custom_place_prop_specs(place))
+
+
+def validate_blocky_screen_proof(spec: dict[str, Any]) -> None:
+    """Require every Blender 3D spoken beat to point at supported on-screen evidence."""
+    contact_pose_peak = {"slap": 0.28, "knock": 0.16, "throw": 0.30, "catch": 0.28}
+    supported_animations = set(_literal_assignment(ROOT / "kit" / "blox" / "chars.py", "ANIMS"))
+    supported_sfx = set(_literal_assignment(ROOT / "kit" / "blox" / "post.py", "SFX"))
+    sfx_manifest = ROOT / "kit" / "blox" / "assets" / "sfx" / "cc0" / "sfx-kit" / "manifest.json"
+    if sfx_manifest.is_file():
+        supported_sfx.update(str(item.get("engine_name")) for item in read_json(sfx_manifest).get("assets", []))
+    supported_vfx = set(_literal_assignment(ROOT / "kit" / "blox" / "vfx3d.py", "KINDS"))
+    custom_places = spec.get("places", {}) or {}
+    things = set((spec.get("things", {}) or {}).keys())
+    for index, shot in enumerate(spec.get("shots", []), start=1):
+        text = str(shot.get("text", "")).strip()
+        if not text:
+            raise SystemExit(f"Blocky 3D shot {index} needs spoken text so its visual proof can be reviewed.")
+        proof_rows = shot.get("screen_proof")
+        if not isinstance(proof_rows, list) or not proof_rows:
+            raise SystemExit(
+                f"Blocky 3D shot {index} needs screen_proof: map its spoken line to visible actions, story props, and timed sounds."
+            )
+        if not any(_proof_text(str(row.get("claim", ""))) == _proof_text(text) for row in proof_rows if isinstance(row, dict)):
+            raise SystemExit(f"Blocky 3D shot {index} screen_proof must include its complete spoken line as a claim.")
+
+        place = custom_places.get(str(shot.get("set", "")))
+        place_prop_specs = _custom_place_prop_specs(place) if isinstance(place, dict) else {}
+        known_props = _custom_place_prop_names(place) if isinstance(place, dict) else set()
+        all_props: set[str] = set()
+        all_events: list[dict[str, Any]] = []
+        all_cues: set[str] = set()
+        all_vfx: list[dict[str, Any]] = []
+        all_interactions: list[dict[str, Any]] = []
+        actual_cues = {str(cue).strip() for cue in (shot.get("sfx", []) or [])}
+        actual_vfx = shot.get("vfx", []) or []
+        actors = {str(actor.get("who")): actor for actor in (shot.get("actors", []) or []) if isinstance(actor, dict)}
+        shot_duration = float(shot["t1"]) - float(shot["t0"])
+
+        for row in proof_rows:
+            if not isinstance(row, dict):
+                raise SystemExit(f"Blocky 3D shot {index} screen_proof rows must be objects.")
+            claim = str(row.get("claim", "")).strip()
+            visible = str(row.get("visual", "")).strip()
+            if not claim or _proof_text(claim) not in _proof_text(text):
+                raise SystemExit(f"Blocky 3D shot {index} has a screen_proof claim that is not in its spoken line.")
+            if len(visible) < 12:
+                raise SystemExit(f"Blocky 3D shot {index} needs a concrete visual description for each screen_proof claim.")
+            props = row.get("props", []) or []
+            if not isinstance(props, list):
+                raise SystemExit(f"Blocky 3D shot {index} screen_proof props must be a list of story prop names.")
+            all_props.update(str(name) for name in props)
+            if known_props:
+                unknown = sorted(set(str(name) for name in props) - known_props)
+                if unknown:
+                    raise SystemExit(f"Blocky 3D shot {index} screen_proof names props not built in its set: {', '.join(unknown)}.")
+            for name in props:
+                if str(name) in things and str(name) not in known_props:
+                    raise SystemExit(f"Blocky 3D shot {index} mentions custom thing {name!r} without placing it in the set.")
+
+            events = row.get("events", []) or []
+            if not isinstance(events, list):
+                raise SystemExit(f"Blocky 3D shot {index} screen_proof events must be a list.")
+            for event in events:
+                if not isinstance(event, dict):
+                    raise SystemExit(f"Blocky 3D shot {index} screen_proof events must be objects.")
+                who, anim = str(event.get("who", "")), str(event.get("anim", ""))
+                if who not in actors:
+                    raise SystemExit(f"Blocky 3D shot {index} screen_proof action names actor {who!r}, who is not in the shot.")
+                if anim not in supported_animations:
+                    raise SystemExit(f"Blocky 3D shot {index} uses unsupported animation {anim!r} in screen_proof.")
+                at = event.get("at")
+                if not isinstance(at, (int, float)) or at < 0 or at > shot_duration:
+                    raise SystemExit(f"Blocky 3D shot {index} action time must be a shot-local second inside the shot.")
+                actor = actors[who]
+                current = str(actor.get("anim", "idle"))
+                for event_time, event_anim in actor.get("animAt", []) or []:
+                    if float(event_time) <= float(at):
+                        current = str(event_anim)
+                if current != anim:
+                    raise SystemExit(
+                        f"Blocky 3D shot {index} says {who} performs {anim} at {at:.2f}s, but the scheduled pose is {current}."
+                    )
+                all_events.append(event)
+
+            cues = row.get("sfx", []) or []
+            if not isinstance(cues, list):
+                raise SystemExit(f"Blocky 3D shot {index} screen_proof sfx must be a list of timed cue names.")
+            for cue in cues:
+                cue = str(cue).strip()
+                name = cue.partition("@")[0]
+                if cue not in actual_cues:
+                    raise SystemExit(f"Blocky 3D shot {index} screen_proof cue {cue!r} is not scheduled in the shot.")
+                if name not in supported_sfx:
+                    raise SystemExit(f"Blocky 3D shot {index} uses unsupported sound effect {name!r}.")
+                if name.startswith("sfxkit_") and "@" not in cue:
+                    raise SystemExit(f"Blocky 3D shot {index} must give {name} an action time such as {name}@0.65.")
+                all_cues.add(cue)
+
+            vfx = row.get("vfx", []) or []
+            if not isinstance(vfx, list):
+                raise SystemExit(f"Blocky 3D shot {index} screen_proof vfx must be a list of timed visual-effect names.")
+            for effect in vfx:
+                if not isinstance(effect, dict):
+                    raise SystemExit(f"Blocky 3D shot {index} screen_proof vfx rows must be objects.")
+                kind = str(effect.get("kind", ""))
+                at = effect.get("at")
+                if kind not in supported_vfx:
+                    raise SystemExit(f"Blocky 3D shot {index} uses unsupported visual effect {kind!r}.")
+                if not isinstance(at, (int, float)) or at < 0 or at > shot_duration:
+                    raise SystemExit(f"Blocky 3D shot {index} visual-effect time must be a shot-local second inside the shot.")
+                matching = [item for item in actual_vfx if isinstance(item, dict) and str(item.get("kind")) == kind]
+                if not any(abs(float(item.get("at", 0.0)) - float(at)) <= 0.03 for item in matching):
+                    raise SystemExit(f"Blocky 3D shot {index} screen_proof effect {kind!r} at {at:.2f}s is not scheduled in the shot.")
+                all_vfx.append(effect)
+
+            interactions = row.get("interactions", []) or []
+            if not isinstance(interactions, list):
+                raise SystemExit(f"Blocky 3D shot {index} screen_proof interactions must be a list.")
+            for interaction in interactions:
+                if not isinstance(interaction, dict):
+                    raise SystemExit(f"Blocky 3D shot {index} screen_proof interactions must be objects.")
+                kind = str(interaction.get("kind", ""))
+                if kind not in {"pass_through", "contact", "launch", "landmark"}:
+                    raise SystemExit(f"Blocky 3D shot {index} has unsupported interaction proof {kind!r}.")
+                if not str(interaction.get("prop", "")).strip():
+                    raise SystemExit(f"Blocky 3D shot {index} interaction proof needs a named prop.")
+                all_interactions.append(interaction)
+
+        text_l = text.casefold()
+        animations = {str(event.get("anim")) for event in all_events}
+        cue_names = {cue.partition("@")[0] for cue in all_cues}
+        effect_names = {str(effect.get("kind")) for effect in all_vfx}
+        interaction_kinds = {str(item.get("kind")) for item in all_interactions}
+
+        def actor_pose_at(actor: dict[str, Any], at: float) -> str:
+            pose = str(actor.get("anim", "idle"))
+            for event_time, event_anim in actor.get("animAt", []) or []:
+                if float(event_time) <= at:
+                    pose = str(event_anim)
+            return pose
+
+        def actor_xy_at(actor: dict[str, Any], at: float) -> tuple[float, float]:
+            start = actor.get("at", [0.0, 0.0])
+            end = actor.get("walkTo", start)
+            fraction = max(0.0, min(1.0, at / max(shot_duration, 0.01)))
+            return (float(start[0]) + (float(end[0]) - float(start[0])) * fraction,
+                    float(start[1]) + (float(end[1]) - float(start[1])) * fraction)
+
+        for interaction in all_interactions:
+            kind = str(interaction["kind"])
+            prop_name = str(interaction["prop"])
+            prop = place_prop_specs.get(prop_name)
+            if prop is None:
+                raise SystemExit(f"Blocky 3D shot {index} interaction references {prop_name!r}, which is not a named prop in its set.")
+            if prop_name not in all_props:
+                raise SystemExit(f"Blocky 3D shot {index} interaction prop {prop_name!r} is not listed in screen_proof.props.")
+
+            if kind == "pass_through":
+                who = str(interaction.get("who", ""))
+                actor = actors.get(who)
+                if actor is None:
+                    raise SystemExit(f"Blocky 3D shot {index} pass-through proof references missing actor {who!r}.")
+                if prop["kind"] != "door" or prop["options"].get("open") is not True:
+                    raise SystemExit(f"Blocky 3D shot {index}: {who} cannot pass through {prop_name}; the named doorway must be visibly open.")
+                if "from" not in interaction or "to" not in interaction:
+                    raise SystemExit(f"Blocky 3D shot {index} pass-through proof needs from/to path coordinates.")
+                path_from, path_to = interaction["from"], interaction["to"]
+                if (len(path_from) != 2 or len(path_to) != 2 or len(actor.get("at", [])) != 2
+                        or len(actor.get("walkTo", [])) != 2):
+                    raise SystemExit(f"Blocky 3D shot {index} pass-through proof needs two-dimensional actor and path positions.")
+                if any(abs(float(a) - float(b)) > 0.05 for a, b in zip(path_from, actor["at"])) or any(
+                    abs(float(a) - float(b)) > 0.05 for a, b in zip(path_to, actor["walkTo"])
+                ):
+                    raise SystemExit(f"Blocky 3D shot {index} pass-through proof path must match {who}'s authored at/walkTo route.")
+                angle = math.radians(float(prop["yaw"]))
+
+                def door_local(point: list[float]) -> tuple[float, float]:
+                    dx, dy = float(point[0]) - prop["x"], float(point[1]) - prop["y"]
+                    return (math.cos(angle) * dx + math.sin(angle) * dy,
+                            -math.sin(angle) * dx + math.cos(angle) * dy)
+
+                start_x, start_y = door_local(path_from)
+                end_x, end_y = door_local(path_to)
+                # A route must carry the whole character through the doorway depth, not
+                # merely cross the door's center plane while still intersecting its frame.
+                doorway_clearance = 0.85
+                if not (start_y <= -doorway_clearance and end_y >= doorway_clearance):
+                    raise SystemExit(
+                        f"Blocky 3D shot {index} route for {who} must start in front of and finish fully behind the open door."
+                    )
+                fraction = -start_y / (end_y - start_y)
+                cross_x = start_x + (end_x - start_x) * fraction
+                # The built doorway opening is 3.8 studs wide and the blocky R6
+                # character is about 3 studs wide. Keep the character centered so
+                # neither shoulder clips a jamb while it crosses.
+                if abs(cross_x) > 0.35:
+                    raise SystemExit(
+                        f"Blocky 3D shot {index} route for {who} clips the doorway frame; center the actor in the clear opening."
+                    )
+                cross_time = fraction * shot_duration
+                if abs(float(interaction.get("at", -100)) - cross_time) > 0.15:
+                    raise SystemExit(f"Blocky 3D shot {index} pass-through time does not match the route crossing.")
+                if actor_pose_at(actor, cross_time) not in {"run", "walk"}:
+                    raise SystemExit(f"Blocky 3D shot {index} needs a walk/run pose while {who} crosses the doorway.")
+                if not any(str(event.get("who")) == who and str(event.get("anim")) in {"run", "walk"} for event in all_events):
+                    raise SystemExit(f"Blocky 3D shot {index} needs screen proof for {who}'s movement through the doorway.")
+                if not re.search(r"\b(?:cross|passes|runs|walks|moves|goes|rushes|sprints)\b",
+                                 str(interaction.get("visual", "")).casefold()):
+                    raise SystemExit(f"Blocky 3D shot {index} pass-through proof must describe crossing the open frame.")
+
+            elif kind == "contact":
+                who = str(interaction.get("who", ""))
+                actor = actors.get(who)
+                at = float(interaction.get("at", -100))
+                pose = str(interaction.get("pose", ""))
+                if actor is None or not 0 <= at <= shot_duration:
+                    raise SystemExit(f"Blocky 3D shot {index} contact proof needs a shot actor and in-range time.")
+                if pose not in {"slap", "knock", "throw", "catch"} or actor_pose_at(actor, at) != pose:
+                    raise SystemExit(f"Blocky 3D shot {index} contact time needs the matching slap/knock/throw/catch pose.")
+                if not any(str(event.get("who")) == who and str(event.get("anim")) == pose
+                           and abs(float(event.get("at", -100)) - at) <= 0.15 for event in all_events):
+                    raise SystemExit(f"Blocky 3D shot {index} contact proof needs the matching timed actor action.")
+                starts = [float(event_time) for event_time, event_anim in actor.get("animAt", []) or []
+                          if str(event_anim) == pose and float(event_time) <= at]
+                expected_phase = contact_pose_peak[pose]
+                if not starts or abs((at - max(starts)) - expected_phase) > 0.09:
+                    start_at = at - expected_phase
+                    raise SystemExit(
+                        f"Blocky 3D shot {index} must start {pose} about {expected_phase:.2f}s before contact; "
+                        f"set {who} animAt near {start_at:.2f}s and keep the contact/VFX/SFX at {at:.2f}s."
+                    )
+                actor_x, actor_y = actor_xy_at(actor, at)
+                if prop["kind"] == "door":
+                    angle = math.radians(float(prop["yaw"]))
+                    dx, dy = actor_x - prop["x"], actor_y - prop["y"]
+                    local_x = math.cos(angle) * dx + math.sin(angle) * dy
+                    local_y = -math.sin(angle) * dx + math.cos(angle) * dy
+                    if abs(local_x) > 2.3 or abs(local_y) > 1.6:
+                        raise SystemExit(
+                            f"Blocky 3D shot {index} {who} is outside contact reach of {prop_name}; move the character up to the door."
+                        )
+                    if re.search(r"\b(?:locked|closed|shut)\b", text_l) and prop["options"].get("open") is True:
+                        raise SystemExit(
+                            f"Blocky 3D shot {index} calls {prop_name} locked/closed, but the set builds it visibly open."
+                        )
+                else:
+                    distance = math.hypot(actor_x - prop["x"], actor_y - prop["y"])
+                    if distance > 1.6:
+                        raise SystemExit(f"Blocky 3D shot {index} {who} is {distance:.1f} studs from {prop_name}; the action would miss the prop.")
+                if not re.search(r"\b(?:contacts?|strikes?|slaps?|hits?|knocks?|meets?)\b",
+                                 str(interaction.get("visual", "")).casefold()):
+                    raise SystemExit(f"Blocky 3D shot {index} contact proof must describe the actor touching the named prop.")
+
+            elif kind == "landmark":
+                who = str(interaction.get("who", ""))
+                actor = actors.get(who)
+                at = float(interaction.get("at", -100))
+                if actor is None or prop_name != "spawn_pad" or prop["kind"] != "spawn_pad":
+                    raise SystemExit(f"Blocky 3D shot {index} landmark proof must place a named actor on the built spawn_pad.")
+                if not 0 <= at <= shot_duration:
+                    raise SystemExit(f"Blocky 3D shot {index} landmark time must fall inside the shot.")
+                actor_x, actor_y = actor_xy_at(actor, at)
+                if math.hypot(actor_x - prop["x"], actor_y - prop["y"]) > 1.6:
+                    raise SystemExit(f"Blocky 3D shot {index} places {who} away from the spawn pad it is narrated to appear on.")
+                if not re.search(r"\b(?:appears?|reappears?|pops? back|returns?|spawns?)\b",
+                                 str(interaction.get("visual", "")).casefold()):
+                    raise SystemExit(f"Blocky 3D shot {index} landmark proof must describe the character arriving on the spawn pad.")
+
+            elif kind == "launch":
+                move = next((item for item in shot.get("propMoves", []) if str(item.get("name")) == prop_name), None)
+                if move is None or float(move.get("arc_height", 0.0)) <= 0 or max(
+                    abs(float(value)) for value in move.get("spin", [0, 0, 0])
+                ) < 360:
+                    raise SystemExit(f"Blocky 3D shot {index} launch proof needs named prop motion with an arc and a full spin.")
+                if not any(isinstance(effect, dict) and effect.get("kind") in {"comet", "energy_trail"} for effect in actual_vfx) or not any(
+                    str(cue).partition("@")[0] in {"whoosh_up", "sfxkit_whoosh_fast_hard"} for cue in actual_cues
+                ):
+                    raise SystemExit(f"Blocky 3D shot {index} launch proof needs a travelling comet/energy trail and timed rising whoosh.")
+
+        doorway_crossing_claim = re.search(
+            r"\b(?:through|into|inside|across)\b.{0,40}\b(?:door|doorway|portal|gate)\b"
+            r"|\b(?:door|doorway|portal|gate)\b.{0,40}\b(?:through|inside|across)\b"
+            r"|\b(?:enters?|exits?|passes?)\b.{0,24}\b(?:door|doorway|portal|gate)\b",
+            text_l,
+        )
+        if doorway_crossing_claim and "pass_through" not in interaction_kinds:
+            raise SystemExit(f"Blocky 3D shot {index} says a character passes through a doorway but lacks open-door/path interaction proof.")
+        physical_contact_claim = re.search(
+            r"\b(?:slaps?|smacks?|knocks?|kicks?|punch(?:es|ed)?|strikes?|bumps?|collides?)\b"
+            r"|\b(?:hits?)\s+(?:the|a|an)\s+(?:locked\s+)?(?:door|exit|wall|frame|crate|box|button|prop|object)\b",
+            text_l,
+        )
+        if physical_contact_claim and "contact" not in interaction_kinds:
+            raise SystemExit(f"Blocky 3D shot {index} narrates physical contact but lacks actor-to-prop contact proof.")
+        if re.search(r"\b(?:rockets?|launches?|flies|fly|rises|rising)\b", text_l) and "launch" not in interaction_kinds:
+            raise SystemExit(f"Blocky 3D shot {index} describes a flying prop but lacks launch/arc/spin proof.")
+        if re.search(r"\b(?:gold|yellow)\s+(?:door|portal|a)\b", text_l) and "door_a" not in all_props:
+            raise SystemExit(f"Blocky 3D shot {index} mentions gold but does not show door_a.")
+        if re.search(r"\bgreen\s+(?:door|portal|b)\b", text_l) and "door_b" not in all_props:
+            raise SystemExit(f"Blocky 3D shot {index} mentions green but does not show door_b.")
+        if re.search(r"\b(?:a or b|door a.{0,30}door b|which door)\b", text_l) and not {"door_a", "door_b"}.issubset(all_props):
+            raise SystemExit(f"Blocky 3D shot {index} asks viewers to choose A/B without showing both doors in the shot.")
+        if re.search(r"\bspawn\b", text_l) and "spawn_pad" not in all_props:
+            raise SystemExit(f"Blocky 3D shot {index} says spawn but does not show the spawn_pad landmark.")
+        if re.search(r"\b(?:appears?|reappears?|pops? back|returns?|spawns?)\b.{0,45}\bspawn\b", text_l) and not any(
+            item.get("kind") == "landmark" and item.get("prop") == "spawn_pad" for item in all_interactions
+        ):
+            raise SystemExit(f"Blocky 3D shot {index} narrates a spawn/return but does not prove the actor lands on the spawn pad.")
+        if re.search(r"\b(?:whistle|chirp)\w*\b", text_l):
+            if (not any("whistle" in prop.casefold() for prop in all_props) or "whistle" not in cue_names
+                    or not effect_names.intersection({"sound_rings", "signal_arrows"})):
+                raise SystemExit(f"Blocky 3D shot {index} mentions a whistle without its visible prop, timed whistle sound, and directional cue.")
+        if re.search(r"\bslaps?\b", text_l) and ("slap" not in animations or "slap" not in cue_names or "burst" not in effect_names):
+            raise SystemExit(f"Blocky 3D shot {index} says slap but needs the slap pose, impact burst, and timed slap sound.")
+        if re.search(r"\b(?:smacks?|hits?)\s+(?:the|a|an)\s+(?:locked\s+)?(?:(?:gold|green|red|blue)\s+)?(?:door|exit|wall)\b", text_l):
+            if "knock" not in animations or not ({"door_hit", "impact", "sfxkit_impact_heavy_hard"} & cue_names) or not ({"burst", "ring"} & effect_names):
+                raise SystemExit(f"Blocky 3D shot {index} says a character hits a door but needs the knock pose, impact sound, and impact effect.")
+        if re.search(r"\b(?:runs?|sprints?|chases?|races?)\b", text_l) and not any(
+            str(actor.get("anim", "")) == "run" or any(str(item[1]) == "run" for item in (actor.get("animAt", []) or []) if len(item) > 1)
+            for actor in actors.values()
+        ):
+            raise SystemExit(f"Blocky 3D shot {index} narrates a chase/run without a scheduled run animation.")
+        if re.search(r"\b(?:runs?|sprints?|chases?|races?)\b", text_l) and not any(
+            isinstance(actor.get("walkTo"), (list, tuple))
+            and len(actor.get("walkTo")) == 2
+            and len(actor.get("at", [])) == 2
+            and math.dist(tuple(map(float, actor["at"])), tuple(map(float, actor["walkTo"]))) >= 1.0
+            for actor in actors.values()
+        ):
+            raise SystemExit(f"Blocky 3D shot {index} says the character runs/chases but has no meaningful travel path.")
+        if re.search(r"\b(?:runs?|sprints?|chases?|races?)\b", text_l) and "dash" not in effect_names:
+            raise SystemExit(f"Blocky 3D shot {index} narrates a chase/run without a timed dash effect.")
+
+
+def _storyboard_review_files(slot: dict[str, Any]) -> tuple[Path, list[Path]]:
+    if slot.get("theme") in ("blocky-3d", "monochrome"):
+        project = ROOT / slot.get("renderer_project", "")
+        return project / "stills_sheet.jpg", [project / "shots.py", project / "timed.json"]
+    if slot.get("theme") == "what-if":
+        slug = slot.get("renderer_slug") or slugify(slot.get("title", ""))
+        episode = ROOT / "studio" / "src" / "episodes" / slug
+        studio_out = ROOT / "studio" / "out" / slug
+        return studio_out / "storyboard.jpg", [
+            episode / "episode.json",
+            episode / "shots.tsx",
+            episode / "index.tsx",
+            episode / "timeline.json",
+            ROOT / "studio" / "src" / "episodes" / "index.ts",
+        ]
+    raise SystemExit(f"Unsupported storyboard theme: {slot.get('theme')}")
+
+
+def _fingerprint_files(paths: list[Path]) -> str:
+    digest = hashlib.sha256()
+    for path in paths:
+        if not path.is_file():
+            raise SystemExit(f"Storyboard review input is missing: {path}")
+        digest.update(str(path.relative_to(ROOT)).encode("utf-8"))
+        digest.update(b"\0")
+        digest.update(path.read_bytes())
+        digest.update(b"\0")
+    return digest.hexdigest()
+
+
+def _current_storyboard_fingerprint(slot: dict[str, Any]) -> tuple[Path, str, str]:
+    board, sources = _storyboard_review_files(slot)
+    if not board.is_file():
+        raise SystemExit(f"Storyboard is missing: {board}. Run prepare again.")
+    source_fingerprint = _fingerprint_files(sources)
+    full_fingerprint = _fingerprint_files([board, *sources])
+    return board, source_fingerprint, full_fingerprint
+
+
+def run(command: list[str], cwd: Path, env: dict[str, str] | None = None) -> None:
+    print("$", " ".join(command), flush=True)
+    started = time.monotonic()
+    subprocess.run(command, cwd=cwd, env=env, check=True)
+    print(f"   completed in {time.monotonic() - started:.1f}s", flush=True)
+
+
+def command_prepare(args: argparse.Namespace) -> None:
+    prepare_started = time.monotonic()
+    batch_dir, manifest = load_batch(args.batch_id)
+    topic = locate_topic(manifest, args.topic)
+    slot = locate_slot(topic, args.slot)
+    if slot["status"] not in ("approved", "storyboard_ready"):
+        raise SystemExit("Approve the pitch first, or revise the current storyboard before preparing.")
+    eta = _stage_eta(manifest, slot, "prepare_duration_seconds")
+    if eta is None:
+        print("No comparable local preparation timing yet. Voice and storyboard preparation is roughly 2–10 minutes per video; the first run is unbenchmarked.")
+    else:
+        print(f"Estimated voice and storyboard preparation time from comparable local videos: about {eta / 60:.1f} minutes (rough estimate).")
+    folder = slot_path(batch_dir, topic, slot)
+    py = sys.executable
+    approved_script = folder / "script.md"
+    validate_spoken_cta(approved_script, slot.get("call_to_action"))
+    if slot["theme"] in ("blocky-3d", "monochrome"):
+        project = folder / "project"
+        shots_path = project / "shots.py"
+        if not shots_path.is_file():
+            raise SystemExit(f"Write the story-specific shot plan first: {shots_path}")
+        starter_path = TEMPLATE / "shots.py"
+        shot_source = shots_path.read_text(encoding="utf-8")
+        if (starter_path.is_file() and shots_path.read_bytes() == starter_path.read_bytes()) or "STARTER_TEMPLATE = True" in shot_source:
+            raise SystemExit(
+                f"{shots_path} is still marked as the starter scene. Replace it with the approved story's shot plan."
+            )
+        env = dict(**__import__("os").environ)
+        env["SHORT_STUDIO_VOICE"] = "system"
+        run([py, str(ROOT / "kit" / "run.py"), str(project), "shots"], ROOT, env)
+        spec_path = project / "timed.json"
+        spec = read_json(spec_path)
+        validate_blocky_story_plan(spec, topic, slot)
+        validate_blocky_script_consistency(approved_script, spec)
+        target_duration = slot.get("target_duration_seconds")
+        if target_duration is not None:
+            validate_duration(float(spec.get("dur", 0)), int(target_duration), "Blender scene")
+        spec["theme"] = slot["theme"]
+        spec["visual_treatment"] = slot.get("visual_treatment", "character-led")
+        spec.setdefault("ui_style", "roblox_cinema")
+        spec["hook"] = slot.get("hook", "")
+        spec["hook_highlights"] = slot.get("hook_highlights", [])
+        spec["hook_duration_seconds"] = 1.5
+        spec["cta"] = slot.get("call_to_action", "")
+        spec["cta_duration_seconds"] = 3.5
+        write_json(spec_path, spec)
+        run([py, str(ROOT / "kit" / "run.py"), str(project), "voice", "compile", "stills"], ROOT, env)
+        validate_blocky_voice_sync(project, approved_script, int(target_duration) if target_duration else None)
+        slot["renderer_project"] = str(project.relative_to(ROOT)).replace("\\", "/")
+    elif slot["theme"] == "what-if":
+        slug = slot.get("renderer_slug") or slugify(slot["title"])
+        ep = ROOT / "studio" / "src" / "episodes" / slug
+        if not (ep / "episode.json").is_file() or not (ep / "shots.tsx").is_file() or not (ep / "index.tsx").is_file():
+            raise SystemExit(f"Complete the vertical Remotion episode files first under {ep}")
+        studio = ROOT / "studio"
+        registry_path = studio / "src" / "episodes" / "index.ts"
+        if not registry_path.is_file():
+            raise SystemExit(f"Episode registry is missing: {registry_path}")
+        registry = registry_path.read_text(encoding="utf-8")
+        import_match = re.search(
+            r"import\s+\{\s*([A-Za-z_$][\w$]*)\s*\}\s+from\s+['\"]\./" + re.escape(slug) + r"['\"]",
+            registry,
+        )
+        episode_list = re.search(r"export\s+const\s+EPISODES\s*=\s*\[([^\]]*)\]", registry, re.S)
+        if not import_match or not episode_list or import_match.group(1) not in re.findall(r"[A-Za-z_$][\w$]*", episode_list.group(1)):
+            raise SystemExit(
+                f"Register {slug} in {registry_path}: import its named episode and add it to EPISODES."
+            )
+        episode_path = ep / "episode.json"
+        episode = read_json(episode_path)
+        episode["hook"] = slot.get("hook", "")
+        episode["hook_highlights"] = slot.get("hook_highlights", [])
+        episode["hook_duration_seconds"] = 1.5
+        episode["cta"] = slot.get("call_to_action", "")
+        episode["cta_duration_seconds"] = 3.5
+        write_json(episode_path, episode)
+        run([py, str(ROOT / "scripts" / "local_tts.py"), "--episode", slug], ROOT)
+        run([py, str(ROOT / "scripts" / "plan.py"), slug], studio)
+        validate_whatif_script_sync(approved_script, ep)
+        target_duration = slot.get("target_duration_seconds")
+        timeline = read_json(ep / "timeline.json")
+        if target_duration is not None:
+            timeline_fps = float(timeline.get("fps", 0))
+            if timeline_fps <= 0:
+                raise SystemExit(f"Invalid timeline fps in {ep / 'timeline.json'}")
+            validate_duration(float(timeline.get("total", 0)) / timeline_fps, int(target_duration), "Remotion timeline")
+        npm = shutil.which("npm.cmd") or shutil.which("npm") or "npm"
+        run([npm, "run", "typecheck"], studio)
+        run(["node", str(ROOT / "scripts" / "stills.mjs"), slug], studio)
+        run(["node", str(ROOT / "scripts" / "stills.mjs"), slug, "--frames", "0"], studio)
+        run([py, str(ROOT / "scripts" / "board.py"), slug], studio)
+        slot["renderer_slug"] = slug
+    else:
+        raise SystemExit(f"Unsupported theme: {slot['theme']}")
+    _, source_fingerprint, _ = _current_storyboard_fingerprint(slot)
+    slot["status"] = "storyboard_ready"
+    slot["prepare_duration_seconds"] = round(time.monotonic() - prepare_started, 1)
+    slot["prepared_at"] = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    slot["storyboard_reviewed"] = False
+    slot["prepared_source_fingerprint"] = source_fingerprint
+    slot.pop("storyboard_fingerprint", None)
+    slot.pop("storyboard_reviewed_at", None)
+    for key in ("preview", "preview_audio_qa", "previewed_at", "preview_duration_seconds",
+                "preview_reviewed", "preview_fingerprint", "preview_decision", "preview_decision_at"):
+        slot.pop(key, None)
+    write_json(batch_dir / "manifest.json", manifest)
+    board, _, _ = _current_storyboard_fingerprint(slot)
+    print(f"Storyboard ready for {topic['id']} short {args.slot:02d}: {board}")
+    print(f"Voice and storyboard preparation took {slot['prepare_duration_seconds'] / 60:.1f} minutes.")
+    print("Show the storyboard to the user. Render stays blocked until review-storyboard --decision approve.")
+
+
+def command_review_storyboard(args: argparse.Namespace) -> None:
+    batch_dir, manifest = load_batch(args.batch_id)
+    topic = locate_topic(manifest, args.topic)
+    slot = locate_slot(topic, args.slot)
+    if slot["status"] not in ("storyboard_ready", "prepared"):
+        raise SystemExit(
+            f"Slot status is '{slot['status']}', expected storyboard_ready. Run prepare first."
+        )
+    board, source_fingerprint, full_fingerprint = _current_storyboard_fingerprint(slot)
+    prepared_source = slot.get("prepared_source_fingerprint")
+    if prepared_source and prepared_source != source_fingerprint:
+        if args.decision == "approve":
+            raise SystemExit(
+                "The shot plan or render source changed after the storyboard was built. "
+                "Run review-storyboard --decision revise, then prepare and review the new storyboard."
+            )
+        slot["status"] = "approved"
+        slot["storyboard_reviewed"] = False
+        slot.pop("storyboard_fingerprint", None)
+        slot.pop("prepared_source_fingerprint", None)
+        slot.pop("storyboard_reviewed_at", None)
+        slot["storyboard_decision"] = "revise"
+        slot["storyboard_decision_at"] = datetime.now(timezone.utc).isoformat(timespec="seconds")
+        write_json(batch_dir / "manifest.json", manifest)
+        print("Storyboard marked for revision because its source changed. Run prepare to build a matching preview.")
+        return
+    if args.decision == "approve":
+        slot["status"] = "prepared"
+        slot["storyboard_reviewed"] = True
+        slot["storyboard_fingerprint"] = full_fingerprint
+        slot["prepared_source_fingerprint"] = source_fingerprint
+        slot["storyboard_reviewed_at"] = datetime.now(timezone.utc).isoformat(timespec="seconds")
+        print(f"Storyboard approved for {topic['id']} short {args.slot:02d}: {board}")
+    else:
+        slot["status"] = "approved"
+        slot["storyboard_reviewed"] = False
+        slot.pop("storyboard_fingerprint", None)
+        slot.pop("prepared_source_fingerprint", None)
+        slot.pop("storyboard_reviewed_at", None)
+        print(f"Storyboard needs changes for {topic['id']} short {args.slot:02d}; edit the plan, then prepare again.")
+    slot["storyboard_decision"] = args.decision
+    write_json(batch_dir / "manifest.json", manifest)
+
+
+def _approved_render_slot(args: argparse.Namespace) -> tuple[Path, dict[str, Any], dict[str, Any], dict[str, Any], Path]:
+    batch_dir, manifest = load_batch(args.batch_id)
+    topic = locate_topic(manifest, args.topic)
+    slot = locate_slot(topic, args.slot)
+    if slot["status"] != "prepared":
+        raise SystemExit("Rendering is blocked until the storyboard has been explicitly approved.")
+    expected_fingerprint = slot.get("storyboard_fingerprint")
+    if not expected_fingerprint:
+        raise SystemExit("Review this storyboard first with review-storyboard --decision approve.")
+    _, _, current_fingerprint = _current_storyboard_fingerprint(slot)
+    if current_fingerprint != expected_fingerprint:
+        raise SystemExit(
+            "The storyboard or its source files changed after approval. Review the current storyboard again "
+            "before rendering."
+        )
+    return batch_dir, manifest, topic, slot, slot_path(batch_dir, topic, slot)
+
+
+def _narration_source(slot: dict[str, Any]) -> Path:
+    if slot["theme"] in ("blocky-3d", "monochrome"):
+        return ROOT / slot["renderer_project"] / "vo.wav"
+    slug = slot.get("renderer_slug") or slugify(slot.get("title", ""))
+    return ROOT / "studio" / "public" / slug / "voice.wav"
+
+
+def command_preview(args: argparse.Namespace) -> None:
+    batch_dir, manifest, topic, slot, folder = _approved_render_slot(args)
+    preview_started = time.monotonic()
+    eta = _stage_eta(manifest, slot, "preview_duration_seconds")
+    if eta is None:
+        print("No comparable local preview timing yet. This half-resolution 540x960 preview is unbenchmarked on this computer.")
+    else:
+        print(f"Estimated preview time from comparable local videos: about {eta / 60:.1f} minutes (rough estimate).")
+    py = sys.executable
+    if slot["theme"] in ("blocky-3d", "monochrome"):
+        project = ROOT / slot["renderer_project"]
+        run([py, str(ROOT / "kit" / "run.py"), str(project), "preview"], ROOT)
+        source = project / "out" / f"{project.name}-preview.mp4"
+    else:
+        slug = slot["renderer_slug"]
+        run([py, str(ROOT / "scripts" / "master.py"), slug, "--preview"], ROOT / "studio")
+        source = ROOT / "studio" / "out" / slug / f"{slug}-preview-final.mp4"
+    if not source.is_file():
+        raise SystemExit(f"Expected review preview was not created: {source}")
+    qa = folder / "audio-qa-preview.md"
+    qa_command = [py, str(ROOT / "scripts" / "quality" / "audio_qa.py"), str(source),
+                  "--report", str(qa), "--voice-source", str(_narration_source(slot))]
+    print("$", " ".join(qa_command), flush=True)
+    qa_started = time.monotonic()
+    qa_result = subprocess.run(qa_command, cwd=ROOT, check=False)
+    print(f"   audio check completed in {time.monotonic() - qa_started:.1f}s", flush=True)
+    destination = OUTPUT_ROOT / manifest["id"] / topic["id"] / f"short-{args.slot:02d}"
+    destination.mkdir(parents=True, exist_ok=True)
+    preview_target = destination / "preview.mp4"
+    shutil.copy2(source, preview_target)
+    shutil.copy2(qa, destination / "audio-qa-preview.md")
+    slot["preview"] = str(preview_target.relative_to(ROOT)).replace("\\", "/")
+    slot["preview_audio_qa"] = str((destination / "audio-qa-preview.md").relative_to(ROOT)).replace("\\", "/")
+    slot["previewed_at"] = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    slot["preview_duration_seconds"] = round(time.monotonic() - preview_started, 1)
+    slot["preview_reviewed"] = False
+    slot.pop("preview_fingerprint", None)
+    write_json(batch_dir / "manifest.json", manifest)
+    print(f"Preview ready: {preview_target}; preview render took {slot['preview_duration_seconds']:.1f}s")
+    if qa_result.returncode:
+        print("Audio QA failed. You can still listen to diagnose it, but final rendering stays blocked until the audio is fixed and a new preview passes.")
+    print("Listen to the narration and check timing. If it is good and the audio report passes, run review-preview --decision approve. The 540x960 preview does not replace the 1080x1920 final render.")
+
+
+def _stage_eta(manifest: dict[str, Any], slot: dict[str, Any], duration_key: str) -> float | None:
+    theme = slot.get("theme")
+    target = float(slot.get("target_duration_seconds") or 0)
+    samples = []
+    for topic in manifest.get("topics", []):
+        for previous in topic.get("episodes", []):
+            if previous is slot or previous.get("theme") != theme:
+                continue
+            seconds = previous.get(duration_key)
+            duration = float(previous.get("target_duration_seconds") or 0)
+            if seconds and duration > 0:
+                samples.append(float(seconds) * target / duration)
+    return statistics.median(samples) if samples else None
+
+
+def _render_eta(manifest: dict[str, Any], slot: dict[str, Any]) -> float | None:
+    return _stage_eta(manifest, slot, "render_duration_seconds")
+
+
+def _current_preview_fingerprint(slot: dict[str, Any], require_pass: bool = True) -> str:
+    preview = ROOT / slot.get("preview", "")
+    report = ROOT / slot.get("preview_audio_qa", "")
+    if not preview.is_file() or not report.is_file():
+        raise SystemExit("Create the review preview first with preview, then listen to it.")
+    if require_pass and "**RESULT: PASS**" not in report.read_text(encoding="utf-8"):
+        raise SystemExit("Preview audio QA did not pass. Fix the narration/audio and create a fresh preview.")
+    return _fingerprint_files([preview, report, _narration_source(slot)])
+
+
+def command_review_preview(args: argparse.Namespace) -> None:
+    batch_dir, manifest = load_batch(args.batch_id)
+    topic = locate_topic(manifest, args.topic)
+    slot = locate_slot(topic, args.slot)
+    if slot.get("status") != "prepared":
+        raise SystemExit("Prepare and approve the storyboard before reviewing its audio preview.")
+    fingerprint = _current_preview_fingerprint(slot, require_pass=args.decision == "approve")
+    if args.decision == "approve":
+        slot["preview_reviewed"] = True
+        slot["preview_fingerprint"] = fingerprint
+        print("Preview approved. The final render is now available.")
+    else:
+        slot["status"] = "approved"
+        slot["preview_reviewed"] = False
+        slot.pop("preview_fingerprint", None)
+        slot.pop("storyboard_fingerprint", None)
+        slot.pop("prepared_source_fingerprint", None)
+        slot.pop("storyboard_reviewed_at", None)
+        print("Preview needs changes. Update the voice or shot plan, then prepare, review, and preview again.")
+    slot["preview_decision"] = args.decision
+    slot["preview_decision_at"] = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    write_json(batch_dir / "manifest.json", manifest)
+
+
+def command_render(args: argparse.Namespace) -> None:
+    batch_dir, manifest, topic, slot, folder = _approved_render_slot(args)
+    if not slot.get("preview_reviewed"):
+        raise SystemExit("Listen to the approved storyboard preview, then run review-preview --decision approve.")
+    current_preview = _current_preview_fingerprint(slot)
+    if current_preview != slot.get("preview_fingerprint"):
+        raise SystemExit("The preview or its audio report changed after approval. Review the current preview again.")
+    py = sys.executable
+    eta = _render_eta(manifest, slot)
+    if eta is None:
+        print("No comparable local render timing yet. A 30–60s, 60 fps short contains 1,800–3,600 frames; first blocky 3D renders can take tens of minutes and may approach 50 minutes on some computers.")
+    else:
+        print(f"Estimated render time from this batch's similar local renders: about {eta / 60:.1f} minutes (rough estimate).")
+    render_started = time.monotonic()
+    if slot["theme"] in ("blocky-3d", "monochrome"):
+        project = ROOT / slot["renderer_project"]
+        run([py, str(ROOT / "kit" / "run.py"), str(project), "render", "post"], ROOT)
+        source = project / "out" / f"{project.name}.mp4"
+    else:
+        slug = slot["renderer_slug"]
+        run([py, str(ROOT / "scripts" / "master.py"), slug], ROOT / "studio")
+        source = ROOT / "studio" / "out" / slug / f"{slug}-final.mp4"
+    if not source.is_file():
+        raise SystemExit(f"Expected render was not created: {source}")
+    slot["render_duration_seconds"] = round(time.monotonic() - render_started, 1)
+    target_duration = slot.get("target_duration_seconds")
+    if target_duration is not None:
+        measured = subprocess.run(
+            ["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "default=noprint_wrappers=1:nokey=1", str(source)],
+            check=True, capture_output=True, text=True,
+        )
+        validate_duration(float(measured.stdout.strip()), int(target_duration), "Rendered MP4")
+    qa = folder / "audio-qa.md"
+    run([py, str(ROOT / "scripts" / "quality" / "audio_qa.py"), str(source),
+         "--report", str(qa), "--voice-source", str(_narration_source(slot))], ROOT)
+    destination = OUTPUT_ROOT / manifest["id"] / topic["id"] / f"short-{args.slot:02d}"
+    destination.mkdir(parents=True, exist_ok=True)
+    target = destination / "final.mp4"
+    shutil.copy2(source, target)
+    for name in ("pitch.md", "script.md", "research.md", "post-caption.txt", "visual-plan.md", "treatment-scorecard.md", "audio-qa.md"):
+        if (folder / name).is_file():
+            shutil.copy2(folder / name, destination / name)
+    if slot["theme"] in ("blocky-3d", "monochrome"):
+        board = ROOT / slot["renderer_project"] / "stills_sheet.jpg"
+    else:
+        board = ROOT / "studio" / "out" / slot["renderer_slug"] / "storyboard.jpg"
+    if board.is_file():
+        shutil.copy2(board, destination / "storyboard.jpg")
+    if slot["theme"] == "what-if":
+        first_frame = ROOT / "studio" / "out" / slot["renderer_slug"] / "frames" / "f0000.png"
+        if first_frame.is_file():
+            shutil.copy2(first_frame, destination / "frame-one.png")
+    slot["status"] = "rendered"
+    slot["output"] = str(target.relative_to(ROOT)).replace("\\", "/")
+    slot["rendered_at"] = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    write_json(batch_dir / "manifest.json", manifest)
+    print(target)
+    print(f"Full render took {slot['render_duration_seconds'] / 60:.1f} minutes.")
+    print("One 1080x1920 H.264 file is ready for TikTok, Instagram Reels, YouTube Shorts, and Facebook Reels.")
+
+
+def command_status(args: argparse.Namespace) -> None:
+    _, manifest = load_batch(args.batch_id)
+    for topic in manifest["topics"]:
+        rows = ", ".join(f"{slot['slot']}:{slot['status']}" for slot in topic["episodes"])
+        print(f"{topic['id']} — {topic['title']} — {rows}")
+
+
+
+def command_add(args: argparse.Namespace) -> None:
+    batch_dir, manifest = load_batch(args.batch_id)
+    if args.count < 1:
+        raise SystemExit("--count must be at least 1.")
+    if args.topic.casefold() == "all":
+        topics = manifest["topics"]
+    else:
+        topics = [locate_topic(manifest, args.topic)]
+    if not TEMPLATE.is_dir():
+        raise SystemExit(f"Short template is missing: {TEMPLATE}")
+
+    planned = []
+    for topic in topics:
+        next_slot = max((slot["slot"] for slot in topic["episodes"]), default=0) + 1
+        for offset in range(args.count):
+            number = next_slot + offset
+            slot = {
+                "slot": number, "status": "empty", "theme": None, "theme_confirmed": False,
+                "renderer_slug": None, "target_duration_seconds": None, "hook_highlights": [],
+                "story_format": None, "format_confirmed": False, "visual_treatment": None, "visual_treatment_mode": "auto", "treatment_confirmed": True, "call_to_action": None,
+            }
+            folder = slot_path(batch_dir, topic, slot)
+            if folder.exists():
+                raise SystemExit(f"Refusing to overwrite an existing slot folder: {folder}")
+            planned.append((topic, slot, folder))
+
+    created = []
+    added = []
+    try:
+        for topic, slot, folder in planned:
+            folder.mkdir(parents=True, exist_ok=False)
+            created.append(folder)
+            slot["directory"] = str(folder.relative_to(ROOT)).replace("\\", "/")
+            shutil.copytree(TEMPLATE, folder / "project")
+            (folder / "README.md").write_text(
+                f"# {topic['title']} · short {slot['slot']:02d}\n\n"
+                "Research this new video from scratch. Ask the user for a theme and 30–60 second target first.\n",
+                encoding="utf-8",
+            )
+            topic["episodes"].append(slot)
+            added.append(f"{topic['id']} short {slot['slot']:02d}")
+        write_json(batch_dir / "manifest.json", manifest)
+    except Exception:
+        for topic, slot, folder in planned:
+            if slot in topic["episodes"]:
+                topic["episodes"].remove(slot)
+        for folder in reversed(created):
+            shutil.rmtree(folder, ignore_errors=True)
+        raise
+    print(f"Added {len(added)} slot(s): {', '.join(added)}")
+
+
+def command_set_format(args: argparse.Namespace) -> None:
+    batch_dir, manifest = load_batch(args.batch_id)
+    topic = locate_topic(manifest, args.topic)
+    slot = locate_slot(topic, args.slot)
+    if slot["status"] not in ("empty", "revise"):
+        raise SystemExit(f"Slot status is '{slot['status']}', expected empty or revise.")
+    if args.story_format not in STORY_FORMATS:
+        raise SystemExit(f"Format must be one of: {', '.join(STORY_FORMATS)}")
+    slot["story_format"] = args.story_format
+    slot["format_confirmed"] = True
+    slot["format_selected_at"] = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    write_json(batch_dir / "manifest.json", manifest)
+    print(f"Story format for {topic['id']} short {args.slot:02d} set to {args.story_format}.")
+
+
+def command_set_duration(args: argparse.Namespace) -> None:
+    batch_dir, manifest = load_batch(args.batch_id)
+    topic = locate_topic(manifest, args.topic)
+    slot = locate_slot(topic, args.slot)
+    if slot["status"] not in ("empty", "revise"):
+        raise SystemExit(f"Slot status is '{slot['status']}', expected empty or revise. Use revise to refresh the pitch first.")
+    if args.seconds < 30 or args.seconds > 60:
+        raise SystemExit("Target duration must be between 30 and 60 seconds.")
+    slot["target_duration_seconds"] = args.seconds
+    slot["duration_selected_at"] = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    write_json(batch_dir / "manifest.json", manifest)
+    print(f"Target duration for {topic['id']} short {args.slot:02d} set to {args.seconds}s.")
+
+
+def command_list(args: argparse.Namespace) -> None:
+    manifests = sorted(
+        BATCH_ROOT.glob("*/manifest.json"),
+        key=lambda path: path.stat().st_mtime,
+        reverse=True,
+    )
+    if not manifests:
+        print("No saved batches.")
+        return
+    for manifest_path in manifests:
+        manifest = read_json(manifest_path)
+        batch_id = manifest.get("id", manifest_path.parent.name)
+        print(f"{batch_id}  (created {manifest.get('created_at', 'unknown')})")
+        for topic in manifest.get("topics", []):
+            states = ", ".join(
+                f"{slot['slot']}:{slot['status']}" for slot in topic.get("episodes", [])
+            )
+            print(f"  {topic['id']} — {topic['title']} — {states}")
+
+
+def command_rename(args: argparse.Namespace) -> None:
+    batch_dir, manifest = load_batch(args.batch_id)
+    old_id = manifest["id"]
+    new_id = slugify(args.new_name)
+    if new_id == old_id:
+        print(f"Batch is already named '{old_id}'.")
+        return
+
+    target_dir = BATCH_ROOT / new_id
+    old_output_dir = OUTPUT_ROOT / old_id
+    new_output_dir = OUTPUT_ROOT / new_id
+    if target_dir.exists():
+        raise SystemExit(f"Batch already exists: {target_dir}")
+    if new_output_dir.exists():
+        raise SystemExit(f"An output folder already exists for '{new_id}': {new_output_dir}")
+
+    old_batch_prefix = f"production/batches/{old_id}"
+    new_batch_prefix = f"production/batches/{new_id}"
+    old_output_prefix = f"out/short-studio/{old_id}"
+    new_output_prefix = f"out/short-studio/{new_id}"
+    for topic in manifest.get("topics", []):
+        for slot in topic.get("episodes", []):
+            for key, old_prefix, new_prefix in (
+                ("directory", old_batch_prefix, new_batch_prefix),
+                ("renderer_project", old_batch_prefix, new_batch_prefix),
+                ("output", old_output_prefix, new_output_prefix),
+            ):
+                value = slot.get(key)
+                if isinstance(value, str) and (value == old_prefix or value.startswith(old_prefix + "/")):
+                    slot[key] = new_prefix + value[len(old_prefix):]
+    manifest["id"] = new_id
+
+    batch_dir.rename(target_dir)
+    output_moved = False
+    try:
+        if old_output_dir.exists():
+            old_output_dir.rename(new_output_dir)
+            output_moved = True
+        write_json(target_dir / "manifest.json", manifest)
+    except Exception:
+        if output_moved:
+            new_output_dir.rename(old_output_dir)
+        target_dir.rename(batch_dir)
+        raise
+    print(f"Renamed batch '{old_id}' to '{new_id}'. Existing queue and outputs were moved in place.")
+
+
+def command_set_theme(args: argparse.Namespace) -> None:
+    batch_dir, manifest = load_batch(args.batch_id)
+    topic = locate_topic(manifest, args.topic)
+    slot = locate_slot(topic, args.slot)
+    if slot["status"] not in ("empty", "revise"):
+        raise SystemExit(f"Slot status is '{slot['status']}', expected empty or revise. Use revise to refresh the pitch first.")
+    if args.theme not in STYLES:
+        raise SystemExit(f"Theme must be one of: {', '.join(STYLES)}")
+    folder = slot_path(batch_dir, topic, slot)
+    pitch_path = folder / "pitch.md"
+    if pitch_path.is_file():
+        pitch = pitch_path.read_text(encoding="utf-8")
+        theme_line = re.compile(r"(?m)^\*\*Theme:\*\* .+$")
+        if not theme_line.search(pitch):
+            raise SystemExit(f"Pitch has no theme line to update: {pitch_path}")
+        pitch_path.write_text(theme_line.sub(f"**Theme:** {args.theme}", pitch, count=1), encoding="utf-8")
+    slot.update({
+        "theme": args.theme,
+        "theme_confirmed": True,
+        "theme_selected_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+    })
+    write_json(batch_dir / "manifest.json", manifest)
+    print(f"Theme for {topic['id']} short {args.slot:02d} set to {args.theme}.")
+
+
+def command_set_treatment(args: argparse.Namespace) -> None:
+    batch_dir, manifest = load_batch(args.batch_id)
+    topic = locate_topic(manifest, args.topic)
+    slot = locate_slot(topic, args.slot)
+    if slot["status"] not in ("empty", "revise"):
+        raise SystemExit(f"Slot status is '{slot['status']}', expected empty or revise. Use revise to refresh the pitch first.")
+    if args.treatment not in TREATMENT_CHOICES:
+        raise SystemExit(f"Treatment must be one of: {', '.join(TREATMENT_CHOICES)}")
+    folder = slot_path(batch_dir, topic, slot)
+    pitch_path = folder / "pitch.md"
+    if pitch_path.is_file():
+        pitch = pitch_path.read_text(encoding="utf-8")
+        treatment_line = re.compile(r"(?m)^\*\*Visual treatment:\*\* .+$")
+        display = "automatic (research-scored)" if args.treatment == "auto" else f"{args.treatment} (manual override)"
+        if treatment_line.search(pitch):
+            pitch = treatment_line.sub(f"**Visual treatment:** {display}", pitch, count=1)
+        else:
+            theme_line = re.compile(r"(?m)^\*\*Theme:\*\* .+$")
+            pitch = theme_line.sub(lambda match: match.group(0) + f"\n\n**Visual treatment:** {display}", pitch, count=1)
+        pitch_path.write_text(pitch, encoding="utf-8")
+    slot.update({
+        "visual_treatment": None if args.treatment == "auto" else args.treatment,
+        "visual_treatment_mode": "auto" if args.treatment == "auto" else "manual",
+        "treatment_confirmed": True,
+        "treatment_selected_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+    })
+    write_json(batch_dir / "manifest.json", manifest)
+    print(f"Visual treatment for {topic['id']} short {args.slot:02d} set to {args.treatment}.")
+
+
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description=__doc__)
+    sub = parser.add_subparsers(dest="command", required=True)
+    init = sub.add_parser("init", help="create a multi-topic batch with up to three short slots per topic")
+    init.add_argument("--batch-id")
+    init.add_argument("--topics-file")
+    init.add_argument("--topics", nargs="*")
+    init.add_argument("--limit", type=int, default=3)
+    init.set_defaults(func=command_init)
+
+    pitch = sub.add_parser("pitch", help="save a researched idea and script for review")
+    pitch.add_argument("--batch-id", required=True)
+    pitch.add_argument("--topic", required=True)
+    pitch.add_argument("--slot", type=int, required=True)
+    pitch.add_argument("--theme", choices=STYLES, required=True)
+    pitch.add_argument("--title", required=True)
+    pitch.add_argument("--hook", required=True)
+    pitch.add_argument("--hook-highlights", nargs=2, required=True, help="two words from the hook to emphasize")
+    pitch.add_argument("--story-format", choices=STORY_FORMATS, required=True)
+    pitch.add_argument("--visual-treatment", choices=TREATMENTS, required=True, help="final treatment selected by the research scorecard or manual override")
+    pitch.add_argument("--treatment-scorecard", help="required for automatic mode; path or text with the 3-mode fit scores and research evidence")
+    pitch.add_argument("--visual-plan", required=True, help="path or text with 5–7 numbered visual beats, written before the script")
+    pitch.add_argument("--call-to-action", required=True, help="spoken CTA line; must also appear in --script")
+    pitch.add_argument("--idea", required=True, help="text or path to a text file")
+    pitch.add_argument("--script", required=True, help="text or path to a text file")
+    pitch.add_argument("--research", required=True, help="text or path to a research notes file")
+    pitch.add_argument("--caption", help="text or path to a post caption")
+    pitch.add_argument("--renderer-slug")
+    pitch.set_defaults(func=command_pitch)
+
+    decide = sub.add_parser("decide", help="record the user's approve, revise, or skip decision")
+    decide.add_argument("--batch-id", required=True)
+    decide.add_argument("--topic", required=True)
+    decide.add_argument("--slot", type=int, required=True)
+    decide.add_argument("--decision", choices=("approve", "revise", "skip"), required=True)
+    decide.set_defaults(func=command_decide)
+
+    prepare = sub.add_parser("prepare", help="prepare local voice and storyboard after approval")
+    prepare.add_argument("--batch-id", required=True)
+    prepare.add_argument("--topic", required=True)
+    prepare.add_argument("--slot", type=int, required=True)
+    prepare.set_defaults(func=command_prepare)
+
+    storyboard_review = sub.add_parser("review-storyboard", help="approve a storyboard or request shot-plan changes")
+    storyboard_review.add_argument("--batch-id", required=True)
+    storyboard_review.add_argument("--topic", required=True)
+    storyboard_review.add_argument("--slot", type=int, required=True)
+    storyboard_review.add_argument("--decision", choices=("approve", "revise"), required=True)
+    storyboard_review.set_defaults(func=command_review_storyboard)
+
+    preview = sub.add_parser("preview", help="make a quick half-resolution preview with narration for listening")
+    preview.add_argument("--batch-id", required=True)
+    preview.add_argument("--topic", required=True)
+    preview.add_argument("--slot", type=int, required=True)
+    preview.set_defaults(func=command_preview)
+
+    preview_review = sub.add_parser("review-preview", help="approve the audio preview or request a revision")
+    preview_review.add_argument("--batch-id", required=True)
+    preview_review.add_argument("--topic", required=True)
+    preview_review.add_argument("--slot", type=int, required=True)
+    preview_review.add_argument("--decision", choices=("approve", "revise"), required=True)
+    preview_review.set_defaults(func=command_review_preview)
+
+    render = sub.add_parser("render", help="render only after storyboard and audio preview approval")
+    render.add_argument("--batch-id", required=True)
+    render.add_argument("--topic", required=True)
+    render.add_argument("--slot", type=int, required=True)
+    render.set_defaults(func=command_render)
+
+    status = sub.add_parser("status", help="show the current review and render queue")
+    status.add_argument("--batch-id", required=True)
+    status.set_defaults(func=command_status)
+
+    add = sub.add_parser("add", help="add new slot(s) to one topic or every topic in a saved batch")
+    add.add_argument("--batch-id", required=True)
+    add.add_argument("--topic", required=True, help="topic ID or 'all'")
+    add.add_argument("--count", type=int, default=1, help="new slots per selected topic")
+    add.set_defaults(func=command_add)
+
+    set_format = sub.add_parser("set-format", help="choose standalone or A/B choice-story format before research")
+    set_format.add_argument("--batch-id", required=True)
+    set_format.add_argument("--topic", required=True)
+    set_format.add_argument("--slot", type=int, required=True)
+    set_format.add_argument("--story-format", choices=STORY_FORMATS, required=True)
+    set_format.set_defaults(func=command_set_format)
+
+    set_duration = sub.add_parser("set-duration", help="save a 30-60 second target before research")
+    set_duration.add_argument("--batch-id", required=True)
+    set_duration.add_argument("--topic", required=True)
+    set_duration.add_argument("--slot", type=int, required=True)
+    set_duration.add_argument("--seconds", type=int, required=True)
+    set_duration.set_defaults(func=command_set_duration)
+
+    list_cmd = sub.add_parser("list", help="list saved batches and their queue states")
+    list_cmd.set_defaults(func=command_list)
+
+    rename = sub.add_parser("rename", help="rename a batch and move its files and outputs in place")
+    rename.add_argument("--batch-id", required=True)
+    rename.add_argument("--new-name", required=True)
+    rename.set_defaults(func=command_rename)
+
+    set_theme = sub.add_parser("set-theme", help="save the user's theme choice before research")
+    set_theme.add_argument("--batch-id", required=True)
+    set_theme.add_argument("--topic", required=True)
+    set_theme.add_argument("--slot", type=int, required=True)
+    set_theme.add_argument("--theme", choices=STYLES, required=True)
+    set_theme.set_defaults(func=command_set_theme)
+
+    set_treatment = sub.add_parser("set-treatment", help="save automatic treatment scoring or a manual override")
+    set_treatment.add_argument("--batch-id", required=True)
+    set_treatment.add_argument("--topic", required=True)
+    set_treatment.add_argument("--slot", type=int, required=True)
+    set_treatment.add_argument("--treatment", choices=TREATMENT_CHOICES, default="auto", help="auto (default), or one fixed treatment")
+    set_treatment.set_defaults(func=command_set_treatment)
+    return parser
+
+
+if __name__ == "__main__":
+    parsed = build_parser().parse_args()
+    parsed.func(parsed)
