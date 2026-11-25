@@ -2,7 +2,7 @@
 blender -b --factory-startup -P compile.py -- EPDIR [--frames a,b,c --still OUT_DIR]
 Writes EPDIR/scene.blend (render with render_par.py) and EPDIR/clash.txt (body/prop overlap gate).
 """
-import bpy, sys, os, json, math, random, re
+import bpy, sys, os, json, math, random, re, hashlib
 from mathutils import Vector, Matrix, Euler
 from mathutils.bvhtree import BVHTree
 
@@ -600,26 +600,96 @@ for o in ids:
         except Exception as e: print('interp', o.name, e)
 print('MISSING anims', sorted(MISSING))
 
-# ---------- clash gate: actor vs actor, actor vs set solids (world AABB of body parts, 10 % tolerance) ----------
+# ---------- collision gate: actor vs actor (world AABB broad phase, exact BVH narrow phase) ----------
 def aabb(o):
     cs = [o.matrix_world @ Vector(c) for c in o.bound_box]
     lo = Vector((min(c.x for c in cs), min(c.y for c in cs), min(c.z for c in cs))); hi = Vector((max(c.x for c in cs), max(c.y for c in cs), max(c.z for c in cs)))
-    m = (hi - lo) * 0.1; return lo + m, hi - m
+    return lo, hi  # exact broad phase; the BVH narrow phase rejects non-intersecting boxes
 def hit(a, b): return all(a[0][i] < b[1][i] and b[0][i] < a[1][i] for i in range(3))
-step = 2
-for f in range(0, N, step):
-    sc.frame_set(f); s = shot_at(f / FPS); names = [a['who'] for a in s['actors']]
-    boxes = {nm: [(o, aabb(o)) for o in chars.body_parts(CAST[nm]) if o.type == 'MESH' and max(o.dimensions) > 0.3] for nm in names}
+# Intentional body contact must be declared on the shot as a narrowly scoped contact event:
+# {"actor":"Milo", "part":"hand.R", "target":"Nia", "target_part":"head",
+#  "at":0.34, "duration":0.08}. Only that part pair is exempt, and only when the meshes
+# actually overlap in the declared window. Every other overlap still fails the gate.
+CONTACT_PARTS = {
+    'head', 'torso', 'upper_arm.L', 'lower_arm.L', 'hand.L', 'upper_arm.R',
+    'lower_arm.R', 'hand.R', 'upper_leg.L', 'lower_leg.L', 'foot.L',
+    'upper_leg.R', 'lower_leg.R', 'foot.R',
+}
+contact_events = []
+for shot_index, shot in enumerate(SPEC['shots'], 1):
+    shot_duration = float(shot['t1']) - float(shot['t0'])
+    active_actors = {actor['who'] for actor in shot['actors']}
+    for event_index, event in enumerate(shot.get('contacts', []) or [], 1):
+        label = f'shot {shot_index} contact {event_index}'
+        if not isinstance(event, dict):
+            raise ValueError(f'{label} must be an object')
+        actor, target = event.get('actor'), event.get('target')
+        part, target_part = event.get('part'), event.get('target_part')
+        at, duration = event.get('at'), event.get('duration')
+        if actor == target or actor not in active_actors or target not in active_actors:
+            raise ValueError(f'{label} must name two different actors present in its shot')
+        if not isinstance(part, str) or not isinstance(target_part, str) or part not in CONTACT_PARTS or target_part not in CONTACT_PARTS:
+            raise ValueError(f'{label} parts must be rig parts from {sorted(CONTACT_PARTS)}')
+        if (not isinstance(at, (int, float)) or isinstance(at, bool)
+                or not isinstance(duration, (int, float)) or isinstance(duration, bool)
+                or not math.isfinite(float(at)) or not math.isfinite(float(duration))):
+            raise ValueError(f'{label} requires numeric at and duration values')
+        if at < 0 or duration < 1 / FPS or duration > 0.20 or at + duration > shot_duration + 1e-5:
+            raise ValueError(f'{label} timing must be inside the shot and last 1 frame to 0.20 seconds')
+        contact_events.append({**event, '_shot': shot, '_index': event_index, '_seen': False})
+
+def object_part(obj):
+    return getattr(obj, 'parent_bone', '') or obj.get('rbx_role', '')
+
+for f in range(N):  # sample every rendered frame so brief intersections cannot fall between checks
+    sc.frame_set(f); s = shot_at(f / FPS); t_local = f / FPS - s['t0']
+    names = [a['who'] for a in s['actors']]
+    boxes = {
+        nm: [(o, object_part(o), aabb(o)) for o in chars.body_parts(CAST[nm])
+             if o.type == 'MESH' and max(o.dimensions) > 0.3]
+        for nm in names
+    }
+    dg = bpy.context.evaluated_depsgraph_get()
+    tree_cache = {}
+
+    def tree(obj):
+        # BVHs are reused across all candidate pairs in this frame.
+        key = obj.as_pointer()
+        if key not in tree_cache:
+            tree_cache[key] = BVHTree.FromObject(obj, dg)
+        return tree_cache[key]
+
     for i in range(len(names)):
         for j in range(i + 1, len(names)):
-            pairs = [(x, y) for x in boxes[names[i]] for y in boxes[names[j]] if hit(x[1], y[1])]
-            if pairs:
-                dg = bpy.context.evaluated_depsgraph_get()
-                for x, y in pairs:
-                    if BVHTree.FromObject(x[0], dg).overlap(BVHTree.FromObject(y[0], dg)):
-                        CLASH.append(f'{f}:{x[0].name}/{y[0].name}'); break
+            left, right = names[i], names[j]
+            for obj_a, part_a, box_a in boxes[left]:
+                for obj_b, part_b, box_b in boxes[right]:
+                    if not hit(box_a, box_b):
+                        continue
+                    if not tree(obj_a).overlap(tree(obj_b)):
+                        continue
+                    intentional = next((event for event in contact_events
+                        if event['_shot'] is s
+                        and event['at'] <= t_local <= event['at'] + event['duration']
+                        and ((event['actor'] == left and event['part'] == part_a
+                              and event['target'] == right and event['target_part'] == part_b)
+                             or (event['actor'] == right and event['part'] == part_b
+                                 and event['target'] == left and event['target_part'] == part_a))), None)
+                    if intentional:
+                        intentional['_seen'] = True
+                    else:
+                        CLASH.append(f'{f}:{obj_a.name}/{obj_b.name}')
+
+for event in contact_events:
+    if not event['_seen']:
+        CLASH.append('CONTACT_MISSING:shot%d:%s.%s>%s.%s@%.3f' % (
+            SPEC['shots'].index(event['_shot']) + 1, event['actor'], event['part'],
+            event['target'], event['target_part'], event['at']))
 open(os.path.join(EP, 'clash.txt'), 'w').write('\n'.join(CLASH))
-print('CLASH frames', len(CLASH))
+timed_sha256 = hashlib.sha256(open(os.path.join(EP, 'timed.json'), 'rb').read()).hexdigest()
+with open(os.path.join(EP, 'clash-meta.json'), 'w', encoding='utf8') as report:
+    json.dump({'timed_sha256': timed_sha256, 'frame_count': N, 'collision_issues': len(CLASH)}, report, indent=2)
+print('COLLISION QA issues', len(CLASH))
 
 sc.render.filepath = os.path.join(EP, 'frames', '#####')
 sc.render.image_settings.file_format = 'JPEG'; sc.render.image_settings.quality = 92

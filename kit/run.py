@@ -17,7 +17,7 @@ Stages: shots voice compile stills render preview post
 
 Blender: set BLENDER to blender.exe, or put the path in kit/config.json {"blender": "..."}, or have it on PATH.
 """
-import json, math, os, shutil, subprocess, sys, time
+import hashlib, json, math, os, shutil, subprocess, sys, time
 
 KIT = os.path.dirname(os.path.abspath(__file__))
 BLOX = os.path.join(KIT, 'blox')
@@ -90,6 +90,27 @@ class Project:
         generated = any(os.path.exists(s.p(x)) for x in ('.voice_kokoro', '.voice_system'))
         return os.path.exists(s.p('vo.wav')) and os.path.exists(s.p('words.json')) and not generated
 
+    def require_clean_clashes(s):
+        """Block draft/final renders until the latest compile has a clean collision report."""
+        report = s.p('clash.txt')
+        metadata = s.p('clash-meta.json')
+        if not os.path.isfile(report):
+            sys.exit('Collision gate report is missing; run compile before rendering or posting.')
+        if not os.path.isfile(metadata):
+            sys.exit('Collision gate metadata is missing; recompile this project with the current kit.')
+        meta = json.load(open(metadata, encoding='utf8'))
+        current_hash = hashlib.sha256(open(s.p('timed.json'), 'rb').read()).hexdigest()
+        if meta.get('timed_sha256') != current_hash:
+            sys.exit('timed.json changed after collision QA; recompile before rendering or posting.')
+        rows = [line.strip() for line in open(report, encoding='utf8') if line.strip()]
+        if meta.get('collision_issues') != len(rows):
+            sys.exit('Collision report does not match its metadata; recompile before rendering or posting.')
+        if rows:
+            preview = '; '.join(rows[:5])
+            suffix = f' (+{len(rows) - 5} more)' if len(rows) > 5 else ''
+            sys.exit(f'Collision gate failed with {len(rows)} issue(s): {preview}{suffix}. '
+                     'Fix the shot or declare a precise, physically present contact event, then recompile.')
+
     def shots(s):
         sh([sys.executable, s.p('shots.py')], cwd=s.d)
         if not s.own_voice():
@@ -118,14 +139,16 @@ class Project:
     def compile(s):
         sh([blender(), '-b', '--factory-startup', '-P', os.path.join(BLOX, 'compile.py'), '--', s.d], log=s.p('compile.log'))
         n = len([x for x in open(s.p('clash.txt')).read().split('\n') if x.strip()])
-        print('   clash frames', n, '(characters overlapping; 0 is the goal; see clash.txt)')
+        print('   collision QA issues', n, '(0 is the goal; see clash.txt)')
+        s.require_clean_clashes()
 
     def stills(s):
+        s.require_clean_clashes()
         c = s.cuts(); spec = s.spec(); fr = []
         for shot, a, b in zip(spec['shots'], c, c[1:]):
             span = max(1, b - a)
             local = None
-            if spec.get('theme') == 'blocky-3d':
+            if spec.get('theme') in ('blocky-3d', 'rule-world-3d'):
                 interaction_events = []
                 for proof_row in (shot.get('screen_proof', []) or []):
                     for event in (proof_row.get('interactions', []) or []) if isinstance(proof_row, dict) else []:
@@ -165,7 +188,7 @@ class Project:
             p = s.p('stills', f'{f:05d}.jpg')
             if not os.path.exists(p): continue
             im = Image.open(p).convert('RGB').resize((W, H))
-            ui_style = 'blocky_game' if sp.get('theme') == 'blocky-3d' else 'clean'
+            ui_style = str(sp.get('ui_style') or ('blocky_game' if sp.get('theme') == 'blocky-3d' else 'town_story' if sp.get('theme') == 'rule-world-3d' else 'clean'))
             if i == 0 and sp.get('hook'):
                 sys.path.insert(0, BLOX)
                 try:
@@ -187,6 +210,7 @@ class Project:
         S.save(s.p('stills_sheet.jpg')); print('   ->', s.p('stills_sheet.jpg'))
 
     def render(s, resolution_percentage=100):
+        s.require_clean_clashes()
         if os.path.isdir(s.p('frames')): shutil.rmtree(s.p('frames'))
         sh([sys.executable, os.path.join(BLOX, 'render_par.py'), s.d, str(procs()),
             '--resolution-percentage', str(resolution_percentage)], log=s.p('render.log'))
@@ -198,6 +222,7 @@ class Project:
         print('   ->', s.p('out', s.name + '-preview.mp4'))
 
     def post(s):
+        s.require_clean_clashes()
         sh([sys.executable, os.path.join(BLOX, 'post.py'), s.d], log=s.p('post.log'))
         print('   ->', s.p('out', s.name + '.mp4'))
         if not os.path.exists(s.p('vo.wav')):

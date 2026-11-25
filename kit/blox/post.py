@@ -531,7 +531,7 @@ def draw_hook_card(im, text, highlights=None, style='clean'):
     if not words:
         return im
     scale = im.width / 1080
-    size = max(32, int((74 if style in ('blocky_game', 'roblox_cinema') else 76) * scale))
+    size = max(32, int((72 if style in ('blocky_game', 'roblox_cinema', 'town_story') else 76) * scale))
     font = _font(size)
     if font.getlength(" ".join(words)) <= 930 * scale:
         lines = [words]
@@ -543,8 +543,24 @@ def draw_hook_card(im, text, highlights=None, style='clean'):
         font = _font(size)
     line_h = int(size * 1.15)
     card_h = int(line_h * len(lines) + (48 if style == 'blocky_game' else 44) * scale)
-    left, top = int(40 * scale), int((116 if style == 'blocky_game' else 300) * scale)
+    left, top = int(40 * scale), int((160 if style == 'town_story' else 116 if style == 'blocky_game' else 300) * scale)
     right = im.width - left
+    if style == 'town_story':
+        draw = ImageDraw.Draw(im)
+        highlights = {norm(word) for word in (highlights or [])}
+        for line_index, line in enumerate(lines):
+            rendered = " ".join(line)
+            y = top + int(22 * scale + line_h * (line_index + 0.5))
+            x = (im.width - font.getlength(rendered)) / 2
+            for word in line:
+                token = norm(word)
+                color = (255, 222, 72) if token in highlights else (255, 255, 255)
+                draw.text((x + 2 * scale, y + 5 * scale), word, font=font, anchor="lm", fill=(0, 0, 0),
+                          stroke_width=max(2, int(10 * scale)), stroke_fill=(0, 0, 0))
+                draw.text((x, y), word, font=font, anchor="lm", fill=color,
+                          stroke_width=max(2, int(7 * scale)), stroke_fill=(17, 23, 37))
+                x += font.getlength(word + " ")
+        return im
     if style == 'roblox_cinema':
         draw = ImageDraw.Draw(im)
         highlights = {norm(word) for word in (highlights or [])}
@@ -602,7 +618,7 @@ def _init(d):
     sp = json.load(open(os.path.join(d, 'timed.json'), encoding='utf8'))
     G['d'] = d; G['keys'] = set(norm(k) for k in sp.get('keys', []))
     G['hook'] = str(sp.get('hook', '')).strip()
-    G['ui_style'] = str(sp.get('ui_style', 'clean')) if sp.get('theme', sp.get('style')) == 'blocky-3d' else 'clean'
+    G['ui_style'] = str(sp.get('ui_style', 'clean')) if sp.get('theme', sp.get('style')) in ('blocky-3d', 'rule-world-3d') else 'clean'
     G['hook_duration'] = float(sp.get('hook_duration_seconds', 1.5))
     G['hook_highlights'] = set(norm(k) for k in sp.get('hook_highlights', []))
     G['cta'] = str(sp.get('cta', '')).strip()
@@ -646,7 +662,13 @@ def comp_frame(i, n):
         size = int((118 if key else 96) * sc * s); f = _font(size)
         while f.getlength(w) > 980 * s and size > 50 * s: size -= int(6 * s) or 1; f = _font(size)
         cx, cy = W / 2, 1290 / 1920 * H; dr = ImageDraw.Draw(im)
-        if G.get('ui_style') == 'roblox_cinema':
+        if G.get('ui_style') == 'town_story':
+            fill = (255, 222, 72) if key else (255, 255, 255)
+            dr.text((cx + 2 * s, cy + 5 * s), w, font=f, anchor='mm', fill=(0, 0, 0),
+                    stroke_width=max(2, int(15 * s)), stroke_fill=(0, 0, 0))
+            dr.text((cx, cy), w, font=f, anchor='mm', fill=fill,
+                    stroke_width=max(2, int(11 * s)), stroke_fill=(17, 23, 37))
+        elif G.get('ui_style') == 'roblox_cinema':
             fill = (255, 208, 73) if key and norm(w) in ('a', 'gold', 'door') else (
                 (68, 243, 162) if key and norm(w) in ('b', 'green') else
                 (88, 226, 255) if key else (255, 255, 255))

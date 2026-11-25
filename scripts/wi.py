@@ -10,6 +10,7 @@ Sound library:  library/sfx/ (generated clips, cached by name + prompt + length,
 import hashlib, json, os, pathlib, re, subprocess, sys, time, urllib.request, wave
 
 import numpy as np
+from media_tools import ffmpeg_path
 
 SR = 44100
 sys.stdout.reconfigure(encoding='utf-8')
@@ -175,7 +176,7 @@ def resolve(cue, words, fps, segments=None, shot_ids=()):
 # ---------------------------------------------------------------- audio
 def decode(path):
     """Any audio file to mono float64 at 44.1 kHz."""
-    raw = subprocess.run(['ffmpeg', '-v', 'error', '-i', str(path), '-f', 'f32le', '-ac', '1', '-ar', str(SR), '-'], capture_output=True, check=True).stdout
+    raw = subprocess.run([ffmpeg_path(), '-v', 'error', '-i', str(path), '-f', 'f32le', '-ac', '1', '-ar', str(SR), '-'], capture_output=True, check=True).stdout
     return np.frombuffer(raw, dtype=np.float32).astype(np.float64)
 
 
@@ -192,7 +193,7 @@ def write_wav(path, x, peak=None):
 def loudness(path_or_args):
     """Integrated loudness (LUFS) and true peak (dBTP) of a file, via ffmpeg's ebur128."""
     args = path_or_args if isinstance(path_or_args, list) else ['-i', str(path_or_args)]
-    r = subprocess.run(['ffmpeg', '-hide_banner', '-nostats', *args, '-af', 'ebur128=peak=true', '-f', 'null', '-'], capture_output=True, text=True, encoding='utf-8', errors='ignore')
+    r = subprocess.run([ffmpeg_path(), '-hide_banner', '-nostats', *args, '-af', 'ebur128=peak=true', '-f', 'null', '-'], capture_output=True, text=True, encoding='utf-8', errors='ignore')
     txt = r.stderr
     summ = txt[txt.rfind('Summary:'):]
     i = re.search(r'I:\s+(-?[\d.]+|-inf) LUFS', summ)

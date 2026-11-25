@@ -1,6 +1,6 @@
 # Transitions and motion
 
-AnimationFusion keeps its three current render themes. These are authoring and editing choices that use existing engine features; they do not add a new renderer.
+AnimationFusion has five render themes: Blender-based `blocky-3d`, `monochrome`, and `rule-world-3d`; Remotion-based 2D `what-if`; and Remotion + Three.js `world-story-3d`. Treat theme-specific transitions as separate implementations; don't assume an effect exists in every renderer.
 
 ## Start with a purposeful cut
 
@@ -30,6 +30,10 @@ The exact shot API is in kit/API.md. Named props and rigid motion can bridge a c
 
 The shared Remotion engine supports timeline flash and shake effects. The author can animate a vector shape or object into the next shot and time the edit to a word using episode.json's edit cues. Use only effects and scene code the current episode can render. If a matching SFX track is used, align its whoosh/hit to the same beat; the engine does not synthesize a transition sound automatically.
 
+## World-story 3D path
+
+`world-story-3d` is a separate 3D Remotion composition. Its current transition kinds are `flash`, `push`, `whip`, `portal`, and `map-fold`, rendered as short overlays at incoming cuts. Choose them only when the story moves through a portal, map, impact, or quick location shift. Add a matching cue to the episode's mixed SFX stem; these visual overlays do not create sound. Reusable `impact`, `spark`, `speed-lines`, `portal`, `pin-pulse`, and `flash` screen cues are listed by frame in `timeline.json`. Use per-shot `set`, `light`, and `camera` fields to make location/state changes readable. Storyboard review includes the shared world renderer in its fingerprint, so an engine change invalidates an earlier approval.
+
 ## Check in the storyboard
 
 Review both sides of every scene change:
@@ -40,4 +44,4 @@ Review both sides of every scene change:
 4. Is the transition short enough that the audience sees the new scene immediately?
 5. Does the motion fit the story and avoid hiding a weak set or generic character?
 
-Use the existing per-shot storyboard as the fast preview. The full 1080×1920/60 fps render happens after the user approves it.
+Use the per-shot storyboard as the fast preview. The full vertical render happens after the user approves it; `blocky-3d` uses 60 fps, while the Remotion episodes use their configured 30 fps timeline.

@@ -77,12 +77,19 @@ def _speak(engine, text: str, path: Path, speed: float = 1.0) -> None:
             subprocess.run(command, check=True)
             if not aiff_path.exists() or aiff_path.stat().st_size < 64:
                 raise SystemExit("macOS `say` did not create a narration file.")
-            ffmpeg = os.environ.get("FFMPEG") or shutil.which("ffmpeg") or "ffmpeg"
-            subprocess.run(
-                [ffmpeg, "-nostdin", "-v", "error", "-y", "-i", str(aiff_path),
-                 "-ar", str(SAMPLE_RATE), "-ac", "1", "-c:a", "pcm_s16le", str(path)],
-                check=True,
-            )
+            afconvert = shutil.which("afconvert")
+            if afconvert:
+                try:
+                    subprocess.run([afconvert, "-f", "WAVE", "-d", "LEI16", "-c", "1", str(aiff_path), str(path)], check=True)
+                except subprocess.CalledProcessError:
+                    path.unlink(missing_ok=True)
+            if not path.exists() or path.stat().st_size < 64:
+                ffmpeg = os.environ.get("FFMPEG") or shutil.which("ffmpeg") or "ffmpeg"
+                subprocess.run(
+                    [ffmpeg, "-nostdin", "-v", "error", "-y", "-i", str(aiff_path),
+                     "-ar", str(SAMPLE_RATE), "-ac", "1", "-c:a", "pcm_s16le", str(path)],
+                    check=True,
+                )
         return
     engine.setProperty("rate", rate)
     engine.save_to_file(text, str(path))
@@ -126,6 +133,101 @@ def _read_mono_48k(path: Path) -> np.ndarray:
 def _write_voice(path: Path, samples: np.ndarray) -> None:
     pcm = (np.clip(samples, -1, 1) * 32767).astype(np.int16)
     wavfile.write(path, SAMPLE_RATE, pcm)
+
+
+def _kokoro_episode_voice(text: str, ep: dict[str, Any], voice_path: Path, words_path: Path) -> None:
+    """Optional free Kokoro voice for Remotion episodes, with model word timing."""
+    if ep.get("kokoro_dictionary_only"):
+        # Some macOS wheels of espeakng-loader contain a build-machine data
+        # path. For episodes opting into dictionary-only mode, keep Kokoro's
+        # English lexicon and resolve named characters from episode.json
+        # instead of invoking that broken optional phoneme fallback.
+        import misaki.espeak as misaki_espeak
+
+        pronunciations = {
+            str(word).casefold(): str(phonemes)
+            for word, phonemes in ep.get("kokoro_pronunciations", {}).items()
+        }
+
+        class EpisodeFallback:
+            def __init__(self, **_kwargs: Any) -> None:
+                pass
+
+            def __call__(self, token: Any) -> tuple[str | None, int | None]:
+                pronunciation = pronunciations.get(str(getattr(token, "text", "")).casefold())
+                return (pronunciation, 4) if pronunciation else (None, None)
+
+        misaki_espeak.EspeakFallback = EpisodeFallback
+    try:
+        from kokoro import KPipeline
+    except ImportError as exc:
+        raise SystemExit(
+            "This episode selects Kokoro, but its optional voice package is missing. "
+            "Install it with: python -m pip install -r kit/requirements-voice.txt"
+        ) from exc
+    voice = str(ep.get("voice", "am_fable")).strip()
+    speed = float(ep.get("voice_speed", 1.0))
+    if not 0.65 <= speed <= 1.35:
+        raise SystemExit("episode.json voice_speed must be between 0.65 and 1.35.")
+    language = voice[:1] if voice[:1] in "ab" else "a"
+    pipeline = KPipeline(lang_code=language)
+    if ep.get("kokoro_dictionary_only"):
+        _, tokens = pipeline.g2p(text)
+        missing = sorted({str(token.text) for token in tokens if getattr(token, "phonemes", None) is None})
+        if missing:
+            raise SystemExit(
+                "Kokoro's English lexicon has no pronunciation for: " + ", ".join(missing)
+                + ". Add kokoro_pronunciations entries in episode.json."
+            )
+    chunks: list[np.ndarray] = []
+    aligned: list[tuple[str, float, float]] = []
+    cursor = 0.0
+    for row in pipeline(text, voice=voice, speed=speed):
+        audio = row.audio
+        if audio is None:
+            continue
+        if hasattr(audio, "detach"):
+            audio = audio.detach().cpu().numpy()
+        audio = np.asarray(audio, dtype=np.float32).reshape(-1)
+        if not len(audio):
+            continue
+        words = []
+        for token in getattr(row, "tokens", None) or []:
+            word = str(getattr(token, "text", "") or "").strip()
+            start = getattr(token, "start_ts", None)
+            end = getattr(token, "end_ts", None)
+            if word and re.search(r"\w", word, re.UNICODE) and start is not None and end is not None:
+                words.append((word, cursor + float(start), cursor + float(end)))
+        if not words:
+            fallback = [token for token in WORD_RE.findall(str(getattr(row, "graphemes", "") or "")) if re.search(r"\w", token, re.UNICODE)]
+            duration = len(audio) / 24_000
+            words = [(word, cursor + duration * index / max(1, len(fallback)), cursor + duration * (index + 1) / max(1, len(fallback))) for index, word in enumerate(fallback)]
+        aligned.extend(words)
+        chunks.append(audio)
+        cursor += len(audio) / 24_000
+    if not chunks:
+        raise SystemExit("Kokoro returned no audio. Check that its voice model downloaded and the selected voice exists.")
+    audio_24k = np.concatenate(chunks).astype(np.float64)
+    audio_48k = resample_poly(audio_24k, 2, 1)
+    _write_voice(voice_path, audio_48k)
+
+    source_tokens = WORD_RE.findall(text)
+    source_words = [token for token in source_tokens if re.search(r"\w", token, re.UNICODE)]
+    if len(aligned) != len(source_words):
+        rows = _weighted_words(text, 0.0, len(audio_48k) / SAMPLE_RATE)
+        print("Kokoro did not return a complete word alignment; using measured-duration caption estimates.")
+    else:
+        rows = []
+        word_index = -1
+        for token in source_tokens:
+            if re.search(r"\w", token, re.UNICODE):
+                word_index += 1
+                _, start, end = aligned[word_index]
+                rows.append({"w": token, "s": round(max(0.0, start), 3), "e": round(max(start + 0.01, end), 3), "p": ""})
+            elif word_index >= 0 and re.fullmatch(r"[^\w\s]+", token, re.UNICODE):
+                rows[word_index]["p"] += token
+    words_path.write_text(json.dumps(rows, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    print(f"Kokoro voice {voice}: {len(rows)} words, {len(audio_48k) / SAMPLE_RATE:.1f}s.")
 
 
 def _weighted_words(text: str, start: float, duration: float) -> list[dict[str, Any]]:
@@ -237,7 +339,8 @@ def make_episode_voice(slug: str) -> None:
     text = " ".join(line for line in lines if line)
     if not text:
         raise SystemExit("episode.json has no script text")
-    signature = _sig(text)
+    backend = str(ep.get("voice_provider", os.environ.get("SHORT_STUDIO_TTS_BACKEND", "system-offline"))).strip().lower()
+    signature = hashlib.sha256(f"{_sig(text)}\0{backend}\0{ep.get('voice', 'am_fable')}\0{ep.get('voice_speed', 1.0)}".encode("utf-8")).hexdigest()
     public_dir = ROOT / "studio" / "public" / slug
     public_dir.mkdir(parents=True, exist_ok=True)
     voice_path = public_dir / "voice.wav"
@@ -253,10 +356,21 @@ def make_episode_voice(slug: str) -> None:
                 return
         except (OSError, json.JSONDecodeError):
             pass
+    if backend == "kokoro":
+        _kokoro_episode_voice(text, ep, voice_path, words_path)
+        meta_path.write_text(json.dumps({"signature": signature, "backend": "kokoro", "voice": ep.get("voice", "am_fable")}, indent=2) + "\n", encoding="utf-8")
+        return
+    if backend not in ("system", "system-offline", "local"):
+        raise SystemExit("episode.json voice_provider must be system-offline or kokoro. Voicemod transforms live microphone input, not generated TTS.")
     with tempfile.TemporaryDirectory(prefix="short-studio-tts-") as td:
         raw = Path(td) / "voice.wav"
         _speak(_engine(), text, raw)
         audio = _read_mono_48k(raw)
+    if len(audio) < int(0.15 * SAMPLE_RATE) or float(np.max(np.abs(audio))) < 1e-3:
+        raise SystemExit(
+            "The local system voice engine returned an empty or silent track. "
+            "Choose the optional Kokoro voice provider or configure an external voice before rendering."
+        )
     _write_voice(voice_path, audio)
     words = _weighted_words(text, 0.0, len(audio) / SAMPLE_RATE)
     words_path.write_text(json.dumps(words, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")

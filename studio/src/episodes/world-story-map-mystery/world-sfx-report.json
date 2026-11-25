@@ -1,0 +1,84 @@
+{
+  "source": "project CC0 SFX Kit samples",
+  "sample_rate": 48000,
+  "peak": 0.42,
+  "events": [
+    {
+      "at": "Choose",
+      "frame": 87,
+      "seconds": 2.9,
+      "clip": "move-spin",
+      "gain": 0.22
+    },
+    {
+      "at": "snaps",
+      "frame": 284,
+      "seconds": 9.467,
+      "clip": "impact-heavy-hard",
+      "gain": 0.42
+    },
+    {
+      "at": "pin",
+      "frame": 381,
+      "seconds": 12.7,
+      "clip": "shimmer-short-sparkle",
+      "gain": 0.28
+    },
+    {
+      "at": "grabs",
+      "frame": 466,
+      "seconds": 15.533,
+      "clip": "whoosh-fast-hard",
+      "gain": 0.3
+    },
+    {
+      "at": "tunnel",
+      "frame": 576,
+      "seconds": 19.2,
+      "clip": "riser-1s-strong",
+      "gain": 0.22
+    },
+    {
+      "at": "opens",
+      "frame": 548,
+      "seconds": 18.267,
+      "clip": "move-spin",
+      "gain": 0.26
+    },
+    {
+      "at": "kitten",
+      "frame": 64,
+      "seconds": 2.133,
+      "clip": "mechanical-latch-heavy",
+      "gain": 0.22
+    },
+    {
+      "at": "bursts",
+      "frame": 610,
+      "seconds": 20.333,
+      "clip": "shimmer-short-sparkle",
+      "gain": 0.26
+    },
+    {
+      "at": "bursts",
+      "frame": 610,
+      "seconds": 20.333,
+      "clip": "whoosh-fast-hard",
+      "gain": 0.18
+    },
+    {
+      "at": "Two",
+      "frame": 694,
+      "seconds": 23.133,
+      "clip": "shimmer-short-sparkle",
+      "gain": 0.24
+    },
+    {
+      "at": "f:870",
+      "frame": 870,
+      "seconds": 29.0,
+      "clip": "shimmer-short-sparkle",
+      "gain": 0.16
+    }
+  ]
+}
