@@ -23,7 +23,9 @@ from typing import Any
 
 import numpy as np
 from scipy.io import wavfile
-from scipy.signal import resample_poly
+from scipy.signal import resample, resample_poly
+
+from media_tools import ffmpeg_path, media_environment
 
 ROOT = Path(__file__).resolve().parents[1]
 SAMPLE_RATE = 48_000
@@ -135,6 +137,29 @@ def _write_voice(path: Path, samples: np.ndarray) -> None:
     wavfile.write(path, SAMPLE_RATE, pcm)
 
 
+def _fit_voice_duration(samples: np.ndarray, seconds: float) -> np.ndarray:
+    """Fit a newly synthesized line to a timed shot using a pitch-preserving tempo filter."""
+    if not math.isfinite(seconds) or seconds <= 0:
+        raise ValueError("voice_duration_seconds must be a finite positive duration")
+    count = round(seconds * 24_000)
+    if count == 0:
+        raise ValueError("Voice target is shorter than one audio sample")
+    tempo = len(samples) / count
+    if not 0.5 <= tempo <= 2:
+        raise ValueError(f"Voice duration would require {tempo:.2f}x tempo. Adjust the line's voice_speed or duration.")
+    proc = subprocess.run(
+        [ffmpeg_path(), "-nostdin", "-v", "error", "-f", "f32le", "-ar", "24000", "-ac", "1", "-i", "pipe:0",
+         "-af", f"atempo={tempo:.8f}", "-f", "f32le", "pipe:1"],
+        input=samples.astype("<f4", copy=False).tobytes(), capture_output=True, check=True, env=media_environment(),
+    )
+    fitted = np.frombuffer(proc.stdout, dtype="<f4")
+    if not len(fitted) or abs(len(fitted) - count) > 2400:
+        raise ValueError("Tempo filter could not fit the voice to its target within 100 ms")
+    # atempo works in overlapping windows. Correct its small remainder so the
+    # start of the next sentence and its word cues do not drift over a long film.
+    return resample(fitted, count).astype(np.float32, copy=False)
+
+
 def _kokoro_episode_voice(text: str, ep: dict[str, Any], voice_path: Path, words_path: Path) -> None:
     """Optional free Kokoro voice for Remotion episodes, with model word timing."""
     if ep.get("kokoro_dictionary_only"):
@@ -169,6 +194,9 @@ def _kokoro_episode_voice(text: str, ep: dict[str, Any], voice_path: Path, words
     speed = float(ep.get("voice_speed", 1.0))
     if not 0.65 <= speed <= 1.35:
         raise SystemExit("episode.json voice_speed must be between 0.65 and 1.35.")
+    pause_seconds = float(ep.get("voice_pause_seconds", 0.0))
+    if not 0 <= pause_seconds <= 1.5:
+        raise SystemExit("episode.json voice_pause_seconds must be between 0 and 1.5.")
     language = voice[:1] if voice[:1] in "ab" else "a"
     pipeline = KPipeline(lang_code=language)
     if ep.get("kokoro_dictionary_only"):
@@ -182,29 +210,72 @@ def _kokoro_episode_voice(text: str, ep: dict[str, Any], voice_path: Path, words
     chunks: list[np.ndarray] = []
     aligned: list[tuple[str, float, float]] = []
     cursor = 0.0
-    for row in pipeline(text, voice=voice, speed=speed):
-        audio = row.audio
-        if audio is None:
-            continue
-        if hasattr(audio, "detach"):
-            audio = audio.detach().cpu().numpy()
-        audio = np.asarray(audio, dtype=np.float32).reshape(-1)
-        if not len(audio):
-            continue
-        words = []
-        for token in getattr(row, "tokens", None) or []:
-            word = str(getattr(token, "text", "") or "").strip()
-            start = getattr(token, "start_ts", None)
-            end = getattr(token, "end_ts", None)
-            if word and re.search(r"\w", word, re.UNICODE) and start is not None and end is not None:
-                words.append((word, cursor + float(start), cursor + float(end)))
-        if not words:
-            fallback = [token for token in WORD_RE.findall(str(getattr(row, "graphemes", "") or "")) if re.search(r"\w", token, re.UNICODE)]
-            duration = len(audio) / 24_000
-            words = [(word, cursor + duration * index / max(1, len(fallback)), cursor + duration * (index + 1) / max(1, len(fallback))) for index, word in enumerate(fallback)]
-        aligned.extend(words)
-        chunks.append(audio)
-        cursor += len(audio) / 24_000
+    script_parts = [
+        (str(row.get("text", "")).strip(), float(row.get("voice_speed", speed)), float(row.get("pause_after_seconds", pause_seconds)), row.get("voice_duration_seconds"))
+        for row in ep.get("script", []) if str(row.get("text", "")).strip()
+    ] or [(text, speed, 0.0, None)]
+    for part_index, (part_text, part_speed, pause_after, target_duration) in enumerate(script_parts):
+        line_start = cursor
+        chunk_offset = len(chunks)
+        aligned_offset = len(aligned)
+        if not 0.65 <= part_speed <= 1.35:
+            raise SystemExit("Each script voice_speed must be between 0.65 and 1.35.")
+        if not 0 <= pause_after <= 1.5:
+            raise SystemExit("Each script pause_after_seconds must be between 0 and 1.5.")
+        for row in pipeline(part_text, voice=voice, speed=part_speed):
+            audio = row.audio
+            if audio is None:
+                continue
+            if hasattr(audio, "detach"):
+                audio = audio.detach().cpu().numpy()
+            audio = np.asarray(audio, dtype=np.float32).reshape(-1)
+            if not len(audio):
+                continue
+            # Kokoro pads sentence chunks with long leading/trailing quiet
+            # sections. Keep a short boundary margin, but remove the bulk so
+            # script-beat pauses are intentional instead of model padding.
+            frame_samples = 240  # 10 ms at 24 kHz
+            frame_count = int(math.ceil(len(audio) / frame_samples))
+            padded = np.pad(audio, (0, frame_count * frame_samples - len(audio)))
+            frame_rms = np.sqrt(np.mean(padded.reshape(frame_count, frame_samples) ** 2, axis=1))
+            active_frames = np.flatnonzero(frame_rms > 0.0005)
+            trim_start_samples = max(0, int(active_frames[0]) * frame_samples - 2 * frame_samples) if len(active_frames) else 0
+            trim_end_samples = min(len(audio), (int(active_frames[-1]) + 3) * frame_samples) if len(active_frames) else len(audio)
+            audio = audio[trim_start_samples:trim_end_samples]
+            trim_start_seconds = trim_start_samples / 24_000
+            chunk_duration = len(audio) / 24_000
+            words = []
+            for token in getattr(row, "tokens", None) or []:
+                word = str(getattr(token, "text", "") or "").strip()
+                start = getattr(token, "start_ts", None)
+                end = getattr(token, "end_ts", None)
+                if word and re.search(r"\w", word, re.UNICODE) and start is not None and end is not None:
+                    local_start = min(chunk_duration, max(0.0, float(start) - trim_start_seconds))
+                    local_end = min(chunk_duration, max(local_start + 0.01, float(end) - trim_start_seconds))
+                    words.append((word, cursor + local_start, cursor + local_end))
+            if not words:
+                fallback = [token for token in WORD_RE.findall(str(getattr(row, "graphemes", "") or "")) if re.search(r"\w", token, re.UNICODE)]
+                duration = len(audio) / 24_000
+                words = [(word, cursor + duration * index / max(1, len(fallback)), cursor + duration * (index + 1) / max(1, len(fallback))) for index, word in enumerate(fallback)]
+            aligned.extend(words)
+            chunks.append(audio)
+            cursor += chunk_duration
+        if target_duration is not None:
+            if len(chunks) == chunk_offset:
+                raise ValueError(f"No synthesized audio for script line {part_index + 1}")
+            fitted = _fit_voice_duration(np.concatenate(chunks[chunk_offset:]), float(target_duration))
+            fitted_duration = len(fitted) / 24_000
+            time_scale = fitted_duration / (cursor - line_start)
+            chunks[chunk_offset:] = [fitted]
+            aligned[aligned_offset:] = [
+                (word, line_start + (a - line_start) * time_scale, line_start + (b - line_start) * time_scale)
+                for word, a, b in aligned[aligned_offset:]
+            ]
+            cursor = line_start + fitted_duration
+        if pause_after and part_index < len(script_parts) - 1:
+            gap = np.zeros(round(pause_after * 24_000), dtype=np.float32)
+            chunks.append(gap)
+            cursor += len(gap) / 24_000
     if not chunks:
         raise SystemExit("Kokoro returned no audio. Check that its voice model downloaded and the selected voice exists.")
     audio_24k = np.concatenate(chunks).astype(np.float64)
@@ -340,7 +411,18 @@ def make_episode_voice(slug: str) -> None:
     if not text:
         raise SystemExit("episode.json has no script text")
     backend = str(ep.get("voice_provider", os.environ.get("SHORT_STUDIO_TTS_BACKEND", "system-offline"))).strip().lower()
-    signature = hashlib.sha256(f"{_sig(text)}\0{backend}\0{ep.get('voice', 'am_fable')}\0{ep.get('voice_speed', 1.0)}".encode("utf-8")).hexdigest()
+    voice_parts = [
+        {
+            "text": str(row.get("text", "")).strip(),
+            "speed": float(row.get("voice_speed", ep.get("voice_speed", 1.0))),
+            "pause": float(row.get("pause_after_seconds", ep.get("voice_pause_seconds", 0.0))),
+            **({"duration": row["voice_duration_seconds"]} if "voice_duration_seconds" in row else {}),
+        }
+        for row in ep.get("script", [])
+    ]
+    signature = hashlib.sha256(
+        f"trimmed-kokoro-chunks-v1\0{_sig(text)}\0{backend}\0{ep.get('voice', 'am_fable')}\0{ep.get('voice_speed', 1.0)}\0{ep.get('voice_pause_seconds', 0.0)}\0{json.dumps(voice_parts, ensure_ascii=False, sort_keys=True)}".encode("utf-8")
+    ).hexdigest()
     public_dir = ROOT / "studio" / "public" / slug
     public_dir.mkdir(parents=True, exist_ok=True)
     voice_path = public_dir / "voice.wav"

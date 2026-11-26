@@ -1,6 +1,6 @@
 # World Story 3D: Reference Study
 
-This is a design study for an original, data-driven animation theme. It records broad visual and pacing patterns from the ten MP4s supplied for this project. It is not a frame-by-frame remake, a transcript, or a recreation of any source video's script, characters, staging, or shot order. The theme should use new stories, characters, props, and compositions.
+This is a production study for a reusable animation skeleton based on ten MP4s supplied for this project. The user wants a very close “1:1” match to the references' visual feel, pacing, detailed actions, and storytelling, recreated from scratch as a base for future iteration with their own stories and assets. They do not want to download, repost, or redistribute the finished videos. The user says the videos are their friend's work and supplied them for analysis; no formal license is needed for this framework work. This study captures broad visual and pacing patterns, but the sampling below is not a frame-by-frame audit, transcript, or proof that the current theme matches the references. Further targeted frame and audio review is needed for exact action, wording, and sound timing.
 
 ## Source coverage and method
 
@@ -38,6 +38,25 @@ This still is a sampled visual study. The 3.75-sample-per-second scan can miss a
 - **Keep captions readable and tied to narration.** Many sampled shots show short, high-contrast lower-frame caption units that change as the narration progresses. The new theme can use concise, narration-matched captions with its own typography and placement; it should not reproduce the source platform watermark or copy a creator's exact caption treatment.
 - **Use hard cuts as the baseline, then motivate special transitions.** Many changes in the sampled windows are direct cuts. Use a special transition only when the story gives it a reason—for example, following a falling object, moving through a portal, or revealing a new scale.
 
+## Variety across all ten clips
+
+The extra clips change the setting, cast roles, and visual proof; the engine should select a pattern per story instead of reusing the scale-scroll episode as a template.
+
+| Clip | Story pattern seen in the sample | Production pattern to support |
+| --- | --- | --- |
+| 00 | Creator and game-world scenes, then a mammoth and large in-world boards | A guide/protagonist, a creature reveal, and readable world-building props |
+| 01 | Doom-scrolling changes leg length through class, bedroom, basketball, and skyline gags | A rule demonstrated by a phone, reactions in several places, then a scale payoff |
+| 02 | Written warnings, a faceless figure, dark corridors, and flashlight reveals | Clue close-ups, a threatened character, a restrained light/fog reveal |
+| 03 | Red-sky disaster states, city/tunnel travel, repairs, and the danger returning | A landmark that survives multiple lighting/weather states; helper and threat roles |
+| 04 | Familiar homes and streets, a dog, a skinwalker transformation, and a chase | A family/pet cast, clear before/change/after poses, then a readable chase path |
+| 05 | Neon robot, portal, future city, oversized gags, and a robot fight | A guide/threat pair, threshold crossing, new-world establishing shot, and action wide |
+| 06 | Disaster imagery, bunker cutaways, a generator, lever, and underground rooms | A clear surface-to-interior geography change and a visible machine interaction |
+| 07 | A pet warns a household before a huge night creature appears | Pet reaction as an early clue, window/door framing, silhouette scale reveal |
+| 08 | Toys and money rain onto a town, keys select a door, a screen room reveals worlds | Many small props as a wide event, then one chosen object as the close-up clue |
+| 09 | Giant flower/ant, baby and animal scale comparisons, chase, and family ending | Size references, repeatable scale marks, animal/child reactions, and a family payoff |
+
+Roles that recur across these varied examples can be represented as reusable *choices*: lead, friend/foil, witness, helper/authority, pet/guide, or threat. A new episode should select only the roles its script needs, then assign each a silhouette, clothing colors, prop, and timed reaction. The samples do not justify putting the same cast, suburb, door, or effect into every story.
+
 ## Timecoded observations
 
 Timestamps below identify moments from the supplied files to make the study auditable. They are examples of broad techniques, not a blueprint for recreating those shots.
@@ -68,6 +87,6 @@ Timestamps below identify moments from the supplied files to make the study audi
 2. For collisions, grabs, doors, buttons, jumps, and other prop interactions, inspect multiple timestamps across the complete action. Confirm that the character reaches the object, contact occurs at the right position, and the object or character responds afterward.
 3. Validate character and prop paths against scene geometry. No walking through walls, floating feet without an intentional jump, intersecting bodies, or jittering between poses.
 4. Make each escalation stage visibly different through a change in location, scale, camera angle, lighting, prop state, or character action. Keep continuity cues so the viewer still understands where the characters are.
-5. Keep the source's general fast, colorful, story-first energy while using original scripts, dialogue, characters, shot sequences, assets, text styling, and transitions. Do not hard-code any source-specific character, prop, scene, caption, or event sequence into the theme.
+5. Match the reference's visual and storytelling skeleton as closely as practical, but build every output from its own scene assets and keyframed actions rather than pasting source footage. Keep the skeleton reusable and data-driven: do not make one source-specific character, prop, scene, caption, or event sequence mandatory for unrelated future stories or other themes.
 
 This study should inform the new `world-story-3d` theme only. It is not a requirement that other 2D or existing 3D themes switch renderers or inherit this look.

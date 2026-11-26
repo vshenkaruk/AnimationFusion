@@ -1,0 +1,1850 @@
+{
+  "id": "WorldStoryScaleScrollFull",
+  "slug": "world-story-scale-scroll-full",
+  "title": "The Doom Scroll That Made His Legs Taller Than a Skyscraper",
+  "fps": 30,
+  "voice_provider": "kokoro",
+  "voice": "am_puck",
+  "voice_speed": 0.84,
+  "voice_pause_seconds": 0.16,
+  "kokoro_dictionary_only": true,
+  "kokoro_pronunciations": {
+    "Wi": "wa\u026a",
+    "Fi": "fa\u026a",
+    "cm": "s\u02c8\u025bnt\u026ami\u02d0t\u025az"
+  },
+  "script": [
+    {
+      "beat": "Rule",
+      "text": "In this town, the more you doom scroll, the longer your legs get."
+    },
+    {
+      "beat": "Measurement",
+      "text": "If you scroll 10 cm on your phone, your legs grow by exactly 10 cm.",
+      "voice_speed": 1.1
+    },
+    {
+      "beat": "No limit",
+      "text": "And there's no limit.",
+      "pause_after_seconds": 0.45
+    },
+    {
+      "beat": "Classroom",
+      "text": "One student secretly scrolls during class."
+    },
+    {
+      "beat": "Ceiling gag",
+      "text": "By lunchtime, his knees are touching the ceiling."
+    },
+    {
+      "beat": "Bedroom gag",
+      "text": "Another man scrolls so much before bed that his feet stick out his bedroom window.",
+      "voice_speed": 1.0
+    },
+    {
+      "beat": "Basketball",
+      "text": "Even basketball players use this to their advantage.",
+      "voice_speed": 1.1
+    },
+    {
+      "beat": "Practice",
+      "text": "They spend hours scrolling before every game."
+    },
+    {
+      "beat": "Payoff",
+      "text": "One player is now so tall that he doesn't even need to jump."
+    },
+    {
+      "beat": "Scale reveal",
+      "text": "And the biggest doom scroller in our town, his legs are taller than a skyscraper.",
+      "voice_speed": 1.1
+    },
+    {
+      "beat": "Button",
+      "text": "The government installed a Wi Fi router on his head so he could keep scrolling.",
+      "voice_speed": 1.1
+    },
+    {
+      "beat": "Resolve",
+      "text": "I've always tried to avoid doom scrolling.",
+      "voice_speed": 1.03,
+      "voice_duration_seconds": 2.1,
+      "pause_after_seconds": 0.4
+    },
+    {
+      "beat": "Night",
+      "text": "But last night, I was lying in bed thinking,",
+      "voice_speed": 1.03,
+      "voice_duration_seconds": 2.4,
+      "pause_after_seconds": 0.5
+    },
+    {
+      "beat": "Temptation",
+      "text": "Just one more video.",
+      "voice_speed": 1.03,
+      "voice_duration_seconds": 1.4,
+      "pause_after_seconds": 0.5
+    },
+    {
+      "beat": "Repeat",
+      "text": "Then another one.",
+      "voice_speed": 1.03,
+      "voice_duration_seconds": 0.8,
+      "pause_after_seconds": 0.4
+    },
+    {
+      "beat": "Repeat",
+      "text": "And another one.",
+      "voice_speed": 1.03,
+      "voice_duration_seconds": 1.0,
+      "pause_after_seconds": 0.4
+    },
+    {
+      "beat": "Viewer",
+      "text": "And you're probably lying in bed right now thinking the exact same thing.",
+      "voice_speed": 1.03,
+      "voice_duration_seconds": 3.9,
+      "pause_after_seconds": 0.3
+    },
+    {
+      "beat": "Time jump",
+      "text": "Three hours later, I finally put my phone down.",
+      "voice_speed": 1.03,
+      "voice_duration_seconds": 2.9,
+      "pause_after_seconds": 0.4
+    },
+    {
+      "beat": "Wake",
+      "text": "But when I tried to get out of bed, my legs were 12 meters long!",
+      "voice_speed": 1.03,
+      "voice_duration_seconds": 3.9,
+      "pause_after_seconds": 0.4
+    },
+    {
+      "beat": "Exterior",
+      "text": "I couldn't even fit inside my own house!",
+      "voice_speed": 1.03,
+      "voice_duration_seconds": 1.85,
+      "pause_after_seconds": 0.45
+    },
+    {
+      "beat": "Mother",
+      "text": "My mom opened the window and shouted,",
+      "voice_speed": 1.03,
+      "voice_duration_seconds": 1.55,
+      "pause_after_seconds": 0.45
+    },
+    {
+      "beat": "Reprimand",
+      "text": "I told you to go to sleep!",
+      "voice_speed": 1.03,
+      "voice_duration_seconds": 1.5,
+      "pause_after_seconds": 0.6
+    },
+    {
+      "beat": "Journey",
+      "text": "Getting to school was surprisingly easy.",
+      "voice_speed": 1.03,
+      "voice_duration_seconds": 2.0,
+      "pause_after_seconds": 0.4
+    },
+    {
+      "beat": "Scale problem",
+      "text": "I only needed six steps, but sitting inside the classroom was impossible.",
+      "voice_speed": 1.03,
+      "voice_duration_seconds": 4.15,
+      "pause_after_seconds": 0.75
+    },
+    {
+      "beat": "Search",
+      "text": "So I started looking for a solution.",
+      "voice_speed": 1.03,
+      "voice_duration_seconds": 1.85,
+      "pause_after_seconds": 0.45
+    },
+    {
+      "beat": "Discovery",
+      "text": "And then I discovered something incredible.",
+      "voice_speed": 1.03,
+      "voice_duration_seconds": 2.3,
+      "pause_after_seconds": 0.5
+    },
+    {
+      "beat": "Reverse rule",
+      "text": "Scrolling in the opposite direction makes your legs shorter.",
+      "voice_speed": 1.03,
+      "voice_duration_seconds": 3.15,
+      "pause_after_seconds": 0.55
+    },
+    {
+      "beat": "Experiment",
+      "text": "I immediately started scrolling backward.",
+      "voice_speed": 1.03,
+      "voice_duration_seconds": 1.85,
+      "pause_after_seconds": 0.35
+    },
+    {
+      "beat": "Freeze",
+      "text": "My legs were shrinking, but suddenly my phone froze.",
+      "voice_speed": 1.03,
+      "voice_duration_seconds": 3.32,
+      "pause_after_seconds": 0.68
+    },
+    {
+      "beat": "Runaway",
+      "text": "Then it started scrolling backward by itself.",
+      "voice_speed": 1.03,
+      "voice_duration_seconds": 2.05,
+      "pause_after_seconds": 0.65
+    },
+    {
+      "beat": "Panic",
+      "text": "Stop! Stop! Stop!",
+      "voice_speed": 1.03,
+      "voice_duration_seconds": 1.25,
+      "pause_after_seconds": 0.35
+    },
+    {
+      "beat": "Minimum",
+      "text": "By the time I turned it off, my legs were only two centimeters long.",
+      "voice_speed": 1.03,
+      "voice_duration_seconds": 3.75,
+      "pause_after_seconds": 0.45
+    },
+    {
+      "beat": "Rescue",
+      "text": "My little brother had to carry me home in his backpack.",
+      "voice_speed": 1.03,
+      "voice_duration_seconds": 2.25,
+      "pause_after_seconds": 0.65
+    },
+    {
+      "beat": "Realization",
+      "text": "But then I realized something.",
+      "voice_speed": 1.03,
+      "voice_duration_seconds": 1.55,
+      "pause_after_seconds": 0.45
+    },
+    {
+      "beat": "Mastery",
+      "text": "I could use doom scrolling to become any height I wanted.",
+      "voice_speed": 1.03,
+      "voice_duration_seconds": 3.1,
+      "pause_after_seconds": 0.4
+    },
+    {
+      "beat": "Shelf",
+      "text": "Need to reach the top shelf? One swipe!",
+      "voice_speed": 1.03,
+      "voice_duration_seconds": 2.35,
+      "pause_after_seconds": 0.2
+    },
+    {
+      "beat": "Tower",
+      "text": "Need to climb a building? A hundred swipes!",
+      "voice_speed": 1.03,
+      "voice_duration_seconds": 2.1,
+      "pause_after_seconds": 0.45
+    },
+    {
+      "beat": "Control",
+      "text": "I finally found a way to control my height.",
+      "voice_speed": 1.03,
+      "voice_duration_seconds": 2.75,
+      "pause_after_seconds": 0.2
+    },
+    {
+      "beat": "Curiosity",
+      "text": "But there's something I'm curious about.",
+      "voice_speed": 1.03,
+      "voice_duration_seconds": 1.47,
+      "pause_after_seconds": 0.38
+    },
+    {
+      "beat": "Question",
+      "text": "How far have you scrolled today?",
+      "voice_speed": 1.03,
+      "voice_duration_seconds": 2.25,
+      "pause_after_seconds": 0.15
+    },
+    {
+      "beat": "Scale ladder",
+      "text": "10 meters? A hundred meters? Maybe even a kilometer?",
+      "voice_speed": 1.03,
+      "voice_duration_seconds": 2.85,
+      "pause_after_seconds": 0.38
+    },
+    {
+      "beat": "Viewer rule",
+      "text": "Imagine if this rule existed in your world.",
+      "voice_speed": 1.03,
+      "voice_duration_seconds": 2.92,
+      "pause_after_seconds": 0.15
+    },
+    {
+      "beat": "Look down",
+      "text": "Actually, don't look down.",
+      "voice_speed": 1.03,
+      "voice_duration_seconds": 1.24,
+      "pause_after_seconds": 0.14
+    },
+    {
+      "beat": "Last reveal",
+      "text": "Your legs might already be growing.",
+      "voice_speed": 1.03,
+      "voice_duration_seconds": 1.87,
+      "pause_after_seconds": 0
+    }
+  ],
+  "shots": [
+    {
+      "id": "S1",
+      "size": "wide town establish",
+      "set": "city-skyline",
+      "light": "day",
+      "key": 30,
+      "note": "Fly into the layered high-rise street, then continue the push past the storefronts toward the avatar as he glances from his phone to camera.",
+      "camera": {
+        "from": {
+          "position": [
+            -9,
+            23,
+            27
+          ],
+          "target": [
+            0,
+            0,
+            -7
+          ],
+          "fov": 58
+        },
+        "to": {
+          "position": [
+            -3.8,
+            7,
+            12.5
+          ],
+          "target": [
+            0.25,
+            1.3,
+            0.65
+          ],
+          "fov": 40
+        }
+      }
+    },
+    {
+      "id": "S2",
+      "size": "phone insert",
+      "set": "town",
+      "light": "day",
+      "key": 28,
+      "note": "Hold a stable readable phone insert; show two distinct thumb swipes and keep the feed change tied to each gesture.",
+      "camera": {
+        "from": {
+          "position": [
+            0.18,
+            3.8,
+            8
+          ],
+          "target": [
+            0,
+            1.45,
+            0.2
+          ],
+          "fov": 34
+        },
+        "to": {
+          "position": [
+            0.18,
+            3.8,
+            8
+          ],
+          "target": [
+            0,
+            1.45,
+            0.2
+          ],
+          "fov": 34
+        }
+      }
+    },
+    {
+      "id": "S3",
+      "size": "low growth medium",
+      "set": "town",
+      "light": "day",
+      "key": 50,
+      "note": "At the spoken growth rule, show the avatar against the town and hold a clean low angle as the legs extend in measured stages; keep the shoes visible on the pavement.",
+      "camera": {
+        "from": {
+          "position": [
+            0,
+            4.2,
+            12
+          ],
+          "target": [
+            0,
+            2.0,
+            -1
+          ],
+          "fov": 45
+        },
+        "to": {
+          "position": [
+            0,
+            5.4,
+            13
+          ],
+          "target": [
+            0,
+            3.0,
+            -1
+          ],
+          "fov": 43
+        }
+      }
+    },
+    {
+      "id": "S4",
+      "size": "low street perspective / no-limit reveal",
+      "set": "city-skyline",
+      "light": "day",
+      "key": 24,
+      "note": "On \"no limit,\" cut to the low road view and show the student already towering over nearby buildings. Keep the phone readable and feet grounded.",
+      "camera": {
+        "from": {
+          "position": [
+            5.5,
+            5.2,
+            15
+          ],
+          "target": [
+            -1,
+            5.5,
+            -3
+          ],
+          "fov": 54
+        },
+        "to": {
+          "position": [
+            3.4,
+            6.4,
+            14
+          ],
+          "target": [
+            0,
+            7,
+            -3
+          ],
+          "fov": 49
+        }
+      }
+    },
+    {
+      "id": "S4B",
+      "size": "overhead town scale insert",
+      "set": "city-skyline",
+      "light": "day",
+      "key": 24,
+      "note": "A high angled view reveals the road, houses and landmark together while the elongated student remains readable as the town-wide gag.",
+      "camera": {
+        "from": {
+          "position": [
+            0,
+            22,
+            12
+          ],
+          "target": [
+            0,
+            1,
+            -14
+          ],
+          "fov": 62
+        },
+        "to": {
+          "position": [
+            1.8,
+            17,
+            9
+          ],
+          "target": [
+            0,
+            2,
+            -14
+          ],
+          "fov": 56
+        }
+      }
+    },
+    {
+      "id": "S5",
+      "size": "classroom medium wide",
+      "set": "classroom",
+      "light": "day",
+      "key": 40,
+      "note": "Push toward the student as he scrolls low by the desk, notices a classmate turning, and stows the phone; keep the classmate and board in frame.",
+      "camera": {
+        "from": {
+          "position": [
+            0,
+            5.2,
+            13
+          ],
+          "target": [
+            0,
+            2.2,
+            -2
+          ],
+          "fov": 48
+        },
+        "to": {
+          "position": [
+            -1.4,
+            4.2,
+            10.5
+          ],
+          "target": [
+            0,
+            2.2,
+            -2
+          ],
+          "fov": 43
+        }
+      }
+    },
+    {
+      "id": "S5B",
+      "size": "phone and thumb insert",
+      "set": "classroom",
+      "light": "day",
+      "key": 10,
+      "note": "Cut on the word scrolls to a close, unobstructed phone insert; hold the phone just in front of the desk edge and show the thumb swipe drive the feed.",
+      "camera": {
+        "from": {
+          "position": [
+            0.35,
+            2.6,
+            1.4
+          ],
+          "target": [
+            0.35,
+            1.35,
+            -2.3
+          ],
+          "fov": 36
+        },
+        "to": {
+          "position": [
+            0.35,
+            2.6,
+            1.4
+          ],
+          "target": [
+            0.35,
+            1.35,
+            -2.3
+          ],
+          "fov": 36
+        }
+      }
+    },
+    {
+      "id": "S5C",
+      "size": "student and teacher reaction",
+      "set": "classroom",
+      "light": "day",
+      "key": 14,
+      "note": "Show the teacher notice the phone, then let the student freeze and hide it as the line ends.",
+      "camera": {
+        "from": {
+          "position": [
+            0,
+            4,
+            8.5
+          ],
+          "target": [
+            -0.55,
+            2.2,
+            -3.5
+          ],
+          "fov": 46
+        },
+        "to": {
+          "position": [
+            -0.3,
+            3.8,
+            8
+          ],
+          "target": [
+            -0.55,
+            2.2,
+            -3.5
+          ],
+          "fov": 43
+        }
+      }
+    },
+    {
+      "id": "S6",
+      "size": "ceiling low angle",
+      "set": "classroom-side",
+      "light": "day",
+      "key": 50,
+      "note": "From the side follow the seated student, desk and planted sneakers as the folded knees grow into an arch.",
+      "camera": {
+        "from": {
+          "position": [
+            2.5,
+            2.1,
+            10.9
+          ],
+          "target": [
+            0.06,
+            2.45,
+            0
+          ],
+          "fov": 50
+        },
+        "to": {
+          "position": [
+            2.4,
+            2.35,
+            11.6
+          ],
+          "target": [
+            0.13,
+            3.1,
+            0
+          ],
+          "fov": 52
+        }
+      }
+    },
+    {
+      "id": "S6B",
+      "size": "full-height ceiling-to-floor payoff",
+      "set": "classroom-side",
+      "light": "day",
+      "key": 30,
+      "note": "Tilt into a close insert of both blue knees touching the underside of the lit ceiling. Small plaster flecks fall at contact.",
+      "camera": {
+        "from": {
+          "position": [
+            2.15,
+            3.4,
+            6.1
+          ],
+          "target": [
+            0.42,
+            5.25,
+            0
+          ],
+          "fov": 47
+        },
+        "to": {
+          "position": [
+            1.7,
+            3.7,
+            5.3
+          ],
+          "target": [
+            0.56,
+            5.75,
+            0
+          ],
+          "fov": 44
+        }
+      }
+    },
+    {
+      "id": "S7",
+      "size": "bedroom side wide",
+      "set": "cottage-interior",
+      "light": "day",
+      "key": 42,
+      "note": "At lamplight, follow the striped pajama legs from the pillow to the foot of the bed.",
+      "camera": {
+        "from": {
+          "position": [
+            3.1,
+            3.2,
+            2.5
+          ],
+          "target": [
+            0,
+            1.55,
+            -3.55
+          ],
+          "fov": 47
+        },
+        "to": {
+          "position": [
+            2.4,
+            2.75,
+            2.8
+          ],
+          "target": [
+            0,
+            1.62,
+            -3.25
+          ],
+          "fov": 46
+        }
+      }
+    },
+    {
+      "id": "S8",
+      "size": "night exterior window gag",
+      "set": "cottage-exterior",
+      "light": "night",
+      "key": 18,
+      "note": "Frame the full cottage and lawn. The same legs cross the warm window sill and extend toward the viewer over the grass.",
+      "camera": {
+        "from": {
+          "position": [
+            -2.5,
+            5.3,
+            24
+          ],
+          "target": [
+            0,
+            3.4,
+            -1.1
+          ],
+          "fov": 44
+        },
+        "to": {
+          "position": [
+            -2.5,
+            5.05,
+            23
+          ],
+          "target": [
+            0,
+            3.3,
+            -1.05
+          ],
+          "fov": 43
+        }
+      }
+    },
+    {
+      "id": "S9",
+      "size": "court establishing wide",
+      "set": "basketball-court",
+      "light": "day",
+      "key": 24,
+      "note": "Establish the court and hoop, then follow one clean ball pass from the tall player to his friend and catch reaction.",
+      "camera": {
+        "from": {
+          "position": [
+            -4.5,
+            7,
+            17
+          ],
+          "target": [
+            0,
+            2,
+            -3.4
+          ],
+          "fov": 49
+        },
+        "to": {
+          "position": [
+            -2.7,
+            5.2,
+            12.5
+          ],
+          "target": [
+            0,
+            2,
+            -3.6
+          ],
+          "fov": 43
+        }
+      }
+    },
+    {
+      "id": "S10",
+      "size": "players and phones",
+      "set": "basketball-court",
+      "light": "day",
+      "key": 36,
+      "note": "Show both players scrolling, then lower their phones and look toward the hoop; crane up as the tall player grows and give his friend a readable recoil.",
+      "camera": {
+        "from": {
+          "position": [
+            0,
+            4.8,
+            14
+          ],
+          "target": [
+            0,
+            3.0,
+            -2
+          ],
+          "fov": 50
+        },
+        "to": {
+          "position": [
+            -0.8,
+            8,
+            15
+          ],
+          "target": [
+            -0.4,
+            6.5,
+            -2
+          ],
+          "fov": 50
+        }
+      }
+    },
+    {
+      "id": "S11",
+      "size": "no-jump shot release",
+      "set": "basketball-court",
+      "light": "day",
+      "key": 56,
+      "note": "Hold the tall player and hoop together; show the hand release, a bright arc, and the ball reaching the rim as he keeps both feet planted.",
+      "camera": {
+        "from": {
+          "position": [
+            -0.8,
+            8,
+            15
+          ],
+          "target": [
+            -0.4,
+            6.5,
+            -2
+          ],
+          "fov": 50
+        },
+        "to": {
+          "position": [
+            0.6,
+            6.8,
+            19
+          ],
+          "target": [
+            0.6,
+            8.0,
+            -3
+          ],
+          "fov": 52
+        }
+      }
+    },
+    {
+      "id": "S11B",
+      "size": "side-angle net insert",
+      "set": "basketball-court",
+      "light": "day",
+      "key": 8,
+      "note": "Continue the ball through the flexing net, floor impact, visible squash, single rebound and short settle; hold the hoop, ball and cheering friend in frame before the city cut.",
+      "camera": {
+        "from": {
+          "position": [
+            3.8,
+            3.3,
+            -1.0
+          ],
+          "target": [
+            0,
+            2.6,
+            -10.6
+          ],
+          "fov": 46
+        },
+        "to": {
+          "position": [
+            3.2,
+            3.1,
+            -1.8
+          ],
+          "target": [
+            0,
+            2.4,
+            -10.6
+          ],
+          "fov": 43
+        }
+      }
+    },
+    {
+      "id": "S12",
+      "size": "town scale reveal",
+      "set": "city-scale-reveal",
+      "light": "day",
+      "key": 60,
+      "note": "Crane from street height into a skyline reveal as the giant grows; keep his feet, head and tallest building together in the portrait frame.",
+      "camera": {
+        "from": {
+          "position": [
+            2,
+            5,
+            22
+          ],
+          "target": [
+            0,
+            3.8,
+            -3
+          ],
+          "fov": 54
+        },
+        "to": {
+          "position": [
+            -3,
+            16,
+            26
+          ],
+          "target": [
+            0,
+            12,
+            -3
+          ],
+          "fov": 58
+        }
+      }
+    },
+    {
+      "id": "S13",
+      "size": "router landing close",
+      "set": "city-scale-reveal",
+      "light": "day",
+      "key": 42,
+      "note": "A router falls onto the giant's head and its cyan lights switch on at installed; show the contact, antenna wobble and facial reaction.",
+      "camera": {
+        "from": {
+          "position": [
+            0,
+            14,
+            18
+          ],
+          "target": [
+            0,
+            16.4,
+            -1
+          ],
+          "fov": 47
+        },
+        "to": {
+          "position": [
+            0,
+            13.7,
+            16.5
+          ],
+          "target": [
+            0,
+            16.4,
+            -1
+          ],
+          "fov": 46
+        }
+      }
+    },
+    {
+      "id": "S14",
+      "size": "city button wide",
+      "set": "city-scale-reveal",
+      "light": "day",
+      "key": 30,
+      "note": "Return to a broad skyline view: router on head, phone in hand, and the same giant still scrolling as the final words land.",
+      "camera": {
+        "from": {
+          "position": [
+            0,
+            16.5,
+            30
+          ],
+          "target": [
+            0,
+            9.1,
+            -4
+          ],
+          "fov": 52
+        },
+        "to": {
+          "position": [
+            0.5,
+            16,
+            27
+          ],
+          "target": [
+            0,
+            9.4,
+            -4
+          ],
+          "fov": 49
+        }
+      }
+    },
+    {
+      "id": "A01",
+      "set": "teen-bedroom",
+      "size": "medium",
+      "key": 18,
+      "light": "day",
+      "note": "Desk resolve",
+      "camera": {
+        "from": {
+          "position": [
+            -0.1,
+            2.85,
+            -0.95
+          ],
+          "target": [
+            -2.2,
+            1.85,
+            -5.56
+          ],
+          "fov": 40
+        },
+        "to": {
+          "position": [
+            -0.62,
+            2.62,
+            -1.35
+          ],
+          "target": [
+            -2.16,
+            1.88,
+            -5.5
+          ],
+          "fov": 39
+        }
+      }
+    },
+    {
+      "id": "A02",
+      "set": "teen-bedroom",
+      "size": "medium",
+      "key": 18,
+      "light": "night",
+      "note": "Last night",
+      "camera": {
+        "from": {
+          "position": [
+            -2.9,
+            4.15,
+            1.7
+          ],
+          "target": [
+            1.1,
+            1.67,
+            -3.74
+          ],
+          "fov": 48
+        },
+        "to": {
+          "position": [
+            -2.27,
+            3.7,
+            1.21
+          ],
+          "target": [
+            1.21,
+            1.68,
+            -3.8
+          ],
+          "fov": 44
+        }
+      }
+    },
+    {
+      "id": "A03",
+      "set": "teen-bedroom",
+      "size": "medium",
+      "key": 18,
+      "light": "night",
+      "note": "One more feed insert",
+      "camera": {
+        "from": {
+          "position": [
+            1.8,
+            3.2,
+            -0.23
+          ],
+          "target": [
+            1.27,
+            2.8,
+            -3.08
+          ],
+          "fov": 43
+        },
+        "to": {
+          "position": [
+            1.78,
+            3.12,
+            -0.4
+          ],
+          "target": [
+            1.29,
+            2.77,
+            -3.09
+          ],
+          "fov": 43
+        }
+      }
+    },
+    {
+      "id": "A04",
+      "set": "teen-bedroom",
+      "size": "medium",
+      "key": 18,
+      "light": "night",
+      "note": "More swipes",
+      "camera": {
+        "from": {
+          "position": [
+            1.78,
+            3.12,
+            -0.4
+          ],
+          "target": [
+            1.29,
+            2.77,
+            -3.09
+          ],
+          "fov": 43
+        },
+        "to": {
+          "position": [
+            1.18,
+            3.12,
+            -0.56
+          ],
+          "target": [
+            1.28,
+            2.78,
+            -3.09
+          ],
+          "fov": 41
+        }
+      }
+    },
+    {
+      "id": "A05",
+      "set": "teen-bedroom",
+      "size": "medium",
+      "key": 18,
+      "light": "night",
+      "note": "Viewer POV",
+      "camera": {
+        "from": {
+          "position": [
+            1.06,
+            5.4,
+            -2.55
+          ],
+          "target": [
+            1.25,
+            1.67,
+            -4.19
+          ],
+          "fov": 46
+        },
+        "to": {
+          "position": [
+            0.95,
+            4.9,
+            -2.65
+          ],
+          "target": [
+            1.25,
+            1.71,
+            -4.15
+          ],
+          "fov": 44
+        }
+      }
+    },
+    {
+      "id": "A06",
+      "set": "teen-bedroom",
+      "size": "medium",
+      "key": 18,
+      "light": "night",
+      "note": "Clock and phone down",
+      "camera": {
+        "from": {
+          "position": [
+            2.99,
+            2.52,
+            -2.25
+          ],
+          "target": [
+            2.62,
+            1.83,
+            -4.64
+          ],
+          "fov": 43
+        },
+        "to": {
+          "position": [
+            3.23,
+            2.5,
+            -1.65
+          ],
+          "target": [
+            2.34,
+            1.86,
+            -4.41
+          ],
+          "fov": 44
+        }
+      }
+    },
+    {
+      "id": "A07",
+      "set": "teen-bedroom",
+      "size": "medium",
+      "key": 18,
+      "light": "day",
+      "note": "Wake",
+      "camera": {
+        "from": {
+          "position": [
+            -1.3,
+            3.1,
+            0.63
+          ],
+          "target": [
+            1.2,
+            1.7,
+            -3.8
+          ],
+          "fov": 43
+        },
+        "to": {
+          "position": [
+            -1.46,
+            3.27,
+            0.74
+          ],
+          "target": [
+            1.22,
+            2,
+            -3.62
+          ],
+          "fov": 46
+        }
+      }
+    },
+    {
+      "id": "A08",
+      "set": "suburb-lane",
+      "size": "medium",
+      "key": 18,
+      "light": "day",
+      "note": "Twelve metres",
+      "camera": {
+        "from": {
+          "position": [
+            -2.0,
+            4.75,
+            14.4
+          ],
+          "target": [
+            1.2,
+            2.15,
+            -0.1
+          ],
+          "fov": 51
+        },
+        "to": {
+          "position": [
+            -6.15,
+            5.6,
+            14.9
+          ],
+          "target": [
+            1.25,
+            2,
+            2.4
+          ],
+          "fov": 56
+        }
+      }
+    },
+    {
+      "id": "A09",
+      "set": "suburb-lane",
+      "size": "medium",
+      "key": 18,
+      "light": "day",
+      "note": "Mother at the window",
+      "camera": {
+        "from": {
+          "position": [
+            -3.68,
+            3.1,
+            7.1
+          ],
+          "target": [
+            -2.36,
+            2.23,
+            0.1
+          ],
+          "fov": 40
+        },
+        "to": {
+          "position": [
+            -3.4,
+            3,
+            5.64
+          ],
+          "target": [
+            -2.39,
+            2.25,
+            0.1
+          ],
+          "fov": 37
+        }
+      }
+    },
+    {
+      "id": "A10",
+      "set": "town",
+      "size": "medium",
+      "key": 18,
+      "light": "day",
+      "note": "Six steps"
+    },
+    {
+      "id": "A11",
+      "set": "school",
+      "size": "medium",
+      "key": 18,
+      "light": "day",
+      "note": "Bus and school"
+    },
+    {
+      "id": "A12",
+      "set": "city-skyline",
+      "size": "medium",
+      "key": 18,
+      "light": "day",
+      "note": "Find a solution"
+    },
+    {
+      "id": "A13",
+      "set": "town",
+      "size": "medium",
+      "key": 18,
+      "light": "day",
+      "note": "Reverse feed insert"
+    },
+    {
+      "id": "A14",
+      "set": "school",
+      "size": "medium",
+      "key": 18,
+      "light": "day",
+      "note": "Shrink near the bus"
+    },
+    {
+      "id": "A15",
+      "set": "school",
+      "size": "medium",
+      "key": 18,
+      "light": "day",
+      "note": "Phone freezes"
+    },
+    {
+      "id": "A16",
+      "set": "school",
+      "size": "medium",
+      "key": 18,
+      "light": "day",
+      "note": "Involuntary reverse and panic"
+    },
+    {
+      "id": "A17",
+      "set": "school",
+      "size": "medium",
+      "key": 18,
+      "light": "day",
+      "note": "Shut down the phone"
+    },
+    {
+      "id": "A18",
+      "set": "school",
+      "size": "medium",
+      "key": 18,
+      "light": "day",
+      "note": "Two centimetres"
+    },
+    {
+      "id": "A19",
+      "set": "town",
+      "size": "medium",
+      "key": 18,
+      "light": "day",
+      "note": "Brother backpack"
+    },
+    {
+      "id": "A20",
+      "set": "town",
+      "size": "medium",
+      "key": 18,
+      "light": "day",
+      "note": "Discover control"
+    },
+    {
+      "id": "A21",
+      "set": "home",
+      "size": "medium",
+      "key": 18,
+      "light": "day",
+      "note": "Shelf swipe"
+    },
+    {
+      "id": "A22",
+      "set": "city-scale-reveal",
+      "size": "medium",
+      "key": 18,
+      "light": "day",
+      "note": "Tower climb"
+    },
+    {
+      "id": "A23",
+      "set": "town",
+      "size": "medium",
+      "key": 18,
+      "light": "day",
+      "note": "Question"
+    },
+    {
+      "id": "A24",
+      "set": "city-skyline",
+      "size": "medium",
+      "key": 18,
+      "light": "day",
+      "note": "Distance scale"
+    },
+    {
+      "id": "A25",
+      "set": "city-scale-reveal",
+      "size": "medium",
+      "key": 18,
+      "light": "day",
+      "note": "Look down"
+    }
+  ],
+  "edit": [
+    {
+      "shot": "S1",
+      "at": "f:0"
+    },
+    {
+      "shot": "S2",
+      "at": "If",
+      "transition": {
+        "kind": "whip",
+        "frames": 8,
+        "direction": "left"
+      }
+    },
+    {
+      "shot": "S3",
+      "at": "grow",
+      "transition": {
+        "kind": "flash",
+        "frames": 6,
+        "color": "#fff1b5"
+      }
+    },
+    {
+      "shot": "S4",
+      "at": "And"
+    },
+    {
+      "shot": "S4B",
+      "at": "limit",
+      "transition": {
+        "kind": "whip",
+        "frames": 7,
+        "direction": "right"
+      }
+    },
+    {
+      "shot": "S5",
+      "at": "One",
+      "transition": {
+        "kind": "whip",
+        "frames": 8,
+        "direction": "down"
+      }
+    },
+    {
+      "shot": "S5B",
+      "at": "scrolls",
+      "transition": {
+        "kind": "push",
+        "frames": 6,
+        "direction": "up"
+      }
+    },
+    {
+      "shot": "S5C",
+      "at": "class",
+      "transition": {
+        "kind": "whip",
+        "frames": 6,
+        "direction": "left"
+      }
+    },
+    {
+      "shot": "S6",
+      "at": "By"
+    },
+    {
+      "shot": "S6B",
+      "at": "knees",
+      "transition": {
+        "kind": "flash",
+        "frames": 6,
+        "color": "#ffe58a"
+      }
+    },
+    {
+      "shot": "S7",
+      "at": "Another"
+    },
+    {
+      "shot": "S8",
+      "at": "bed",
+      "transition": {
+        "kind": "whip",
+        "frames": 7,
+        "direction": "right"
+      }
+    },
+    {
+      "shot": "S9",
+      "at": "Even",
+      "transition": {
+        "kind": "whip",
+        "frames": 7,
+        "direction": "up"
+      }
+    },
+    {
+      "shot": "S10",
+      "at": "They",
+      "transition": {
+        "kind": "whip",
+        "frames": 12,
+        "direction": "left"
+      }
+    },
+    {
+      "shot": "S11",
+      "at": "One",
+      "transition": {
+        "kind": "push",
+        "frames": 8
+      }
+    },
+    {
+      "shot": "S11B",
+      "at": "jump",
+      "transition": {
+        "kind": "push",
+        "frames": 8
+      }
+    },
+    {
+      "shot": "S12",
+      "at": "doom+2",
+      "transition": {
+        "kind": "whip",
+        "frames": 8,
+        "direction": "up"
+      }
+    },
+    {
+      "shot": "S13",
+      "at": "The",
+      "transition": {
+        "kind": "flash",
+        "frames": 6,
+        "color": "#bdf4ff"
+      }
+    },
+    {
+      "shot": "S14",
+      "at": "so"
+    },
+    {
+      "shot": "A01",
+      "at": "I've"
+    },
+    {
+      "shot": "A02",
+      "at": "But"
+    },
+    {
+      "shot": "A03",
+      "at": "Just"
+    },
+    {
+      "shot": "A04",
+      "at": "Then"
+    },
+    {
+      "shot": "A05",
+      "at": "And#2"
+    },
+    {
+      "shot": "A06",
+      "at": "Three"
+    },
+    {
+      "shot": "A07",
+      "at": "But"
+    },
+    {
+      "shot": "A08",
+      "at": "legs"
+    },
+    {
+      "shot": "A09",
+      "at": "mom"
+    },
+    {
+      "shot": "A10",
+      "at": "Getting"
+    },
+    {
+      "shot": "A11",
+      "at": "sitting"
+    },
+    {
+      "shot": "A12",
+      "at": "So"
+    },
+    {
+      "shot": "A13",
+      "at": "Scrolling"
+    },
+    {
+      "shot": "A14",
+      "at": "shorter"
+    },
+    {
+      "shot": "A15",
+      "at": "suddenly"
+    },
+    {
+      "shot": "A16",
+      "at": "Then"
+    },
+    {
+      "shot": "A17",
+      "at": "By"
+    },
+    {
+      "shot": "A18",
+      "at": "my"
+    },
+    {
+      "shot": "A19",
+      "at": "My"
+    },
+    {
+      "shot": "A20",
+      "at": "But"
+    },
+    {
+      "shot": "A21",
+      "at": "Need"
+    },
+    {
+      "shot": "A22",
+      "at": "Need"
+    },
+    {
+      "shot": "A23",
+      "at": "But"
+    },
+    {
+      "shot": "A24",
+      "at": "10"
+    },
+    {
+      "shot": "A25",
+      "at": "Imagine"
+    }
+  ],
+  "tail": 0.2,
+  "world_sfx": {
+    "volume": 0.38,
+    "events": [
+      {
+        "at": "If",
+        "clip": "whoosh-fast-hard",
+        "gain": 0.14
+      },
+      {
+        "at": "scroll",
+        "clip": "move-spin",
+        "gain": 0.18
+      },
+      {
+        "at": "grow",
+        "clip": "whoosh-fast-hard",
+        "gain": 0.25
+      },
+      {
+        "at": "ceiling+6",
+        "clip": "impact-heavy-hard",
+        "gain": 0.3
+      },
+      {
+        "at": "window",
+        "clip": "impact-heavy-hard",
+        "gain": 0.2
+      },
+      {
+        "at": "bed",
+        "clip": "whoosh-fast-hard",
+        "gain": 0.17
+      },
+      {
+        "at": "basketball",
+        "clip": "whoosh-fast-hard",
+        "gain": 0.18
+      },
+      {
+        "at": "They",
+        "clip": "whoosh-fast-hard",
+        "gain": 0.2
+      },
+      {
+        "at": "One#2",
+        "clip": "whoosh-fast-hard",
+        "gain": 0.17
+      },
+      {
+        "at": "S9+62",
+        "clip": "whoosh-fast-hard",
+        "gain": 0.2
+      },
+      {
+        "at": "now",
+        "clip": "whoosh-fast-hard",
+        "gain": 0.14
+      },
+      {
+        "at": "jump",
+        "clip": "shimmer-short-sparkle",
+        "gain": 0.16
+      },
+      {
+        "at": "event:S11B.net_contact",
+        "clip": "impact-heavy-hard",
+        "gain": 0.1
+      },
+      {
+        "at": "jump+22",
+        "clip": "impact-heavy-hard",
+        "gain": 0.18
+      },
+      {
+        "at": "advantage-8",
+        "clip": "impact-heavy-hard",
+        "gain": 0.1
+      },
+      {
+        "at": "skyscraper",
+        "clip": "riser-1s-strong",
+        "gain": 0.22
+      },
+      {
+        "at": "event:S13.router_contact",
+        "clip": "mechanical-latch-heavy",
+        "gain": 0.3
+      },
+      {
+        "at": "scrolling",
+        "clip": "move-spin",
+        "gain": 0.16
+      }
+    ]
+  },
+  "choiceCues": [],
+  "caption_mode": "word",
+  "caption_zones": {
+    "S5B": "top-center",
+    "S10": "top-right",
+    "S11": "top-right",
+    "S11B": "top-right"
+  },
+  "fx": [
+    {
+      "at": "grow",
+      "kind": "speed-lines",
+      "strength": 0.34,
+      "duration": 0.22
+    },
+    {
+      "at": "jump",
+      "kind": "spark",
+      "x": 50,
+      "y": 47,
+      "color": "#ffb74f",
+      "duration": 0.3
+    },
+    {
+      "at": "skyscraper",
+      "kind": "speed-lines",
+      "strength": 0.3,
+      "color": "#ffe18b",
+      "duration": 0.3
+    },
+    {
+      "at": "installed",
+      "kind": "impact-star",
+      "x": 46.5,
+      "y": 35,
+      "color": "#bdf4ff",
+      "duration": 0.13
+    }
+  ],
+  "shot_events": [
+    {
+      "shot": "S6B",
+      "name": "ceiling_contact",
+      "at": "ceiling+6"
+    },
+    {
+      "shot": "S8",
+      "name": "window_exit",
+      "at": "feet"
+    },
+    {
+      "shot": "S10",
+      "name": "tall_reveal",
+      "at": "game"
+    },
+    {
+      "shot": "S12",
+      "name": "skyscraper",
+      "at": "skyscraper"
+    },
+    {
+      "shot": "S11B",
+      "name": "net_contact",
+      "at": "jump"
+    },
+    {
+      "shot": "S13",
+      "name": "router_contact",
+      "at": "installed"
+    }
+  ]
+}

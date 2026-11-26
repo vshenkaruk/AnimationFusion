@@ -2,7 +2,8 @@
 """Mix locally licensed CC0 action cues for the world-story 3D renderer.
 
 Episode files may define ``world_sfx.events`` as ``[{at, clip, gain}]``. ``at``
-uses the same word/shot/frame cue syntax as plan.py. The script uses only the
+uses the same word/shot/frame cue syntax as plan.py, plus ``event:SHOT.NAME``
+to bind a sound to a named shot event shared with the animation. The script uses only the
 CC0 WAV samples already included in kit/blox/assets/sfx/cc0/sfx-kit/; it makes
 no network requests and spends no voice-generation credits.
 
@@ -33,6 +34,28 @@ CLIPS = {
     "shimmer-short-sparkle": "shimmer-short-sparkle.wav",
     "whoosh-fast-hard": "whoosh-fast-hard.wav",
 }
+
+
+def resolve_sfx_cue(cue: str, words: list, timeline: dict, shot_ids: list, fps: float) -> int:
+    match = re.fullmatch(r"event:([A-Za-z0-9_-]+)\.([A-Za-z0-9_-]+)", cue)
+    if not match:
+        return resolve(cue, words, fps, timeline.get("segments"), shot_ids)
+    shot_id, event_name = match.groups()
+    local_frame = timeline.get("shotEvents", {}).get(shot_id, {}).get(event_name)
+    if local_frame is None:
+        raise ValueError(f"unknown shot event '{shot_id}.{event_name}'")
+    candidates = [
+        segment for segment in timeline.get("segments", [])
+        if segment.get("shot") == shot_id
+        and float(segment.get("t0", 0)) <= float(local_frame) <= float(segment.get("t1", -1))
+    ]
+    if not candidates:
+        raise ValueError(f"shot event '{shot_id}.{event_name}' at local frame {local_frame} is outside its timeline segment")
+    segment = candidates[0]
+    global_frame = round(float(segment["a"]) + float(local_frame) - float(segment.get("t0", 0)))
+    if global_frame < int(segment["a"]) or global_frame >= int(segment["b"]):
+        raise ValueError(f"shot event '{shot_id}.{event_name}' resolves outside its global segment")
+    return global_frame
 
 
 def mono_float(path: Path) -> np.ndarray:
@@ -80,7 +103,7 @@ def main(slug: str) -> None:
             raise SystemExit(f"Event {index} uses an unsupported CC0 clip '{clip_name}'. Available: {', '.join(CLIPS)}")
         cue = str(event.get("at", ""))
         try:
-            frame = resolve(cue, words, fps, timeline.get("segments"), shot_ids)
+            frame = resolve_sfx_cue(cue, words, timeline, shot_ids, fps)
         except Exception as exc:
             raise SystemExit(f"Cannot place world SFX event {index} at cue '{cue}': {exc}") from exc
         gain = float(event.get("gain", 0.35))

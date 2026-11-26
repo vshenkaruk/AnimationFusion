@@ -24,6 +24,10 @@ The user-provided Brave URL is a search query, not a repository: `https://search
 
 [KanzeroG/roblox-vfx-animation](https://github.com/KanzeroG/roblox-vfx-animation) was used as a design reference for effect layering, key poses, and timing. No code or `.rbxm` assets were copied. Its MIT-licensed Blender helpers primarily support Roblox model/animation export, and its prefab pack is designed for Roblox Studio with assets that may require separate Creator Store permissions; neither is bundled in this Blender video renderer. See the upstream [license](https://github.com/KanzeroG/roblox-vfx-animation/blob/main/LICENSE) and [asset notes](https://github.com/KanzeroG/roblox-vfx-animation#download-the-vfx-pack).
 
+## Kenney CC0 assets for `world-story-3d`
+
+Selected Kenney Blocky Characters models and textures are included in `studio/public/assets/kenney/blocky-characters/`. The commercial skyline and suburban models are under `studio/public/assets/kenney/city-kit-commercial/` and `studio/public/assets/kenney/city-kit-suburban/`. All three packs include their upstream CC0 license. [Blocky Characters](https://kenney.nl/assets/blocky-characters), [City Kit (Commercial)](https://kenney.nl/assets/city-kit-commercial), [City Kit (Suburban)](https://kenney.nl/assets/city-kit-suburban). These are generic Kenney game assets, not official Roblox assets.
+
 ## CC0 sound samples
 
 Six WAV effects selected from [wyzowl/sfx-kit](https://github.com/wyzowl/sfx-kit) are included at `kit/blox/assets/sfx/cc0/sfx-kit/`: `whoosh-fast-hard`, `impact-heavy-hard`, `mechanical-latch-heavy`, `shimmer-short-sparkle`, `move-spin`, and `riser-1s-strong`. They are CC0. The source commit, per-file SHA-256, sync point, target loudness, and intended event are recorded in `manifest.json`; the source CC0 dedication is preserved in `licenses/upstream/SFX-Kit-CC0.txt`. These are individual effect samples, not a soundtrack.

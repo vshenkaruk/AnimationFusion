@@ -1,0 +1,133 @@
+{
+  "source": "project CC0 SFX Kit samples",
+  "sample_rate": 48000,
+  "peak": 0.3,
+  "events": [
+    {
+      "at": "If",
+      "frame": 117,
+      "seconds": 3.9,
+      "clip": "whoosh-fast-hard",
+      "gain": 0.14
+    },
+    {
+      "at": "scroll",
+      "frame": 42,
+      "seconds": 1.4,
+      "clip": "move-spin",
+      "gain": 0.18
+    },
+    {
+      "at": "grow",
+      "frame": 198,
+      "seconds": 6.6,
+      "clip": "whoosh-fast-hard",
+      "gain": 0.25
+    },
+    {
+      "at": "ceiling",
+      "frame": 469,
+      "seconds": 15.633,
+      "clip": "impact-heavy-hard",
+      "gain": 0.3
+    },
+    {
+      "at": "window",
+      "frame": 617,
+      "seconds": 20.567,
+      "clip": "impact-heavy-hard",
+      "gain": 0.2
+    },
+    {
+      "at": "bed",
+      "frame": 555,
+      "seconds": 18.5,
+      "clip": "whoosh-fast-hard",
+      "gain": 0.17
+    },
+    {
+      "at": "basketball",
+      "frame": 655,
+      "seconds": 21.833,
+      "clip": "whoosh-fast-hard",
+      "gain": 0.18
+    },
+    {
+      "at": "They",
+      "frame": 733,
+      "seconds": 24.433,
+      "clip": "whoosh-fast-hard",
+      "gain": 0.2
+    },
+    {
+      "at": "One#2",
+      "frame": 821,
+      "seconds": 27.367,
+      "clip": "whoosh-fast-hard",
+      "gain": 0.17
+    },
+    {
+      "at": "S9+62",
+      "frame": 709,
+      "seconds": 23.633,
+      "clip": "whoosh-fast-hard",
+      "gain": 0.2
+    },
+    {
+      "at": "now",
+      "frame": 845,
+      "seconds": 28.167,
+      "clip": "whoosh-fast-hard",
+      "gain": 0.14
+    },
+    {
+      "at": "jump",
+      "frame": 913,
+      "seconds": 30.433,
+      "clip": "shimmer-short-sparkle",
+      "gain": 0.16
+    },
+    {
+      "at": "event:S11B.net_contact",
+      "frame": 913,
+      "seconds": 30.433,
+      "clip": "impact-heavy-hard",
+      "gain": 0.1
+    },
+    {
+      "at": "jump+22",
+      "frame": 935,
+      "seconds": 31.167,
+      "clip": "impact-heavy-hard",
+      "gain": 0.18
+    },
+    {
+      "at": "advantage-8",
+      "frame": 695,
+      "seconds": 23.167,
+      "clip": "impact-heavy-hard",
+      "gain": 0.1
+    },
+    {
+      "at": "skyscraper",
+      "frame": 1036,
+      "seconds": 34.533,
+      "clip": "riser-1s-strong",
+      "gain": 0.22
+    },
+    {
+      "at": "event:S13.router_contact",
+      "frame": 1076,
+      "seconds": 35.867,
+      "clip": "mechanical-latch-heavy",
+      "gain": 0.3
+    },
+    {
+      "at": "scrolling",
+      "frame": 757,
+      "seconds": 25.233,
+      "clip": "move-spin",
+      "gain": 0.16
+    }
+  ]
+}

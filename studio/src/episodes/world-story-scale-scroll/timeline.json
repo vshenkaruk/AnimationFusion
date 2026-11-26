@@ -1,0 +1,1902 @@
+{
+ "slug": "world-story-scale-scroll",
+ "title": "The Doom Scroll That Made His Legs Taller Than a Skyscraper",
+ "fps": 30,
+ "total": 1332,
+ "segments": [
+  {
+   "shot": "S1",
+   "a": 0,
+   "b": 115,
+   "t0": 0,
+   "t1": 115,
+   "line": "In this town, the more you doom scroll, the longer your legs get."
+  },
+  {
+   "shot": "S2",
+   "a": 115,
+   "b": 196,
+   "t0": 0,
+   "t1": 81,
+   "line": "If you scroll 10 cm on your phone, your legs",
+   "transition": {
+    "kind": "whip",
+    "frames": 8,
+    "direction": "left"
+   }
+  },
+  {
+   "shot": "S3",
+   "a": 196,
+   "b": 273,
+   "t0": 0,
+   "t1": 77,
+   "line": "grow by exactly 10 cm.",
+   "transition": {
+    "kind": "flash",
+    "frames": 6,
+    "color": "#fff1b5"
+   }
+  },
+  {
+   "shot": "S4",
+   "a": 273,
+   "b": 290,
+   "t0": 0,
+   "t1": 17,
+   "line": "And there's no"
+  },
+  {
+   "shot": "S4B",
+   "a": 290,
+   "b": 325,
+   "t0": 0,
+   "t1": 35,
+   "line": "limit.",
+   "transition": {
+    "kind": "whip",
+    "frames": 7,
+    "direction": "right"
+   }
+  },
+  {
+   "shot": "S5",
+   "a": 325,
+   "b": 358,
+   "t0": 0,
+   "t1": 33,
+   "line": "One student secretly",
+   "transition": {
+    "kind": "whip",
+    "frames": 8,
+    "direction": "down"
+   }
+  },
+  {
+   "shot": "S5B",
+   "a": 358,
+   "b": 380,
+   "t0": 0,
+   "t1": 22,
+   "line": "scrolls during",
+   "transition": {
+    "kind": "push",
+    "frames": 6,
+    "direction": "up"
+   }
+  },
+  {
+   "shot": "S5C",
+   "a": 380,
+   "b": 410,
+   "t0": 0,
+   "t1": 30,
+   "line": "class.",
+   "transition": {
+    "kind": "whip",
+    "frames": 6,
+    "direction": "left"
+   }
+  },
+  {
+   "shot": "S6",
+   "a": 410,
+   "b": 442,
+   "t0": 0,
+   "t1": 32,
+   "line": "By lunchtime, his"
+  },
+  {
+   "shot": "S6B",
+   "a": 442,
+   "b": 498,
+   "t0": 0,
+   "t1": 56,
+   "line": "knees are touching the ceiling.",
+   "transition": {
+    "kind": "flash",
+    "frames": 6,
+    "color": "#ffe58a"
+   }
+  },
+  {
+   "shot": "S7",
+   "a": 498,
+   "b": 553,
+   "t0": 0,
+   "t1": 55,
+   "line": "Another man scrolls so much before"
+  },
+  {
+   "shot": "S8",
+   "a": 553,
+   "b": 647,
+   "t0": 0,
+   "t1": 94,
+   "line": "bed that his feet stick out his bedroom window.",
+   "transition": {
+    "kind": "whip",
+    "frames": 7,
+    "direction": "right"
+   }
+  },
+  {
+   "shot": "S9",
+   "a": 647,
+   "b": 731,
+   "t0": 0,
+   "t1": 84,
+   "line": "Even basketball players use this to their advantage.",
+   "transition": {
+    "kind": "whip",
+    "frames": 7,
+    "direction": "up"
+   }
+  },
+  {
+   "shot": "S10",
+   "a": 731,
+   "b": 819,
+   "t0": 0,
+   "t1": 88,
+   "line": "They spend hours scrolling before every game.",
+   "transition": {
+    "kind": "whip",
+    "frames": 12,
+    "direction": "left"
+   }
+  },
+  {
+   "shot": "S11",
+   "a": 819,
+   "b": 911,
+   "t0": 0,
+   "t1": 92,
+   "line": "One player is now so tall that he doesn't even need",
+   "transition": {
+    "kind": "push",
+    "frames": 8
+   }
+  },
+  {
+   "shot": "S11B",
+   "a": 911,
+   "b": 958,
+   "t0": 0,
+   "t1": 47,
+   "line": "to jump. And the biggest",
+   "transition": {
+    "kind": "push",
+    "frames": 8
+   }
+  },
+  {
+   "shot": "S12",
+   "a": 958,
+   "b": 1073,
+   "t0": 0,
+   "t1": 115,
+   "line": "doom scroller in our town, his legs are taller than a skyscraper.",
+   "transition": {
+    "kind": "whip",
+    "frames": 8,
+    "direction": "up"
+   }
+  },
+  {
+   "shot": "S13",
+   "a": 1073,
+   "b": 1149,
+   "t0": 0,
+   "t1": 76,
+   "line": "The government installed a Wi Fi router on his head",
+   "transition": {
+    "kind": "flash",
+    "frames": 6,
+    "color": "#bdf4ff"
+   }
+  },
+  {
+   "shot": "S14",
+   "a": 1149,
+   "b": 1200,
+   "t0": 0,
+   "t1": 51,
+   "line": "so he could keep scrolling."
+  },
+  {
+   "shot": "S15",
+   "a": 1200,
+   "b": 1332,
+   "t0": 0,
+   "t1": 132,
+   "line": "Would you stop scrolling if your legs grew? Follow for the next weird world rule.",
+   "transition": {
+    "kind": "flash",
+    "frames": 6,
+    "color": "#ffe58a"
+   }
+  }
+ ],
+ "shots": [
+  {
+   "id": "S1",
+   "size": "wide town establish",
+   "key": 30,
+   "len": 115,
+   "first": 0,
+   "line": "In this town, the more you doom scroll, the longer your legs get.",
+   "note": "Fly into the layered high-rise street, then continue the push past the storefronts toward the avatar as he glances from his phone to camera.",
+   "camera": {
+    "from": {
+     "position": [
+      -9,
+      23,
+      27
+     ],
+     "target": [
+      0,
+      0,
+      -7
+     ],
+     "fov": 58
+    },
+    "to": {
+     "position": [
+      -3.8,
+      7,
+      12.5
+     ],
+     "target": [
+      0.25,
+      1.3,
+      0.65
+     ],
+     "fov": 40
+    }
+   },
+   "set": "city-skyline",
+   "light": "day"
+  },
+  {
+   "id": "S2",
+   "size": "phone insert",
+   "key": 28,
+   "len": 81,
+   "first": 115,
+   "line": "If you scroll 10 cm on your phone, your legs",
+   "note": "Hold a stable readable phone insert; show two distinct thumb swipes and keep the feed change tied to each gesture.",
+   "camera": {
+    "from": {
+     "position": [
+      0.18,
+      3.8,
+      8
+     ],
+     "target": [
+      0,
+      1.45,
+      0.2
+     ],
+     "fov": 34
+    },
+    "to": {
+     "position": [
+      0.18,
+      3.8,
+      8
+     ],
+     "target": [
+      0,
+      1.45,
+      0.2
+     ],
+     "fov": 34
+    }
+   },
+   "set": "town",
+   "light": "day"
+  },
+  {
+   "id": "S3",
+   "size": "low growth medium",
+   "key": 50,
+   "len": 77,
+   "first": 196,
+   "line": "grow by exactly 10 cm.",
+   "note": "At the spoken growth rule, show the avatar against the town and hold a clean low angle as the legs extend in measured stages; keep the shoes visible on the pavement.",
+   "camera": {
+    "from": {
+     "position": [
+      0,
+      4.2,
+      12
+     ],
+     "target": [
+      0,
+      2.0,
+      -1
+     ],
+     "fov": 45
+    },
+    "to": {
+     "position": [
+      0,
+      5.4,
+      13
+     ],
+     "target": [
+      0,
+      3.0,
+      -1
+     ],
+     "fov": 43
+    }
+   },
+   "set": "town",
+   "light": "day"
+  },
+  {
+   "id": "S4",
+   "size": "low street perspective / no-limit reveal",
+   "key": 24,
+   "len": 17,
+   "first": 273,
+   "line": "And there's no",
+   "note": "On \"no limit,\" cut to the low road view and show the student already towering over nearby buildings. Keep the phone readable and feet grounded.",
+   "camera": {
+    "from": {
+     "position": [
+      5.5,
+      5.2,
+      15
+     ],
+     "target": [
+      -1,
+      5.5,
+      -3
+     ],
+     "fov": 54
+    },
+    "to": {
+     "position": [
+      3.4,
+      6.4,
+      14
+     ],
+     "target": [
+      0,
+      7,
+      -3
+     ],
+     "fov": 49
+    }
+   },
+   "set": "city-skyline",
+   "light": "day"
+  },
+  {
+   "id": "S4B",
+   "size": "overhead town scale insert",
+   "key": 24,
+   "len": 35,
+   "first": 290,
+   "line": "limit.",
+   "note": "A high angled view reveals the road, houses and landmark together while the elongated student remains readable as the town-wide gag.",
+   "camera": {
+    "from": {
+     "position": [
+      0,
+      22,
+      12
+     ],
+     "target": [
+      0,
+      1,
+      -14
+     ],
+     "fov": 62
+    },
+    "to": {
+     "position": [
+      1.8,
+      17,
+      9
+     ],
+     "target": [
+      0,
+      2,
+      -14
+     ],
+     "fov": 56
+    }
+   },
+   "set": "city-skyline",
+   "light": "day"
+  },
+  {
+   "id": "S5",
+   "size": "classroom medium wide",
+   "key": 40,
+   "len": 33,
+   "first": 325,
+   "line": "One student secretly",
+   "note": "Push toward the student as he scrolls low by the desk, notices a classmate turning, and stows the phone; keep the classmate and board in frame.",
+   "camera": {
+    "from": {
+     "position": [
+      0,
+      5.2,
+      13
+     ],
+     "target": [
+      0,
+      2.2,
+      -2
+     ],
+     "fov": 48
+    },
+    "to": {
+     "position": [
+      -1.4,
+      4.2,
+      10.5
+     ],
+     "target": [
+      0,
+      2.2,
+      -2
+     ],
+     "fov": 43
+    }
+   },
+   "set": "classroom",
+   "light": "day"
+  },
+  {
+   "id": "S5B",
+   "size": "phone and thumb insert",
+   "key": 10,
+   "len": 22,
+   "first": 358,
+   "line": "scrolls during",
+   "note": "Cut on the word scrolls to a close, unobstructed phone insert; hold the phone just in front of the desk edge and show the thumb swipe drive the feed.",
+   "camera": {
+    "from": {
+     "position": [
+      0.35,
+      2.6,
+      1.4
+     ],
+     "target": [
+      0.35,
+      1.35,
+      -2.3
+     ],
+     "fov": 36
+    },
+    "to": {
+     "position": [
+      0.35,
+      2.6,
+      1.4
+     ],
+     "target": [
+      0.35,
+      1.35,
+      -2.3
+     ],
+     "fov": 36
+    }
+   },
+   "set": "classroom",
+   "light": "day"
+  },
+  {
+   "id": "S5C",
+   "size": "student and teacher reaction",
+   "key": 14,
+   "len": 30,
+   "first": 380,
+   "line": "class.",
+   "note": "Show the teacher notice the phone, then let the student freeze and hide it as the line ends.",
+   "camera": {
+    "from": {
+     "position": [
+      0,
+      4,
+      8.5
+     ],
+     "target": [
+      -0.55,
+      2.2,
+      -3.5
+     ],
+     "fov": 46
+    },
+    "to": {
+     "position": [
+      -0.3,
+      3.8,
+      8
+     ],
+     "target": [
+      -0.55,
+      2.2,
+      -3.5
+     ],
+     "fov": 43
+    }
+   },
+   "set": "classroom",
+   "light": "day"
+  },
+  {
+   "id": "S6",
+   "size": "ceiling low angle",
+   "key": 50,
+   "len": 32,
+   "first": 410,
+   "line": "By lunchtime, his",
+   "note": "From the side follow the seated student, desk and planted sneakers as the folded knees grow into an arch.",
+   "camera": {
+    "from": {
+     "position": [
+      2.5,
+      2.1,
+      10.9
+     ],
+     "target": [
+      0.06,
+      2.45,
+      0
+     ],
+     "fov": 50
+    },
+    "to": {
+     "position": [
+      2.4,
+      2.35,
+      11.6
+     ],
+     "target": [
+      0.13,
+      3.1,
+      0
+     ],
+     "fov": 52
+    }
+   },
+   "set": "classroom-side",
+   "light": "day"
+  },
+  {
+   "id": "S6B",
+   "size": "full-height ceiling-to-floor payoff",
+   "key": 30,
+   "len": 56,
+   "first": 442,
+   "line": "knees are touching the ceiling.",
+   "note": "Tilt into a close insert of both blue knees touching the underside of the lit ceiling. Small plaster flecks fall at contact.",
+   "camera": {
+    "from": {
+     "position": [
+      2.15,
+      3.4,
+      6.1
+     ],
+     "target": [
+      0.42,
+      5.25,
+      0
+     ],
+     "fov": 47
+    },
+    "to": {
+     "position": [
+      1.7,
+      3.7,
+      5.3
+     ],
+     "target": [
+      0.56,
+      5.75,
+      0
+     ],
+     "fov": 44
+    }
+   },
+   "set": "classroom-side",
+   "light": "day"
+  },
+  {
+   "id": "S7",
+   "size": "bedroom side wide",
+   "key": 42,
+   "len": 55,
+   "first": 498,
+   "line": "Another man scrolls so much before",
+   "note": "At lamplight, follow the striped pajama legs from the pillow to the foot of the bed.",
+   "camera": {
+    "from": {
+     "position": [
+      3.1,
+      3.2,
+      2.5
+     ],
+     "target": [
+      0,
+      1.55,
+      -3.55
+     ],
+     "fov": 47
+    },
+    "to": {
+     "position": [
+      2.4,
+      2.75,
+      2.8
+     ],
+     "target": [
+      0,
+      1.62,
+      -3.25
+     ],
+     "fov": 46
+    }
+   },
+   "set": "cottage-interior",
+   "light": "day"
+  },
+  {
+   "id": "S8",
+   "size": "night exterior window gag",
+   "key": 18,
+   "len": 94,
+   "first": 553,
+   "line": "bed that his feet stick out his bedroom window.",
+   "note": "Frame the full cottage and lawn. The same legs cross the warm window sill and extend toward the viewer over the grass.",
+   "camera": {
+    "from": {
+     "position": [
+      -2.5,
+      5.3,
+      24
+     ],
+     "target": [
+      0,
+      3.4,
+      -1.1
+     ],
+     "fov": 44
+    },
+    "to": {
+     "position": [
+      -2.5,
+      5.05,
+      23
+     ],
+     "target": [
+      0,
+      3.3,
+      -1.05
+     ],
+     "fov": 43
+    }
+   },
+   "set": "cottage-exterior",
+   "light": "night"
+  },
+  {
+   "id": "S9",
+   "size": "court establishing wide",
+   "key": 24,
+   "len": 84,
+   "first": 647,
+   "line": "Even basketball players use this to their advantage.",
+   "note": "Establish the court and hoop, then follow one clean ball pass from the tall player to his friend and catch reaction.",
+   "camera": {
+    "from": {
+     "position": [
+      -4.5,
+      7,
+      17
+     ],
+     "target": [
+      0,
+      2,
+      -3.4
+     ],
+     "fov": 49
+    },
+    "to": {
+     "position": [
+      -2.7,
+      5.2,
+      12.5
+     ],
+     "target": [
+      0,
+      2,
+      -3.6
+     ],
+     "fov": 43
+    }
+   },
+   "set": "basketball-court",
+   "light": "day"
+  },
+  {
+   "id": "S10",
+   "size": "players and phones",
+   "key": 36,
+   "len": 88,
+   "first": 731,
+   "line": "They spend hours scrolling before every game.",
+   "note": "Show both players scrolling, then lower their phones and look toward the hoop; crane up as the tall player grows and give his friend a readable recoil.",
+   "camera": {
+    "from": {
+     "position": [
+      0,
+      4.8,
+      14
+     ],
+     "target": [
+      0,
+      3.0,
+      -2
+     ],
+     "fov": 50
+    },
+    "to": {
+     "position": [
+      -0.8,
+      8,
+      15
+     ],
+     "target": [
+      -0.4,
+      6.5,
+      -2
+     ],
+     "fov": 50
+    }
+   },
+   "set": "basketball-court",
+   "light": "day"
+  },
+  {
+   "id": "S11",
+   "size": "no-jump shot release",
+   "key": 56,
+   "len": 92,
+   "first": 819,
+   "line": "One player is now so tall that he doesn't even need",
+   "note": "Hold the tall player and hoop together; show the hand release, a bright arc, and the ball reaching the rim as he keeps both feet planted.",
+   "camera": {
+    "from": {
+     "position": [
+      -0.8,
+      8,
+      15
+     ],
+     "target": [
+      -0.4,
+      6.5,
+      -2
+     ],
+     "fov": 50
+    },
+    "to": {
+     "position": [
+      0.6,
+      6.8,
+      19
+     ],
+     "target": [
+      0.6,
+      8.0,
+      -3
+     ],
+     "fov": 52
+    }
+   },
+   "set": "basketball-court",
+   "light": "day"
+  },
+  {
+   "id": "S11B",
+   "size": "side-angle net insert",
+   "key": 8,
+   "len": 47,
+   "first": 911,
+   "line": "to jump. And the biggest",
+   "note": "Continue the ball through the flexing net, floor impact, visible squash, single rebound and short settle; hold the hoop, ball and cheering friend in frame before the city cut.",
+   "camera": {
+    "from": {
+     "position": [
+      3.8,
+      3.3,
+      -1.0
+     ],
+     "target": [
+      0,
+      2.6,
+      -10.6
+     ],
+     "fov": 46
+    },
+    "to": {
+     "position": [
+      3.2,
+      3.1,
+      -1.8
+     ],
+     "target": [
+      0,
+      2.4,
+      -10.6
+     ],
+     "fov": 43
+    }
+   },
+   "set": "basketball-court",
+   "light": "day"
+  },
+  {
+   "id": "S12",
+   "size": "town scale reveal",
+   "key": 60,
+   "len": 115,
+   "first": 958,
+   "line": "doom scroller in our town, his legs are taller than a skyscraper.",
+   "note": "Crane from street height into a skyline reveal as the giant grows; keep his feet, head and tallest building together in the portrait frame.",
+   "camera": {
+    "from": {
+     "position": [
+      2,
+      5,
+      22
+     ],
+     "target": [
+      0,
+      3.8,
+      -3
+     ],
+     "fov": 54
+    },
+    "to": {
+     "position": [
+      -3,
+      16,
+      26
+     ],
+     "target": [
+      0,
+      12,
+      -3
+     ],
+     "fov": 58
+    }
+   },
+   "set": "city-scale-reveal",
+   "light": "day"
+  },
+  {
+   "id": "S13",
+   "size": "router landing close",
+   "key": 42,
+   "len": 76,
+   "first": 1073,
+   "line": "The government installed a Wi Fi router on his head",
+   "note": "A router falls onto the giant's head and its cyan lights switch on at installed; show the contact, antenna wobble and facial reaction.",
+   "camera": {
+    "from": {
+     "position": [
+      0,
+      14,
+      18
+     ],
+     "target": [
+      0,
+      16.4,
+      -1
+     ],
+     "fov": 47
+    },
+    "to": {
+     "position": [
+      0,
+      13.7,
+      16.5
+     ],
+     "target": [
+      0,
+      16.4,
+      -1
+     ],
+     "fov": 46
+    }
+   },
+   "set": "city-scale-reveal",
+   "light": "day"
+  },
+  {
+   "id": "S14",
+   "size": "city button wide",
+   "key": 30,
+   "len": 51,
+   "first": 1149,
+   "line": "so he could keep scrolling.",
+   "note": "Return to a broad skyline view: router on head, phone in hand, and the same giant still scrolling as the final words land.",
+   "camera": {
+    "from": {
+     "position": [
+      0,
+      16.5,
+      30
+     ],
+     "target": [
+      0,
+      9.1,
+      -4
+     ],
+     "fov": 52
+    },
+    "to": {
+     "position": [
+      0.5,
+      16,
+      27
+     ],
+     "target": [
+      0,
+      9.4,
+      -4
+     ],
+     "fov": 49
+    }
+   },
+   "set": "city-scale-reveal",
+   "light": "day"
+  },
+  {
+   "id": "S15",
+   "size": "CTA face close-up",
+   "key": 60,
+   "len": 132,
+   "first": 1200,
+   "line": "Would you stop scrolling if your legs grew? Follow for the next weird world rule.",
+   "note": "Close on the protagonist as he looks toward the viewer and phone. Keep the lit router and a sliver of the skyline in frame during the spoken CTA.",
+   "camera": {
+    "from": {
+     "position": [
+      -2.5,
+      15.4,
+      15
+     ],
+     "target": [
+      0.15,
+      15.3,
+      -1
+     ],
+     "fov": 41
+    },
+    "to": {
+     "position": [
+      0,
+      15,
+      13
+     ],
+     "target": [
+      0.15,
+      15.5,
+      -1
+     ],
+     "fov": 39
+    }
+   },
+   "set": "city-scale-reveal",
+   "light": "day"
+  }
+ ],
+ "fx": [
+  {
+   "kind": "speed-lines",
+   "strength": 0.34,
+   "duration": 0.22,
+   "f": 198
+  },
+  {
+   "kind": "spark",
+   "x": 50,
+   "y": 47,
+   "color": "#ffb74f",
+   "duration": 0.3,
+   "f": 913
+  },
+  {
+   "kind": "speed-lines",
+   "strength": 0.3,
+   "color": "#ffe18b",
+   "duration": 0.3,
+   "f": 1036
+  },
+  {
+   "kind": "impact-star",
+   "x": 46.5,
+   "y": 35,
+   "color": "#bdf4ff",
+   "duration": 0.13,
+   "f": 1089
+  }
+ ],
+ "audio": {
+  "sfxVol": 0.38,
+  "voice": "world-story-scale-scroll/voice.wav",
+  "sfx": "world-story-scale-scroll/sfx.wav"
+ },
+ "shotEvents": {
+  "S6B": {
+   "ceiling_contact": 33
+  },
+  "S8": {
+   "window_exit": 22
+  },
+  "S10": {
+   "tall_reveal": 61
+  },
+  "S12": {
+   "skyscraper": 78
+  },
+  "S11B": {
+   "net_contact": 2
+  },
+  "S13": {
+   "router_contact": 16
+  }
+ },
+ "words": [
+  {
+   "w": "In",
+   "s": 0.05,
+   "e": 0.15,
+   "p": ""
+  },
+  {
+   "w": "this",
+   "s": 0.15,
+   "e": 0.35,
+   "p": ""
+  },
+  {
+   "w": "town",
+   "s": 0.35,
+   "e": 0.65,
+   "p": ","
+  },
+  {
+   "w": "the",
+   "s": 0.688,
+   "e": 0.775,
+   "p": ""
+  },
+  {
+   "w": "more",
+   "s": 0.775,
+   "e": 1.0,
+   "p": ""
+  },
+  {
+   "w": "you",
+   "s": 1.0,
+   "e": 1.15,
+   "p": ""
+  },
+  {
+   "w": "doom",
+   "s": 1.15,
+   "e": 1.387,
+   "p": ""
+  },
+  {
+   "w": "scroll",
+   "s": 1.387,
+   "e": 1.95,
+   "p": ","
+  },
+  {
+   "w": "the",
+   "s": 2.05,
+   "e": 2.175,
+   "p": ""
+  },
+  {
+   "w": "longer",
+   "s": 2.175,
+   "e": 2.55,
+   "p": ""
+  },
+  {
+   "w": "your",
+   "s": 2.55,
+   "e": 2.675,
+   "p": ""
+  },
+  {
+   "w": "legs",
+   "s": 2.675,
+   "e": 3.0,
+   "p": ""
+  },
+  {
+   "w": "get",
+   "s": 3.0,
+   "e": 3.75,
+   "p": "."
+  },
+  {
+   "w": "If",
+   "s": 3.91,
+   "e": 3.973,
+   "p": ""
+  },
+  {
+   "w": "you",
+   "s": 3.973,
+   "e": 4.085,
+   "p": ""
+  },
+  {
+   "w": "scroll",
+   "s": 4.085,
+   "e": 4.447,
+   "p": ""
+  },
+  {
+   "w": "10",
+   "s": 4.447,
+   "e": 4.71,
+   "p": ""
+  },
+  {
+   "w": "cm",
+   "s": 4.71,
+   "e": 5.298,
+   "p": ""
+  },
+  {
+   "w": "on",
+   "s": 5.298,
+   "e": 5.423,
+   "p": ""
+  },
+  {
+   "w": "your",
+   "s": 5.423,
+   "e": 5.598,
+   "p": ""
+  },
+  {
+   "w": "phone",
+   "s": 5.598,
+   "e": 6.035,
+   "p": ","
+  },
+  {
+   "w": "your",
+   "s": 6.11,
+   "e": 6.31,
+   "p": ""
+  },
+  {
+   "w": "legs",
+   "s": 6.31,
+   "e": 6.61,
+   "p": ""
+  },
+  {
+   "w": "grow",
+   "s": 6.61,
+   "e": 6.935,
+   "p": ""
+  },
+  {
+   "w": "by",
+   "s": 6.935,
+   "e": 7.11,
+   "p": ""
+  },
+  {
+   "w": "exactly",
+   "s": 7.11,
+   "e": 7.672,
+   "p": ""
+  },
+  {
+   "w": "10",
+   "s": 7.672,
+   "e": 7.935,
+   "p": ""
+  },
+  {
+   "w": "cm",
+   "s": 7.935,
+   "e": 9.01,
+   "p": "."
+  },
+  {
+   "w": "And",
+   "s": 9.17,
+   "e": 9.307,
+   "p": ""
+  },
+  {
+   "w": "there's",
+   "s": 9.307,
+   "e": 9.52,
+   "p": ""
+  },
+  {
+   "w": "no",
+   "s": 9.52,
+   "e": 9.72,
+   "p": ""
+  },
+  {
+   "w": "limit",
+   "s": 9.72,
+   "e": 10.44,
+   "p": "."
+  },
+  {
+   "w": "One",
+   "s": 10.915,
+   "e": 11.14,
+   "p": ""
+  },
+  {
+   "w": "student",
+   "s": 11.14,
+   "e": 11.54,
+   "p": ""
+  },
+  {
+   "w": "secretly",
+   "s": 11.54,
+   "e": 12.015,
+   "p": ""
+  },
+  {
+   "w": "scrolls",
+   "s": 12.015,
+   "e": 12.465,
+   "p": ""
+  },
+  {
+   "w": "during",
+   "s": 12.465,
+   "e": 12.74,
+   "p": ""
+  },
+  {
+   "w": "class",
+   "s": 12.74,
+   "e": 13.54,
+   "p": "."
+  },
+  {
+   "w": "By",
+   "s": 13.725,
+   "e": 13.9,
+   "p": ""
+  },
+  {
+   "w": "lunchtime",
+   "s": 13.9,
+   "e": 14.55,
+   "p": ","
+  },
+  {
+   "w": "his",
+   "s": 14.6,
+   "e": 14.8,
+   "p": ""
+  },
+  {
+   "w": "knees",
+   "s": 14.8,
+   "e": 15.062,
+   "p": ""
+  },
+  {
+   "w": "are",
+   "s": 15.062,
+   "e": 15.15,
+   "p": ""
+  },
+  {
+   "w": "touching",
+   "s": 15.15,
+   "e": 15.537,
+   "p": ""
+  },
+  {
+   "w": "the",
+   "s": 15.537,
+   "e": 15.637,
+   "p": ""
+  },
+  {
+   "w": "ceiling",
+   "s": 15.637,
+   "e": 16.5,
+   "p": "."
+  },
+  {
+   "w": "Another",
+   "s": 16.66,
+   "e": 16.96,
+   "p": ""
+  },
+  {
+   "w": "man",
+   "s": 16.96,
+   "e": 17.285,
+   "p": ""
+  },
+  {
+   "w": "scrolls",
+   "s": 17.285,
+   "e": 17.672,
+   "p": ""
+  },
+  {
+   "w": "so",
+   "s": 17.672,
+   "e": 17.885,
+   "p": ""
+  },
+  {
+   "w": "much",
+   "s": 17.885,
+   "e": 18.11,
+   "p": ""
+  },
+  {
+   "w": "before",
+   "s": 18.11,
+   "e": 18.485,
+   "p": ""
+  },
+  {
+   "w": "bed",
+   "s": 18.485,
+   "e": 18.835,
+   "p": ""
+  },
+  {
+   "w": "that",
+   "s": 18.835,
+   "e": 18.973,
+   "p": ""
+  },
+  {
+   "w": "his",
+   "s": 18.973,
+   "e": 19.172,
+   "p": ""
+  },
+  {
+   "w": "feet",
+   "s": 19.172,
+   "e": 19.485,
+   "p": ""
+  },
+  {
+   "w": "stick",
+   "s": 19.485,
+   "e": 19.735,
+   "p": ""
+  },
+  {
+   "w": "out",
+   "s": 19.735,
+   "e": 19.922,
+   "p": ""
+  },
+  {
+   "w": "his",
+   "s": 19.922,
+   "e": 20.085,
+   "p": ""
+  },
+  {
+   "w": "bedroom",
+   "s": 20.085,
+   "e": 20.56,
+   "p": ""
+  },
+  {
+   "w": "window",
+   "s": 20.56,
+   "e": 21.47,
+   "p": "."
+  },
+  {
+   "w": "Even",
+   "s": 21.63,
+   "e": 21.83,
+   "p": ""
+  },
+  {
+   "w": "basketball",
+   "s": 21.83,
+   "e": 22.38,
+   "p": ""
+  },
+  {
+   "w": "players",
+   "s": 22.38,
+   "e": 22.805,
+   "p": ""
+  },
+  {
+   "w": "use",
+   "s": 22.805,
+   "e": 23.03,
+   "p": ""
+  },
+  {
+   "w": "this",
+   "s": 23.03,
+   "e": 23.23,
+   "p": ""
+  },
+  {
+   "w": "to",
+   "s": 23.23,
+   "e": 23.317,
+   "p": ""
+  },
+  {
+   "w": "their",
+   "s": 23.317,
+   "e": 23.442,
+   "p": ""
+  },
+  {
+   "w": "advantage",
+   "s": 23.442,
+   "e": 24.28,
+   "p": "."
+  },
+  {
+   "w": "They",
+   "s": 24.44,
+   "e": 24.59,
+   "p": ""
+  },
+  {
+   "w": "spend",
+   "s": 24.59,
+   "e": 24.877,
+   "p": ""
+  },
+  {
+   "w": "hours",
+   "s": 24.877,
+   "e": 25.24,
+   "p": ""
+  },
+  {
+   "w": "scrolling",
+   "s": 25.24,
+   "e": 25.69,
+   "p": ""
+  },
+  {
+   "w": "before",
+   "s": 25.69,
+   "e": 26.09,
+   "p": ""
+  },
+  {
+   "w": "every",
+   "s": 26.09,
+   "e": 26.415,
+   "p": ""
+  },
+  {
+   "w": "game",
+   "s": 26.415,
+   "e": 27.19,
+   "p": "."
+  },
+  {
+   "w": "One",
+   "s": 27.375,
+   "e": 27.6,
+   "p": ""
+  },
+  {
+   "w": "player",
+   "s": 27.6,
+   "e": 28.025,
+   "p": ""
+  },
+  {
+   "w": "is",
+   "s": 28.025,
+   "e": 28.175,
+   "p": ""
+  },
+  {
+   "w": "now",
+   "s": 28.175,
+   "e": 28.412,
+   "p": ""
+  },
+  {
+   "w": "so",
+   "s": 28.412,
+   "e": 28.687,
+   "p": ""
+  },
+  {
+   "w": "tall",
+   "s": 28.687,
+   "e": 29.212,
+   "p": ""
+  },
+  {
+   "w": "that",
+   "s": 29.212,
+   "e": 29.362,
+   "p": ""
+  },
+  {
+   "w": "he",
+   "s": 29.362,
+   "e": 29.5,
+   "p": ""
+  },
+  {
+   "w": "doesn't",
+   "s": 29.5,
+   "e": 29.787,
+   "p": ""
+  },
+  {
+   "w": "even",
+   "s": 29.787,
+   "e": 30.075,
+   "p": ""
+  },
+  {
+   "w": "need",
+   "s": 30.075,
+   "e": 30.3,
+   "p": ""
+  },
+  {
+   "w": "to",
+   "s": 30.3,
+   "e": 30.437,
+   "p": ""
+  },
+  {
+   "w": "jump",
+   "s": 30.437,
+   "e": 31.28,
+   "p": "."
+  },
+  {
+   "w": "And",
+   "s": 31.44,
+   "e": 31.502,
+   "p": ""
+  },
+  {
+   "w": "the",
+   "s": 31.502,
+   "e": 31.59,
+   "p": ""
+  },
+  {
+   "w": "biggest",
+   "s": 31.59,
+   "e": 31.94,
+   "p": ""
+  },
+  {
+   "w": "doom",
+   "s": 31.94,
+   "e": 32.19,
+   "p": ""
+  },
+  {
+   "w": "scroller",
+   "s": 32.19,
+   "e": 32.602,
+   "p": ""
+  },
+  {
+   "w": "in",
+   "s": 32.602,
+   "e": 32.677,
+   "p": ""
+  },
+  {
+   "w": "our",
+   "s": 32.677,
+   "e": 32.815,
+   "p": ""
+  },
+  {
+   "w": "town",
+   "s": 32.815,
+   "e": 33.24,
+   "p": ","
+  },
+  {
+   "w": "his",
+   "s": 33.315,
+   "e": 33.527,
+   "p": ""
+  },
+  {
+   "w": "legs",
+   "s": 33.527,
+   "e": 33.852,
+   "p": ""
+  },
+  {
+   "w": "are",
+   "s": 33.852,
+   "e": 33.977,
+   "p": ""
+  },
+  {
+   "w": "taller",
+   "s": 33.977,
+   "e": 34.377,
+   "p": ""
+  },
+  {
+   "w": "than",
+   "s": 34.377,
+   "e": 34.477,
+   "p": ""
+  },
+  {
+   "w": "a",
+   "s": 34.477,
+   "e": 34.54,
+   "p": ""
+  },
+  {
+   "w": "skyscraper",
+   "s": 34.54,
+   "e": 35.66,
+   "p": "."
+  },
+  {
+   "w": "The",
+   "s": 35.82,
+   "e": 35.855,
+   "p": ""
+  },
+  {
+   "w": "government",
+   "s": 35.855,
+   "e": 36.305,
+   "p": ""
+  },
+  {
+   "w": "installed",
+   "s": 36.305,
+   "e": 36.792,
+   "p": ""
+  },
+  {
+   "w": "a",
+   "s": 36.792,
+   "e": 36.88,
+   "p": ""
+  },
+  {
+   "w": "Wi",
+   "s": 36.88,
+   "e": 37.192,
+   "p": ""
+  },
+  {
+   "w": "Fi",
+   "s": 37.192,
+   "e": 37.48,
+   "p": ""
+  },
+  {
+   "w": "router",
+   "s": 37.48,
+   "e": 37.767,
+   "p": ""
+  },
+  {
+   "w": "on",
+   "s": 37.767,
+   "e": 37.867,
+   "p": ""
+  },
+  {
+   "w": "his",
+   "s": 37.867,
+   "e": 38.03,
+   "p": ""
+  },
+  {
+   "w": "head",
+   "s": 38.03,
+   "e": 38.367,
+   "p": ""
+  },
+  {
+   "w": "so",
+   "s": 38.367,
+   "e": 38.492,
+   "p": ""
+  },
+  {
+   "w": "he",
+   "s": 38.492,
+   "e": 38.605,
+   "p": ""
+  },
+  {
+   "w": "could",
+   "s": 38.605,
+   "e": 38.755,
+   "p": ""
+  },
+  {
+   "w": "keep",
+   "s": 38.755,
+   "e": 38.98,
+   "p": ""
+  },
+  {
+   "w": "scrolling",
+   "s": 38.98,
+   "e": 39.89,
+   "p": "."
+  },
+  {
+   "w": "Would",
+   "s": 40.05,
+   "e": 40.112,
+   "p": ""
+  },
+  {
+   "w": "you",
+   "s": 40.112,
+   "e": 40.225,
+   "p": ""
+  },
+  {
+   "w": "stop",
+   "s": 40.225,
+   "e": 40.55,
+   "p": ""
+  },
+  {
+   "w": "scrolling",
+   "s": 40.55,
+   "e": 40.987,
+   "p": ""
+  },
+  {
+   "w": "if",
+   "s": 40.987,
+   "e": 41.087,
+   "p": ""
+  },
+  {
+   "w": "your",
+   "s": 41.087,
+   "e": 41.2,
+   "p": ""
+  },
+  {
+   "w": "legs",
+   "s": 41.2,
+   "e": 41.475,
+   "p": ""
+  },
+  {
+   "w": "grew",
+   "s": 41.475,
+   "e": 41.85,
+   "p": "?"
+  },
+  {
+   "w": "Follow",
+   "s": 41.987,
+   "e": 42.375,
+   "p": ""
+  },
+  {
+   "w": "for",
+   "s": 42.375,
+   "e": 42.487,
+   "p": ""
+  },
+  {
+   "w": "the",
+   "s": 42.487,
+   "e": 42.575,
+   "p": ""
+  },
+  {
+   "w": "next",
+   "s": 42.575,
+   "e": 42.9,
+   "p": ""
+  },
+  {
+   "w": "weird",
+   "s": 42.9,
+   "e": 43.175,
+   "p": ""
+  },
+  {
+   "w": "world",
+   "s": 43.175,
+   "e": 43.475,
+   "p": ""
+  },
+  {
+   "w": "rule",
+   "s": 43.475,
+   "e": 44.2,
+   "p": "."
+  }
+ ],
+ "choiceCues": [
+  {
+   "a": "I'D STOP",
+   "b": "KEEP SCROLLING",
+   "startSeconds": 40.55,
+   "endSeconds": 44.46,
+   "title": "WOULD YOU STOP?",
+   "topPercent": 1.5
+  }
+ ],
+ "captionMode": "word",
+ "captionZones": {
+  "S5B": "top-center",
+  "S10": "top-right",
+  "S11": "top-right",
+  "S11B": "top-right"
+ }
+}

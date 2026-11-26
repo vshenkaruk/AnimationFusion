@@ -103,6 +103,17 @@ for e in ep.get('fx', []):
     item = {k: v for k, v in e.items() if k != 'at'}
     item['f'] = resolve(e['at'], words, FPS, segments, ids)
     fx.append(item)
+shot_events = {}
+for event in ep.get('shot_events', []):
+    sid = str(event.get('shot', ''))
+    name = str(event.get('name', '')).strip()
+    if sid not in shots or not name or not event.get('at'):
+        raise SystemExit(f'Invalid shot_events entry: {event}')
+    frame = resolve(event['at'], words, FPS)
+    segment = next((s for s in segments if s['shot'] == sid and s['a'] <= frame < s['b']), None)
+    if segment is None:
+        raise SystemExit(f'Shot event {sid}.{name} at {event["at"]} falls outside that shot\'s edit segment')
+    shot_events.setdefault(sid, {})[name] = round(segment['t0'] + frame - segment['a'])
 old = load_json(ep_dir(slug) / 'timeline.json', {}) or {}
 audio = {k: v for k, v in old.get('audio', {}).items() if k.endswith('Vol')}
 for k in ['voice', 'sfx', 'music']:
@@ -111,6 +122,8 @@ for k in ['voice', 'sfx', 'music']:
         audio[k] = f'{slug}/{f.name}'
 title = ep.get('title', ['', ''])
 tl = {'slug': slug, 'title': ' '.join(title) if isinstance(title, list) else title, 'fps': FPS, 'total': end, 'segments': segments, 'shots': info, 'fx': fx, 'audio': audio}
+if shot_events:
+    tl['shotEvents'] = shot_events
 if words:
     tl['words'] = words
 if ep.get('countdown_seconds') is not None:
@@ -126,6 +139,12 @@ if ep.get('choiceCue'):
     tl['choiceCue'] = ep['choiceCue']
 if ep.get('choiceCues'):
     tl['choiceCues'] = ep['choiceCues']
+if 'caption_mode' in ep:
+    if ep['caption_mode'] not in ('word', 'phrase'):
+        raise SystemExit("caption_mode must be 'word' or 'phrase'")
+    tl['captionMode'] = ep['caption_mode']
+if ep.get('caption_zones'):
+    tl['captionZones'] = ep['caption_zones']
 save_json(ep_dir(slug) / 'timeline.json', tl)
 
 # ---------------------------------------------------------------- the pace report and the shot list

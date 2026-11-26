@@ -1,0 +1,1126 @@
+{
+  "id": "WorldStoryScaleScroll",
+  "slug": "world-story-scale-scroll",
+  "title": "The Doom Scroll That Made His Legs Taller Than a Skyscraper",
+  "fps": 30,
+  "voice_provider": "kokoro",
+  "voice": "am_puck",
+  "voice_speed": 0.84,
+  "voice_pause_seconds": 0.16,
+  "kokoro_dictionary_only": true,
+  "kokoro_pronunciations": {
+    "Wi": "wa\u026a",
+    "Fi": "fa\u026a",
+    "cm": "s\u02c8\u025bnt\u026ami\u02d0t\u025az"
+  },
+  "script": [
+    {
+      "beat": "Rule",
+      "text": "In this town, the more you doom scroll, the longer your legs get."
+    },
+    {
+      "beat": "Measurement",
+      "text": "If you scroll 10 cm on your phone, your legs grow by exactly 10 cm.",
+      "voice_speed": 1.1
+    },
+    {
+      "beat": "No limit",
+      "text": "And there's no limit.",
+      "pause_after_seconds": 0.45
+    },
+    {
+      "beat": "Classroom",
+      "text": "One student secretly scrolls during class."
+    },
+    {
+      "beat": "Ceiling gag",
+      "text": "By lunchtime, his knees are touching the ceiling."
+    },
+    {
+      "beat": "Bedroom gag",
+      "text": "Another man scrolls so much before bed that his feet stick out his bedroom window.",
+      "voice_speed": 1.0
+    },
+    {
+      "beat": "Basketball",
+      "text": "Even basketball players use this to their advantage.",
+      "voice_speed": 1.1
+    },
+    {
+      "beat": "Practice",
+      "text": "They spend hours scrolling before every game."
+    },
+    {
+      "beat": "Payoff",
+      "text": "One player is now so tall that he doesn't even need to jump."
+    },
+    {
+      "beat": "Scale reveal",
+      "text": "And the biggest doom scroller in our town, his legs are taller than a skyscraper.",
+      "voice_speed": 1.1
+    },
+    {
+      "beat": "Button",
+      "text": "The government installed a Wi Fi router on his head so he could keep scrolling.",
+      "voice_speed": 1.1
+    },
+    {
+      "beat": "CTA",
+      "text": "Would you stop scrolling if your legs grew? Follow for the next weird world rule.",
+      "voice_speed": 1.05
+    }
+  ],
+  "shots": [
+    {
+      "id": "S1",
+      "size": "wide town establish",
+      "set": "city-skyline",
+      "light": "day",
+      "key": 30,
+      "note": "Fly into the layered high-rise street, then continue the push past the storefronts toward the avatar as he glances from his phone to camera.",
+      "camera": {
+        "from": {
+          "position": [
+            -9,
+            23,
+            27
+          ],
+          "target": [
+            0,
+            0,
+            -7
+          ],
+          "fov": 58
+        },
+        "to": {
+          "position": [
+            -3.8,
+            7,
+            12.5
+          ],
+          "target": [
+            0.25,
+            1.3,
+            0.65
+          ],
+          "fov": 40
+        }
+      }
+    },
+    {
+      "id": "S2",
+      "size": "phone insert",
+      "set": "town",
+      "light": "day",
+      "key": 28,
+      "note": "Hold a stable readable phone insert; show two distinct thumb swipes and keep the feed change tied to each gesture.",
+      "camera": {
+        "from": {
+          "position": [
+            0.18,
+            3.8,
+            8
+          ],
+          "target": [
+            0,
+            1.45,
+            0.2
+          ],
+          "fov": 34
+        },
+        "to": {
+          "position": [
+            0.18,
+            3.8,
+            8
+          ],
+          "target": [
+            0,
+            1.45,
+            0.2
+          ],
+          "fov": 34
+        }
+      }
+    },
+    {
+      "id": "S3",
+      "size": "low growth medium",
+      "set": "town",
+      "light": "day",
+      "key": 50,
+      "note": "At the spoken growth rule, show the avatar against the town and hold a clean low angle as the legs extend in measured stages; keep the shoes visible on the pavement.",
+      "camera": {
+        "from": {
+          "position": [
+            0,
+            4.2,
+            12
+          ],
+          "target": [
+            0,
+            2.0,
+            -1
+          ],
+          "fov": 45
+        },
+        "to": {
+          "position": [
+            0,
+            5.4,
+            13
+          ],
+          "target": [
+            0,
+            3.0,
+            -1
+          ],
+          "fov": 43
+        }
+      }
+    },
+    {
+      "id": "S4",
+      "size": "low street perspective / no-limit reveal",
+      "set": "city-skyline",
+      "light": "day",
+      "key": 24,
+      "note": "On \"no limit,\" cut to the low road view and show the student already towering over nearby buildings. Keep the phone readable and feet grounded.",
+      "camera": {
+        "from": {
+          "position": [
+            5.5,
+            5.2,
+            15
+          ],
+          "target": [
+            -1,
+            5.5,
+            -3
+          ],
+          "fov": 54
+        },
+        "to": {
+          "position": [
+            3.4,
+            6.4,
+            14
+          ],
+          "target": [
+            0,
+            7,
+            -3
+          ],
+          "fov": 49
+        }
+      }
+    },
+    {
+      "id": "S4B",
+      "size": "overhead town scale insert",
+      "set": "city-skyline",
+      "light": "day",
+      "key": 24,
+      "note": "A high angled view reveals the road, houses and landmark together while the elongated student remains readable as the town-wide gag.",
+      "camera": {
+        "from": {
+          "position": [
+            0,
+            22,
+            12
+          ],
+          "target": [
+            0,
+            1,
+            -14
+          ],
+          "fov": 62
+        },
+        "to": {
+          "position": [
+            1.8,
+            17,
+            9
+          ],
+          "target": [
+            0,
+            2,
+            -14
+          ],
+          "fov": 56
+        }
+      }
+    },
+    {
+      "id": "S5",
+      "size": "classroom medium wide",
+      "set": "classroom",
+      "light": "day",
+      "key": 40,
+      "note": "Push toward the student as he scrolls low by the desk, notices a classmate turning, and stows the phone; keep the classmate and board in frame.",
+      "camera": {
+        "from": {
+          "position": [
+            0,
+            5.2,
+            13
+          ],
+          "target": [
+            0,
+            2.2,
+            -2
+          ],
+          "fov": 48
+        },
+        "to": {
+          "position": [
+            -1.4,
+            4.2,
+            10.5
+          ],
+          "target": [
+            0,
+            2.2,
+            -2
+          ],
+          "fov": 43
+        }
+      }
+    },
+    {
+      "id": "S5B",
+      "size": "phone and thumb insert",
+      "set": "classroom",
+      "light": "day",
+      "key": 10,
+      "note": "Cut on the word scrolls to a close, unobstructed phone insert; hold the phone just in front of the desk edge and show the thumb swipe drive the feed.",
+      "camera": {
+        "from": {
+          "position": [
+            0.35,
+            2.6,
+            1.4
+          ],
+          "target": [
+            0.35,
+            1.35,
+            -2.3
+          ],
+          "fov": 36
+        },
+        "to": {
+          "position": [
+            0.35,
+            2.6,
+            1.4
+          ],
+          "target": [
+            0.35,
+            1.35,
+            -2.3
+          ],
+          "fov": 36
+        }
+      }
+    },
+    {
+      "id": "S5C",
+      "size": "student and teacher reaction",
+      "set": "classroom",
+      "light": "day",
+      "key": 14,
+      "note": "Show the teacher notice the phone, then let the student freeze and hide it as the line ends.",
+      "camera": {
+        "from": {
+          "position": [
+            0,
+            4,
+            8.5
+          ],
+          "target": [
+            -0.55,
+            2.2,
+            -3.5
+          ],
+          "fov": 46
+        },
+        "to": {
+          "position": [
+            -0.3,
+            3.8,
+            8
+          ],
+          "target": [
+            -0.55,
+            2.2,
+            -3.5
+          ],
+          "fov": 43
+        }
+      }
+    },
+    {
+      "id": "S6",
+      "size": "ceiling low angle",
+      "set": "classroom-side",
+      "light": "day",
+      "key": 50,
+      "note": "From the side follow the seated student, desk and planted sneakers as the folded knees grow into an arch.",
+      "camera": {
+        "from": {
+          "position": [
+            2.5,
+            2.1,
+            10.9
+          ],
+          "target": [
+            0.06,
+            2.45,
+            0
+          ],
+          "fov": 50
+        },
+        "to": {
+          "position": [
+            2.4,
+            2.35,
+            11.6
+          ],
+          "target": [
+            0.13,
+            3.1,
+            0
+          ],
+          "fov": 52
+        }
+      }
+    },
+    {
+      "id": "S6B",
+      "size": "full-height ceiling-to-floor payoff",
+      "set": "classroom-side",
+      "light": "day",
+      "key": 30,
+      "note": "Tilt into a close insert of both blue knees touching the underside of the lit ceiling. Small plaster flecks fall at contact.",
+      "camera": {
+        "from": {
+          "position": [
+            2.15,
+            3.4,
+            6.1
+          ],
+          "target": [
+            0.42,
+            5.25,
+            0
+          ],
+          "fov": 47
+        },
+        "to": {
+          "position": [
+            1.7,
+            3.7,
+            5.3
+          ],
+          "target": [
+            0.56,
+            5.75,
+            0
+          ],
+          "fov": 44
+        }
+      }
+    },
+    {
+      "id": "S7",
+      "size": "bedroom side wide",
+      "set": "cottage-interior",
+      "light": "day",
+      "key": 42,
+      "note": "At lamplight, follow the striped pajama legs from the pillow to the foot of the bed.",
+      "camera": {
+        "from": {
+          "position": [
+            3.1,
+            3.2,
+            2.5
+          ],
+          "target": [
+            0,
+            1.55,
+            -3.55
+          ],
+          "fov": 47
+        },
+        "to": {
+          "position": [
+            2.4,
+            2.75,
+            2.8
+          ],
+          "target": [
+            0,
+            1.62,
+            -3.25
+          ],
+          "fov": 46
+        }
+      }
+    },
+    {
+      "id": "S8",
+      "size": "night exterior window gag",
+      "set": "cottage-exterior",
+      "light": "night",
+      "key": 18,
+      "note": "Frame the full cottage and lawn. The same legs cross the warm window sill and extend toward the viewer over the grass.",
+      "camera": {
+        "from": {
+          "position": [
+            -2.5,
+            5.3,
+            24
+          ],
+          "target": [
+            0,
+            3.4,
+            -1.1
+          ],
+          "fov": 44
+        },
+        "to": {
+          "position": [
+            -2.5,
+            5.05,
+            23
+          ],
+          "target": [
+            0,
+            3.3,
+            -1.05
+          ],
+          "fov": 43
+        }
+      }
+    },
+    {
+      "id": "S9",
+      "size": "court establishing wide",
+      "set": "basketball-court",
+      "light": "day",
+      "key": 24,
+      "note": "Establish the court and hoop, then follow one clean ball pass from the tall player to his friend and catch reaction.",
+      "camera": {
+        "from": {
+          "position": [
+            -4.5,
+            7,
+            17
+          ],
+          "target": [
+            0,
+            2,
+            -3.4
+          ],
+          "fov": 49
+        },
+        "to": {
+          "position": [
+            -2.7,
+            5.2,
+            12.5
+          ],
+          "target": [
+            0,
+            2,
+            -3.6
+          ],
+          "fov": 43
+        }
+      }
+    },
+    {
+      "id": "S10",
+      "size": "players and phones",
+      "set": "basketball-court",
+      "light": "day",
+      "key": 36,
+      "note": "Show both players scrolling, then lower their phones and look toward the hoop; crane up as the tall player grows and give his friend a readable recoil.",
+      "camera": {
+        "from": {
+          "position": [
+            0,
+            4.8,
+            14
+          ],
+          "target": [
+            0,
+            3.0,
+            -2
+          ],
+          "fov": 50
+        },
+        "to": {
+          "position": [
+            -0.8,
+            8,
+            15
+          ],
+          "target": [
+            -0.4,
+            6.5,
+            -2
+          ],
+          "fov": 50
+        }
+      }
+    },
+    {
+      "id": "S11",
+      "size": "no-jump shot release",
+      "set": "basketball-court",
+      "light": "day",
+      "key": 56,
+      "note": "Hold the tall player and hoop together; show the hand release, a bright arc, and the ball reaching the rim as he keeps both feet planted.",
+      "camera": {
+        "from": {
+          "position": [
+            -0.8,
+            8,
+            15
+          ],
+          "target": [
+            -0.4,
+            6.5,
+            -2
+          ],
+          "fov": 50
+        },
+        "to": {
+          "position": [
+            0.6,
+            6.8,
+            19
+          ],
+          "target": [
+            0.6,
+            8.0,
+            -3
+          ],
+          "fov": 52
+        }
+      }
+    },
+    {
+      "id": "S11B",
+      "size": "side-angle net insert",
+      "set": "basketball-court",
+      "light": "day",
+      "key": 8,
+      "note": "Continue the ball through the flexing net, floor impact, visible squash, single rebound and short settle; hold the hoop, ball and cheering friend in frame before the city cut.",
+      "camera": {
+        "from": {
+          "position": [
+            3.8,
+            3.3,
+            -1.0
+          ],
+          "target": [
+            0,
+            2.6,
+            -10.6
+          ],
+          "fov": 46
+        },
+        "to": {
+          "position": [
+            3.2,
+            3.1,
+            -1.8
+          ],
+          "target": [
+            0,
+            2.4,
+            -10.6
+          ],
+          "fov": 43
+        }
+      }
+    },
+    {
+      "id": "S12",
+      "size": "town scale reveal",
+      "set": "city-scale-reveal",
+      "light": "day",
+      "key": 60,
+      "note": "Crane from street height into a skyline reveal as the giant grows; keep his feet, head and tallest building together in the portrait frame.",
+      "camera": {
+        "from": {
+          "position": [
+            2,
+            5,
+            22
+          ],
+          "target": [
+            0,
+            3.8,
+            -3
+          ],
+          "fov": 54
+        },
+        "to": {
+          "position": [
+            -3,
+            16,
+            26
+          ],
+          "target": [
+            0,
+            12,
+            -3
+          ],
+          "fov": 58
+        }
+      }
+    },
+    {
+      "id": "S13",
+      "size": "router landing close",
+      "set": "city-scale-reveal",
+      "light": "day",
+      "key": 42,
+      "note": "A router falls onto the giant's head and its cyan lights switch on at installed; show the contact, antenna wobble and facial reaction.",
+      "camera": {
+        "from": {
+          "position": [
+            0,
+            14,
+            18
+          ],
+          "target": [
+            0,
+            16.4,
+            -1
+          ],
+          "fov": 47
+        },
+        "to": {
+          "position": [
+            0,
+            13.7,
+            16.5
+          ],
+          "target": [
+            0,
+            16.4,
+            -1
+          ],
+          "fov": 46
+        }
+      }
+    },
+    {
+      "id": "S14",
+      "size": "city button wide",
+      "set": "city-scale-reveal",
+      "light": "day",
+      "key": 30,
+      "note": "Return to a broad skyline view: router on head, phone in hand, and the same giant still scrolling as the final words land.",
+      "camera": {
+        "from": {
+          "position": [
+            0,
+            16.5,
+            30
+          ],
+          "target": [
+            0,
+            9.1,
+            -4
+          ],
+          "fov": 52
+        },
+        "to": {
+          "position": [
+            0.5,
+            16,
+            27
+          ],
+          "target": [
+            0,
+            9.4,
+            -4
+          ],
+          "fov": 49
+        }
+      }
+    },
+    {
+      "id": "S15",
+      "size": "CTA face close-up",
+      "set": "city-scale-reveal",
+      "light": "day",
+      "key": 60,
+      "note": "Close on the protagonist as he looks toward the viewer and phone. Keep the lit router and a sliver of the skyline in frame during the spoken CTA.",
+      "camera": {
+        "from": {
+          "position": [
+            -2.5,
+            15.4,
+            15
+          ],
+          "target": [
+            0.15,
+            15.3,
+            -1
+          ],
+          "fov": 41
+        },
+        "to": {
+          "position": [
+            0,
+            15,
+            13
+          ],
+          "target": [
+            0.15,
+            15.5,
+            -1
+          ],
+          "fov": 39
+        }
+      }
+    }
+  ],
+  "edit": [
+    {
+      "shot": "S1",
+      "at": "f:0"
+    },
+    {
+      "shot": "S2",
+      "at": "If",
+      "transition": {
+        "kind": "whip",
+        "frames": 8,
+        "direction": "left"
+      }
+    },
+    {
+      "shot": "S3",
+      "at": "grow",
+      "transition": {
+        "kind": "flash",
+        "frames": 6,
+        "color": "#fff1b5"
+      }
+    },
+    {
+      "shot": "S4",
+      "at": "And"
+    },
+    {
+      "shot": "S4B",
+      "at": "limit",
+      "transition": {
+        "kind": "whip",
+        "frames": 7,
+        "direction": "right"
+      }
+    },
+    {
+      "shot": "S5",
+      "at": "One",
+      "transition": {
+        "kind": "whip",
+        "frames": 8,
+        "direction": "down"
+      }
+    },
+    {
+      "shot": "S5B",
+      "at": "scrolls",
+      "transition": {
+        "kind": "push",
+        "frames": 6,
+        "direction": "up"
+      }
+    },
+    {
+      "shot": "S5C",
+      "at": "class",
+      "transition": {
+        "kind": "whip",
+        "frames": 6,
+        "direction": "left"
+      }
+    },
+    {
+      "shot": "S6",
+      "at": "By"
+    },
+    {
+      "shot": "S6B",
+      "at": "knees",
+      "transition": {
+        "kind": "flash",
+        "frames": 6,
+        "color": "#ffe58a"
+      }
+    },
+    {
+      "shot": "S7",
+      "at": "Another"
+    },
+    {
+      "shot": "S8",
+      "at": "bed",
+      "transition": {
+        "kind": "whip",
+        "frames": 7,
+        "direction": "right"
+      }
+    },
+    {
+      "shot": "S9",
+      "at": "Even",
+      "transition": {
+        "kind": "whip",
+        "frames": 7,
+        "direction": "up"
+      }
+    },
+    {
+      "shot": "S10",
+      "at": "They",
+      "transition": {
+        "kind": "whip",
+        "frames": 12,
+        "direction": "left"
+      }
+    },
+    {
+      "shot": "S11",
+      "at": "One",
+      "transition": {
+        "kind": "push",
+        "frames": 8
+      }
+    },
+    {
+      "shot": "S11B",
+      "at": "jump",
+      "transition": {
+        "kind": "push",
+        "frames": 8
+      }
+    },
+    {
+      "shot": "S12",
+      "at": "doom+2",
+      "transition": {
+        "kind": "whip",
+        "frames": 8,
+        "direction": "up"
+      }
+    },
+    {
+      "shot": "S13",
+      "at": "The",
+      "transition": {
+        "kind": "flash",
+        "frames": 6,
+        "color": "#bdf4ff"
+      }
+    },
+    {
+      "shot": "S14",
+      "at": "so"
+    },
+    {
+      "shot": "S15",
+      "at": "Would",
+      "transition": {
+        "kind": "flash",
+        "frames": 6,
+        "color": "#ffe58a"
+      }
+    }
+  ],
+  "tail": 0.2,
+  "world_sfx": {
+    "volume": 0.38,
+    "events": [
+      {
+        "at": "If",
+        "clip": "whoosh-fast-hard",
+        "gain": 0.14
+      },
+      {
+        "at": "scroll",
+        "clip": "move-spin",
+        "gain": 0.18
+      },
+      {
+        "at": "grow",
+        "clip": "whoosh-fast-hard",
+        "gain": 0.25
+      },
+      {
+        "at": "ceiling+6",
+        "clip": "impact-heavy-hard",
+        "gain": 0.3
+      },
+      {
+        "at": "window",
+        "clip": "impact-heavy-hard",
+        "gain": 0.2
+      },
+      {
+        "at": "bed",
+        "clip": "whoosh-fast-hard",
+        "gain": 0.17
+      },
+      {
+        "at": "basketball",
+        "clip": "whoosh-fast-hard",
+        "gain": 0.18
+      },
+      {
+        "at": "They",
+        "clip": "whoosh-fast-hard",
+        "gain": 0.2
+      },
+      {
+        "at": "One#2",
+        "clip": "whoosh-fast-hard",
+        "gain": 0.17
+      },
+      {
+        "at": "S9+62",
+        "clip": "whoosh-fast-hard",
+        "gain": 0.2
+      },
+      {
+        "at": "now",
+        "clip": "whoosh-fast-hard",
+        "gain": 0.14
+      },
+      {
+        "at": "jump",
+        "clip": "shimmer-short-sparkle",
+        "gain": 0.16
+      },
+      {
+        "at": "event:S11B.net_contact",
+        "clip": "impact-heavy-hard",
+        "gain": 0.1
+      },
+      {
+        "at": "jump+22",
+        "clip": "impact-heavy-hard",
+        "gain": 0.18
+      },
+      {
+        "at": "advantage-8",
+        "clip": "impact-heavy-hard",
+        "gain": 0.1
+      },
+      {
+        "at": "skyscraper",
+        "clip": "riser-1s-strong",
+        "gain": 0.22
+      },
+      {
+        "at": "event:S13.router_contact",
+        "clip": "mechanical-latch-heavy",
+        "gain": 0.3
+      },
+      {
+        "at": "scrolling",
+        "clip": "move-spin",
+        "gain": 0.16
+      }
+    ]
+  },
+  "choiceCues": [
+    {
+      "a": "I'D STOP",
+      "b": "KEEP SCROLLING",
+      "startSeconds": 40.55,
+      "endSeconds": 44.46,
+      "title": "WOULD YOU STOP?",
+      "topPercent": 1.5
+    }
+  ],
+  "caption_mode": "word",
+  "caption_zones": {
+    "S5B": "top-center",
+    "S10": "top-right",
+    "S11": "top-right",
+    "S11B": "top-right"
+  },
+  "fx": [
+    {
+      "at": "grow",
+      "kind": "speed-lines",
+      "strength": 0.34,
+      "duration": 0.22
+    },
+    {
+      "at": "jump",
+      "kind": "spark",
+      "x": 50,
+      "y": 47,
+      "color": "#ffb74f",
+      "duration": 0.3
+    },
+    {
+      "at": "skyscraper",
+      "kind": "speed-lines",
+      "strength": 0.3,
+      "color": "#ffe18b",
+      "duration": 0.3
+    },
+    {
+      "at": "installed",
+      "kind": "impact-star",
+      "x": 46.5,
+      "y": 35,
+      "color": "#bdf4ff",
+      "duration": 0.13
+    }
+  ],
+  "shot_events": [
+    {
+      "shot": "S6B",
+      "name": "ceiling_contact",
+      "at": "ceiling+6"
+    },
+    {
+      "shot": "S8",
+      "name": "window_exit",
+      "at": "feet"
+    },
+    {
+      "shot": "S10",
+      "name": "tall_reveal",
+      "at": "game"
+    },
+    {
+      "shot": "S12",
+      "name": "skyscraper",
+      "at": "skyscraper"
+    },
+    {
+      "shot": "S11B",
+      "name": "net_contact",
+      "at": "jump"
+    },
+    {
+      "shot": "S13",
+      "name": "router_contact",
+      "at": "installed"
+    }
+  ]
+}
